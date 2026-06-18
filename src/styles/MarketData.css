@@ -90,17 +90,6 @@
   color: var(--down);
 }
 
-.liq-card {
-  border-left: 3px solid rgba(255, 255, 255, 0.06);
-}
-
-.liq-card:nth-child(4) {
-  border-left-color: var(--down);
-}
-
-.liq-card:nth-child(5) {
-  border-left-color: var(--accent);
-}
 
 @media (max-width: 600px) {
   .metrics-grid {
