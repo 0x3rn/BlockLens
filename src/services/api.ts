@@ -125,7 +125,7 @@ Keep the response concise but actionable. Format with clear section headers. Do 
     const response = await axios.post(
       'https://api.deepseek.com/v1/chat/completions',
       {
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-pro',
         messages: [
           {
             role: 'system',
