@@ -12,7 +12,7 @@
 
 .nav-container { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(100% - 48px, 1320px); margin: 0 auto; }
 .nav-logo { display: flex; align-items: center; gap: 9px; font: 850 1.2rem var(--font-heading); color: var(--text-primary); letter-spacing: -.03em; }
-.logo-icon-wrap { display: grid; place-items: center; width: 34px; height: 34px; color: var(--accent); background: var(--accent-dim); border: 1px solid var(--border-glow); border-radius: 9px; }
+.logo-icon-wrap { display: grid; place-items: center; width: 34px; height: 34px; color: var(--accent); background: var(--accent-dim); border: 1px solid var(--border-strong); border-radius: 9px; }
 .nav-links { display: flex; gap: 3px; padding: 3px; background: rgba(255,255,255,.025); border: 1px solid var(--border-subtle); border-radius: 10px; }
 .nav-link { display: flex; align-items: center; gap: 6px; padding: 8px 11px; color: var(--text-secondary); border-radius: 7px; font-size: .76rem; font-weight: 600; }
 .nav-link:hover { color: var(--text-primary); background: rgba(255,255,255,.04); }

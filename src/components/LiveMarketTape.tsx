@@ -23,6 +23,7 @@ const LiveMarketTape: React.FC = () => {
           <p>Real trade prints and forced orders—not estimated dashboard figures.</p>
         </div>
         <div className="live-tape-source">
+          <span className="tape-index">BL / TAPE 01</span>
           <span className={`stream-status ${status}`}><i aria-hidden="true" />{status}</span>
           <small>Binance · live WebSocket</small>
           {hasConnectionIssue && (

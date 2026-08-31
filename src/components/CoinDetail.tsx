@@ -109,14 +109,10 @@ const CoinDetailPage: React.FC = () => {
         <div className="coin-detail-identity">
           <img src={coin.image.large} alt="" className="coin-detail-img" />
           <div>
-            <span className="eyebrow">Market cap rank #{market.market_cap_rank}</span>
             <h1>{coin.name} <span className="coin-detail-symbol">{coin.symbol.toUpperCase()}</span></h1>
-            <div className="detail-meta-line">
-              <span>Spot market</span>
-              {coin.last_updated && <span>Updated {formatDate(coin.last_updated)}</span>}
-            </div>
           </div>
         </div>
+        <span className="coin-detail-rank"><small>Market cap rank</small><strong>#{market.market_cap_rank}</strong></span>
         <div className="coin-detail-price">
           <span className="detail-current-price">{formatCurrency(market.current_price[currency], currency)}</span>
           <span className={`detail-price-change ${(market.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>

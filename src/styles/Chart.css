@@ -9,7 +9,7 @@
 .chart-controls { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .chart-controls button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 8px; color: var(--text-muted); background: transparent; border: 1px solid var(--border-subtle); border-radius: 6px; font-size: .63rem; }
 .chart-controls button:hover { color: var(--text-primary); }
-.chart-controls button[aria-pressed='true'] { color: var(--purple); background: var(--purple-dim); border-color: rgba(180,108,245,.25); }
+.chart-controls button[aria-pressed='true'] { color: var(--accent); background: var(--accent-dim); border-color: var(--border-strong); }
 .chart-wrapper { width: 100%; min-width: 0; height: clamp(280px, 34vw, 350px); overflow: hidden; }
 .chart-wrapper .recharts-wrapper, .chart-wrapper .recharts-surface { max-width: 100%; }
 .chart-loading { display: flex; flex-direction: column; gap: 10px; }

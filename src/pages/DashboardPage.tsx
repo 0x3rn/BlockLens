@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Bot, GitCompareArrows, Radar, Star } from 'lucide-react';
+import { ArrowRight, Bot, GitCompareArrows, RadioTower, Radar, Star } from 'lucide-react';
 import CoinTable from '../components/CoinTable';
 import { DataState } from '../components/DataState';
 import MarketData from '../components/MarketData';
 import LiveMarketTape from '../components/LiveMarketTape';
+import MarketLens from '../components/MarketLens';
 import TrendingCoins from '../components/TrendingCoins';
 import { useMarket } from '../context/MarketContext';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -25,22 +26,36 @@ const DashboardPage: React.FC = () => {
   return (
     <main className="app-container page-stack">
       <header className="page-intro dashboard-intro">
-        <div>
-          <span className="eyebrow"><Radar size={14} aria-hidden="true" /> Market intelligence</span>
-          <h1>See the market clearly.</h1>
-          <p>Live spot-market data, precise pricing, watchlists, portfolio tracking, comparisons, and evidence-based research in one focused workspace.</p>
+        <div className="dashboard-hero-copy">
+          <span className="eyebrow"><Radar size={14} aria-hidden="true" /> Live crypto intelligence</span>
+          <h1>See the market <span>clearly.</span></h1>
+          <p>Track spot prices, watch forced liquidations, compare assets, and turn market history into risk-aware trade research.</p>
+          <div className="page-actions">
+            <Link className="primary-button" to="/markets">Explore markets <ArrowRight size={16} aria-hidden="true" /></Link>
+            <Link className="secondary-button" to="/analysis"><Bot size={16} aria-hidden="true" /> Create AI brief</Link>
+          </div>
+          <div className="hero-proof" aria-label="BlockLens capabilities">
+            <span><i aria-hidden="true" /> Real market feeds</span>
+            <span>Local portfolio</span>
+            <span>Risk-aware AI</span>
+          </div>
         </div>
-        <div className="page-actions">
-          <Link className="primary-button" to="/markets">Explore markets <ArrowRight size={16} aria-hidden="true" /></Link>
-          <Link className="secondary-button" to="/analysis"><Bot size={16} aria-hidden="true" /> Create AI brief</Link>
-        </div>
+        <MarketLens coins={coins} currency={currency} />
       </header>
 
       {error && coins.length > 0 && (
         <DataState title="Showing the last available snapshot" message={error} onRetry={() => void refresh()} compact />
       )}
       {error && coins.length === 0 ? (
-        <DataState message={error} onRetry={() => void refresh()} />
+        <>
+          <DataState title="Market snapshot unavailable" message={error} onRetry={() => void refresh()} compact />
+          <section className="feed-resilience-note" aria-labelledby="feed-resilience-title">
+            <span className="feed-resilience-icon"><RadioTower size={18} aria-hidden="true" /></span>
+            <div><span className="eyebrow">Independent live source</span><h2 id="feed-resilience-title">The exchange tape can keep listening</h2><p>CoinGecko powers the global snapshot, while the Binance event stream below connects independently. Your locally saved watchlist and portfolio also remain available.</p></div>
+            <Link className="text-link" to="/watchlist">Open portfolio <ArrowRight size={14} aria-hidden="true" /></Link>
+          </section>
+          <LiveMarketTape />
+        </>
       ) : (
         <>
           <MarketData />

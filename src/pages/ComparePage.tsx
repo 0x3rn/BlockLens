@@ -16,6 +16,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { fetchCoinHistory, getApiErrorMessage } from '../services/api';
 import { ChartData } from '../types/crypto';
 import { formatCompactCurrency, formatCurrency, formatDate, formatPercent } from '../utils/format';
+import '../styles/Chart.css';
 
 const chartColors = ['#00ff88', '#a855f7', '#5d6fff', '#ffaa00'];
 const formatChartTick = (timestamp: number, days: number) => new Intl.DateTimeFormat(undefined, days === 365
@@ -104,6 +105,7 @@ const ComparePage: React.FC = () => {
       <div className="compare-selection" aria-label="Selected assets">
         {selectedCoins.map((coin, index) => coin && (
           <span className="compare-chip" style={{ '--coin-color': chartColors[index] } as React.CSSProperties} key={coin.id}>
+            <span className="compare-series-dot" aria-hidden="true" />
             <img src={coin.image} alt="" /> {coin.name}
             <button type="button" onClick={() => setSelectedIds((ids) => ids.filter((id) => id !== coin.id))} aria-label={`Remove ${coin.name}`} disabled={selectedIds.length === 1}><X size={13} /></button>
           </span>
@@ -119,12 +121,19 @@ const ComparePage: React.FC = () => {
         </div>
         {error ? <DataState message={error} compact /> : loading && normalizedData.length === 0 ? <div className="skeleton-chart compare-skeleton" /> : (
           <div className="compare-chart" role="img" aria-label={`Normalized ${days === 365 ? 'one year' : `${days} day`} performance comparison for ${selectedCoins.map((coin) => coin?.name).join(', ')}`}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={80}>
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              minHeight={0}
+              initialDimension={{ width: 320, height: 340 }}
+              debounce={80}
+            >
               <LineChart data={normalizedData} margin={{ top: 12, right: 6, bottom: 4, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.045)" />
                 <XAxis dataKey="timestamp" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={(value) => formatChartTick(Number(value), days)} tick={{ fontSize: 10, fill: '#858bab' }} axisLine={false} tickLine={false} minTickGap={32} tickCount={5} />
                 <YAxis tickFormatter={(value) => `${Number(value).toFixed(0)}`} tick={{ fontSize: 10, fill: '#858bab' }} axisLine={false} tickLine={false} width={38} />
-                <Tooltip labelFormatter={(label) => formatDate(Number(label))} formatter={(value, name) => [`${Number(value).toFixed(2)}`, coins.find((coin) => coin.id === name)?.name ?? name]} contentStyle={{ background: '#0c0c1d', border: '1px solid rgba(0,255,136,.2)', borderRadius: 10 }} />
+                <Tooltip labelFormatter={(label) => formatDate(Number(label))} formatter={(value, name) => [`${Number(value).toFixed(2)}`, coins.find((coin) => coin.id === name)?.name ?? name]} contentStyle={{ background: '#0c0c1d', border: '1px solid rgba(255,255,255,.12)', borderRadius: 8 }} />
                 <Legend formatter={(id) => coins.find((coin) => coin.id === id)?.name ?? id} wrapperStyle={{ fontSize: '0.68rem', color: '#a7acc8', paddingTop: '8px' }} />
                 {selectedIds.map((id, index) => <Line key={id} type="monotone" dataKey={id} stroke={chartColors[index]} strokeWidth={2} dot={false} isAnimationActive={false} />)}
               </LineChart>

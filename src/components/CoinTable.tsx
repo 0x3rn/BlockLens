@@ -100,7 +100,9 @@ const CoinTable: React.FC<CoinTableProps> = ({
         <div className="market-toolbar">
           <div>
             <h2 id="markets-table-title">{title}</h2>
-            <p>{filteredCoins.length} assets match this view</p>
+            <p>
+              {filteredCoins.length} {filteredCoins.length === 1 ? 'asset matches' : 'assets match'} this view
+            </p>
           </div>
           <label className="market-search">
             <Search size={16} aria-hidden="true" />

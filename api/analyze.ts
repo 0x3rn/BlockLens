@@ -205,7 +205,8 @@ ${JSON.stringify(marketSnapshot)}`;
       ],
       temperature: 0.2,
       response_format: { type: 'json_object' },
-      max_tokens: 1_200,
+      max_completion_tokens: 4_096,
+      reasoning_effort: 'low',
     });
 
     const content = providerResponse.choices[0]?.message?.content;
@@ -251,7 +252,11 @@ ${JSON.stringify(marketSnapshot)}`;
       dataAsOf: input.dataAsOf,
       generatedAt: new Date().toISOString(),
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      'Gemini analysis request failed:',
+      error instanceof Error ? error.message : 'Unknown provider error',
+    );
     return response.status(502).json({ error: 'The AI market brief is temporarily unavailable.' });
   }
 }

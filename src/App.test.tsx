@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { MarketProvider } from './context/MarketContext';
+import { fetchMarketData, fetchMarketMetrics } from './services/api';
 
 vi.mock('./services/api', () => ({
   fetchMarketData: vi.fn().mockResolvedValue([{
@@ -49,9 +50,23 @@ describe('BlockLens routes', () => {
 
   it('loads the market dashboard with real-data labels', async () => {
     renderRoute();
-    expect(await screen.findByRole('heading', { name: /see the market clearly/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('heading', { name: /see the market clearly/i })).toBeInTheDocument(), { timeout: 3000 });
     expect(await screen.findByText(/global market overview/i)).toBeInTheDocument();
+    expect(screen.getByText(/market lens/i)).toBeInTheDocument();
+    expect(screen.getByText(/top 4 · 24h snapshot/i)).toBeInTheDocument();
+    expect(screen.getByText(/top-100 asset breadth/i)).toBeInTheDocument();
+    expect(screen.getByText(/biggest 24h gainer/i)).toBeInTheDocument();
+    expect(screen.getByText(/biggest 24h loser/i)).toBeInTheDocument();
     expect(screen.getAllByText(/coingecko/i).length).toBeGreaterThan(0);
+  });
+
+  it('keeps independent market tools visible when the global snapshot fails', async () => {
+    vi.mocked(fetchMarketData).mockRejectedValueOnce(new Error('offline'));
+    vi.mocked(fetchMarketMetrics).mockRejectedValueOnce(new Error('offline'));
+    renderRoute();
+    expect(await screen.findByRole('heading', { name: /market snapshot unavailable/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /the exchange tape can keep listening/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /live market tape/i })).toBeInTheDocument();
   });
 
   it('renders a useful not-found route', async () => {

@@ -128,7 +128,14 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
           role="img"
           aria-label={`${days === 365 ? 'One year' : `${days} day`} price chart for ${coinName ?? coinId}. Range ${formatCurrency(priceRange?.min, currency)} to ${formatCurrency(priceRange?.max, currency)}.`}
         >
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={80}>
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            minHeight={0}
+            initialDimension={{ width: 320, height: 290 }}
+            debounce={80}
+          >
             <ComposedChart data={chartData} margin={{ top: 8, right: 4, bottom: 2, left: 0 }}>
               <defs>
                 <linearGradient id={`priceGradient-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
