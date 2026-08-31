@@ -56,6 +56,17 @@ export interface ChartData {
   volume?: number;
 }
 
+export type CandleInterval = '5m' | '15m' | '30m' | '1h' | '4h';
+
+export interface CandleData {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
 export interface LiveSpotTrade {
   id: string;
   timestamp: number;

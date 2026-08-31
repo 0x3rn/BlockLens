@@ -2,6 +2,9 @@
 .chart-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
 .chart-header > div:first-child { min-width: 0; }
 .chart-header h2 { overflow: hidden; margin-top: 4px; font-size: 1.1rem; text-overflow: ellipsis; white-space: nowrap; }
+.chart-range-groups { display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.chart-range-group { display: flex; align-items: center; gap: 6px; }
+.chart-range-label { color: var(--text-muted); font: 600 .57rem var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }
 .time-filters { display: flex; gap: 2px; padding: 3px; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 8px; }
 .time-filters button { padding: 6px 10px; color: var(--text-muted); background: transparent; border: 0; border-radius: 6px; font: 650 .65rem var(--font-mono); }
 .time-filters button:hover { color: var(--text-primary); }
@@ -11,7 +14,18 @@
 .chart-controls button:hover { color: var(--text-primary); }
 .chart-controls button[aria-pressed='true'] { color: var(--accent); background: var(--accent-dim); border-color: var(--border-strong); }
 .chart-wrapper { width: 100%; min-width: 0; height: clamp(280px, 34vw, 350px); overflow: hidden; }
-.chart-wrapper .recharts-wrapper, .chart-wrapper .recharts-surface { max-width: 100%; }
+.candle-chart { width: 100%; min-width: 0; height: clamp(280px, 34vw, 350px); overflow: hidden; background: var(--bg-secondary); border-radius: 8px; }
+.candle-chart svg { display: block; width: 100%; height: 100%; }
+.candle-grid line { stroke: rgba(255,255,255,.06); stroke-dasharray: 3 5; }
+.candle-grid text, .candle-time { fill: var(--text-muted); font: 10px var(--font-mono); }
+.candle-volume { fill: rgba(93,111,255,.22); }
+.candle-wick { stroke-width: 1.2; }
+.candle-body { stroke-width: 1; }
+.candle.up .candle-wick { stroke: var(--accent); }
+.candle.up .candle-body { fill: var(--accent); stroke: var(--accent); }
+.candle.down .candle-wick { stroke: var(--down); }
+.candle.down .candle-body { fill: var(--down); stroke: var(--down); }
+.candle-average { fill: none; stroke: var(--purple); stroke-width: 1.8; vector-effect: non-scaling-stroke; }
 .chart-loading { display: flex; flex-direction: column; gap: 10px; }
 .chart-loading .skeleton-line { width: 120px; }
 .skeleton-chart { width: 100%; height: 350px; border-radius: 9px; }
@@ -20,7 +34,9 @@
 @media (max-width: 600px) {
   .chart-card { padding: 15px 10px 13px; }
   .chart-header { align-items: flex-start; flex-wrap: wrap; }
+  .chart-range-groups { width: 100%; justify-content: flex-start; }
   .chart-wrapper, .skeleton-chart { height: 290px; }
+  .candle-chart { height: 290px; }
   .chart-controls { padding-inline: 5px; }
   .time-filters { flex: 0 0 auto; }
   .time-filters button { padding-inline: 9px; }
@@ -30,5 +46,6 @@
   .chart-card { padding-inline: 7px; }
   .chart-header, .chart-controls { padding-inline: 5px; }
   .chart-wrapper, .skeleton-chart { height: 260px; }
+  .candle-chart { height: 260px; }
   .chart-controls button { flex: 1; justify-content: center; min-width: 82px; }
 }

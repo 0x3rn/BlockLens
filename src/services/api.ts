@@ -2,6 +2,8 @@ import axios, { AxiosError } from 'axios';
 import {
   AIAnalysis,
   AIAnalysisRequest,
+  CandleData,
+  CandleInterval,
   ChartData,
   Coin,
   CoinDetail,
@@ -97,6 +99,54 @@ export const fetchCoinHistory = async (
   }));
 });
 
+const candleIntervalMs: Record<CandleInterval, number> = {
+  '5m': 5 * 60_000,
+  '15m': 15 * 60_000,
+  '30m': 30 * 60_000,
+  '1h': 60 * 60_000,
+  '4h': 4 * 60 * 60_000,
+};
+
+export const fetchCoinCandles = async (
+  coinId: string,
+  interval: CandleInterval,
+  currency: CurrencyCode = 'usd',
+): Promise<CandleData[]> => cachedRequest(`candles:${coinId}:${interval}:${currency}`, 30_000, async () => {
+  const response = await marketApi.get<{
+    prices: [number, number][];
+    total_volumes: [number, number][];
+  }>(`/coins/${encodeURIComponent(coinId)}/market_chart`, {
+    params: { vs_currency: currency, days: 1, precision: 'full' },
+  });
+
+  const bucketSize = candleIntervalMs[interval];
+  const buckets = new Map<number, CandleData>();
+  let previousVolume: number | null = null;
+  response.data.prices.forEach(([timestamp, price], index) => {
+    const volumeTotal = response.data.total_volumes[index]?.[1];
+    const volume = typeof volumeTotal === 'number' && Number.isFinite(volumeTotal) && previousVolume != null
+      ? Math.max(0, volumeTotal - previousVolume)
+      : 0;
+    if (typeof volumeTotal === 'number' && Number.isFinite(volumeTotal)) previousVolume = volumeTotal;
+    if (!Number.isFinite(timestamp) || !Number.isFinite(price)) return;
+    const bucket = Math.floor(timestamp / bucketSize) * bucketSize;
+    const current = buckets.get(bucket);
+    if (!current) {
+      buckets.set(bucket, { timestamp: bucket, open: price, high: price, low: price, close: price, volume });
+      return;
+    }
+    current.high = Math.max(current.high, price);
+    current.low = Math.min(current.low, price);
+    current.close = price;
+    current.volume += volume;
+  });
+
+  const candles = [...buckets.values()].sort((a, b) => a.timestamp - b.timestamp);
+
+  if (candles.length < 2) throw new Error('Intraday candles are not available for this asset.');
+  return candles;
+});
+
 export const fetchMarketMetrics = async (
   currency: CurrencyCode = 'usd',
   force = false,
@@ -162,5 +212,6 @@ export const getApiErrorMessage = (error: unknown): string => {
     if (axiosError.code === 'ECONNABORTED') return 'The request timed out. Please retry.';
     if (!axiosError.response) return 'The data service could not be reached. Check your connection and retry.';
   }
+  if (error instanceof Error && error.message) return error.message;
   return 'Something went wrong while loading data. Please retry.';
 };

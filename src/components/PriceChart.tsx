@@ -11,9 +11,10 @@ import {
   YAxis,
 } from 'recharts';
 import { Activity, BarChart3, Scale } from 'lucide-react';
-import { fetchCoinHistory, getApiErrorMessage } from '../services/api';
-import { ChartData, CurrencyCode } from '../types/crypto';
+import { fetchCoinCandles, fetchCoinHistory, getApiErrorMessage } from '../services/api';
+import { CandleData, CandleInterval, ChartData, CurrencyCode } from '../types/crypto';
 import { formatCompactCurrency, formatCurrency } from '../utils/format';
+import CandlestickChart from './CandlestickChart';
 import { DataState } from './DataState';
 import '../styles/Chart.css';
 
@@ -24,6 +25,7 @@ interface PriceChartProps {
 }
 
 type ChartPointWithAverage = ChartData & { movingAverage?: number };
+const intradayIntervals: CandleInterval[] = ['5m', '15m', '30m', '1h', '4h'];
 
 const addMovingAverage = (data: ChartData[], period = 20): ChartPointWithAverage[] => data.map((point, index) => {
   if (index < period - 1) return point;
@@ -40,7 +42,8 @@ const formatChartTick = (timestamp: number, days: number) => new Intl.DateTimeFo
 
 const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'usd' }) => {
   const [data, setData] = useState<ChartData[]>([]);
-  const [days, setDays] = useState(7);
+  const [candles, setCandles] = useState<CandleData[]>([]);
+  const [range, setRange] = useState<number | CandleInterval>(7);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showVolume, setShowVolume] = useState(true);
@@ -48,16 +51,25 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
   const [logScale, setLogScale] = useState(false);
   const requestVersion = useRef(0);
   const gradientId = useId().replace(/:/g, '');
+  const isIntraday = typeof range === 'string';
+  const days = typeof range === 'number' ? range : 7;
 
   const loadChart = async () => {
     const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
     setData([]);
+    setCandles([]);
     try {
-      const history = await fetchCoinHistory(coinId, days, currency);
-      if (requestVersion.current !== version) return;
-      setData(history);
+      if (typeof range === 'string') {
+        const history = await fetchCoinCandles(coinId, range, currency);
+        if (requestVersion.current !== version) return;
+        setCandles(history);
+      } else {
+        const history = await fetchCoinHistory(coinId, range, currency);
+        if (requestVersion.current !== version) return;
+        setData(history);
+      }
     } catch (chartError) {
       if (requestVersion.current !== version) return;
       setData([]);
@@ -70,7 +82,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
   useEffect(() => {
     void loadChart();
     return () => { requestVersion.current += 1; };
-  }, [coinId, currency, days]);
+  }, [coinId, currency, range]);
 
   const chartData = useMemo(() => addMovingAverage(data), [data]);
   const priceRange = useMemo(() => {
@@ -86,18 +98,23 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
           <span className="eyebrow">Price and volume</span>
           <h2 id={`chart-title-${gradientId}`}>{coinName ?? coinId}</h2>
         </div>
-        <div className="time-filters" aria-label="Chart time range">
-          {[7, 30, 365].map((value) => (
-            <button
-              type="button"
-              key={value}
-              onClick={() => setDays(value)}
-              className={days === value ? 'active' : ''}
-              aria-pressed={days === value}
-            >
-              {value === 365 ? '1Y' : `${value}D`}
-            </button>
-          ))}
+        <div className="chart-range-groups">
+          <div className="chart-range-group">
+            <span className="chart-range-label">Candles</span>
+            <div className="time-filters" aria-label="Intraday candle interval">
+              {intradayIntervals.map((interval) => (
+                <button type="button" key={interval} onClick={() => setRange(interval)} className={range === interval ? 'active' : ''} aria-pressed={range === interval}>{interval}</button>
+              ))}
+            </div>
+          </div>
+          <div className="chart-range-group">
+            <span className="chart-range-label">History</span>
+            <div className="time-filters" aria-label="Chart time range">
+              {[7, 30, 365].map((value) => (
+                <button type="button" key={value} onClick={() => setRange(value)} className={range === value ? 'active' : ''} aria-pressed={range === value}>{value === 365 ? '1Y' : `${value}D`}</button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -113,15 +130,19 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
         </button>
       </div>
 
-      {loading && data.length === 0 ? (
+      {loading && data.length === 0 && candles.length === 0 ? (
         <div className="chart-loading" aria-label="Loading chart data">
           <div className="skeleton-line" />
           <div className="skeleton-chart" />
         </div>
       ) : error ? (
         <DataState message={error} onRetry={() => void loadChart()} compact />
-      ) : data.length === 0 ? (
+      ) : isIntraday && candles.length === 0 ? (
+        <DataState title="No intraday candles" message="Intraday candle data is unavailable for this asset and interval." compact />
+      ) : !isIntraday && data.length === 0 ? (
         <DataState title="No chart history" message="Historical pricing is unavailable for this asset and range." compact />
+      ) : isIntraday ? (
+        <CandlestickChart data={candles} currency={currency} interval={range} coinName={coinName ?? coinId} showVolume={showVolume} showAverage={showAverage} logScale={logScale} />
       ) : (
         <div
           className="chart-wrapper"
