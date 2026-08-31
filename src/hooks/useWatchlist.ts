@@ -1,20 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useCallback } from 'react';
+import { usePersistentState } from './usePersistentState';
+
+const isStringArray = (value: unknown): value is string[] => (
+  Array.isArray(value)
+  && value.length <= 500
+  && value.every((item) => typeof item === 'string' && /^[a-z0-9-]{1,100}$/.test(item))
+);
 
 export const useWatchlist = () => {
-  const [watchlist, setWatchlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('crypto_watchlist');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [watchlist, setWatchlist] = usePersistentState<string[]>(
+    'blocklens_watchlist',
+    [],
+    isStringArray,
+  );
 
-  useEffect(() => {
-    localStorage.setItem('crypto_watchlist', JSON.stringify(watchlist));
-  }, [watchlist]);
+  const toggleWatchlist = useCallback((id: string) => {
+    setWatchlist((previous) => (
+      previous.includes(id)
+        ? previous.filter((coinId) => coinId !== id)
+        : [...new Set([...previous, id])]
+    ));
+  }, [setWatchlist]);
 
-  const toggleWatchlist = (id: string) => {
-    setWatchlist(prev => 
-      prev.includes(id) ? prev.filter(coinId => coinId !== id) : [...prev, id]
-    );
-  };
-
-  return { watchlist, toggleWatchlist };
+  return { watchlist, toggleWatchlist, clearWatchlist: () => setWatchlist([]) };
 };

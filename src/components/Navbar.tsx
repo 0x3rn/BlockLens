@@ -1,77 +1,117 @@
 import React from 'react';
-import { TrendingUp, BarChart3, Briefcase, LayoutDashboard, Bot } from 'lucide-react';
+import { Link, NavLink } from 'react-router-dom';
+import {
+  BellRing,
+  Bot,
+  GitCompareArrows,
+  LayoutDashboard,
+  RefreshCw,
+  TrendingUp,
+  WalletCards,
+} from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
+import { CurrencyCode } from '../types/crypto';
+import { formatDateTime } from '../utils/format';
 import '../styles/Navbar.css';
 
-interface NavbarProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}
-
 const tabs = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'markets', label: 'Markets', icon: BarChart3 },
-  { id: 'ai', label: 'AI Analysis', icon: Bot },
-  { id: 'watchlist', label: 'Watchlist', icon: Briefcase },
+  { to: '/', end: true, label: 'Dashboard', mobileLabel: 'Home', icon: LayoutDashboard },
+  { to: '/markets', label: 'Markets', mobileLabel: 'Markets', icon: TrendingUp },
+  { to: '/analysis', label: 'AI Brief', mobileLabel: 'AI', icon: Bot },
+  { to: '/watchlist', label: 'Portfolio', mobileLabel: 'Portfolio', icon: WalletCards },
+  { to: '/compare', label: 'Compare', mobileLabel: 'Compare', icon: GitCompareArrows },
 ];
 
-const mobileTabs = [
-  { id: 'dashboard', label: 'Home', icon: LayoutDashboard },
-  { id: 'markets', label: 'Markets', icon: BarChart3 },
-  { id: 'ai', label: 'AI', icon: Bot },
-  { id: 'watchlist', label: 'Watchlist', icon: Briefcase },
-];
+const Navbar: React.FC = () => {
+  const {
+    currency,
+    setCurrency,
+    error,
+    lastUpdated,
+    refreshing,
+    refresh,
+    alerts,
+  } = useMarket();
+  const triggeredAlerts = alerts.filter((alert) => alert.triggeredAt).length;
 
-const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   return (
     <>
-      <nav className="navbar">
+      <nav className="navbar" aria-label="Primary navigation">
         <div className="nav-container">
-          <div className="nav-logo" onClick={() => onTabChange('dashboard')} style={{ cursor: 'pointer' }}>
-            <div className="logo-icon-wrap">
+          <Link className="nav-logo" to="/" aria-label="BlockLens dashboard">
+            <span className="logo-icon-wrap" aria-hidden="true">
               <TrendingUp className="logo-icon" size={22} />
-            </div>
+            </span>
             <span>BlockLens</span>
-          </div>
+          </Link>
+
           <div className="nav-links">
-            {tabs.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  className={`nav-link ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => onTabChange(tab.id)}
-                >
-                  <Icon size={16} />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
+            {tabs.map(({ to, end, label, icon: Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span>{label}</span>
+              </NavLink>
+            ))}
           </div>
+
           <div className="nav-right">
-            <div className="nav-live-indicator">
-              <span className="live-dot-pulse" />
-              <span>Live Data</span>
+            {triggeredAlerts > 0 && (
+              <Link className="alert-indicator" to="/watchlist#alerts" aria-label={`${triggeredAlerts} triggered alerts`}>
+                <BellRing size={16} aria-hidden="true" />
+                <span>{triggeredAlerts}</span>
+              </Link>
+            )}
+            <label className="currency-control">
+              <span className="sr-only">Display currency</span>
+              <select
+                value={currency}
+                onChange={(event) => setCurrency(event.target.value as CurrencyCode)}
+              >
+                <option value="usd">USD</option>
+                <option value="eur">EUR</option>
+                <option value="gbp">GBP</option>
+                <option value="ngn">NGN</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="refresh-button"
+              onClick={() => void refresh()}
+              disabled={refreshing}
+              aria-label="Refresh market data"
+              title="Refresh market data"
+            >
+              <RefreshCw size={15} className={refreshing ? 'is-spinning' : ''} aria-hidden="true" />
+            </button>
+            <div
+              className={`nav-live-indicator ${error ? 'has-error' : ''}`}
+              title={error ?? `Updated ${formatDateTime(lastUpdated)}`}
+            >
+              <span className="live-dot-pulse" aria-hidden="true" />
+              <span>{error ? 'Data issue' : lastUpdated ? 'Updated' : 'Connecting'}</span>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="mobile-bottom-nav">
-        {mobileTabs.map(tab => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              className={`mobile-nav-item ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => onTabChange(tab.id)}
-            >
-              <Icon size={20} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
+        {tabs.map(({ to, end, mobileLabel, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) => `mobile-nav-item ${isActive ? 'active' : ''}`}
+          >
+            <Icon size={19} aria-hidden="true" />
+            <span>{mobileLabel}</span>
+          </NavLink>
+        ))}
+      </nav>
     </>
   );
 };

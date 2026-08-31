@@ -1,169 +1,166 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import {
+  AIAnalysis,
+  AIAnalysisRequest,
+  ChartData,
+  Coin,
+  CoinDetail,
+  CurrencyCode,
+  MarketMetrics,
+  TrendingCoin,
+} from '../types/crypto';
 
-const BASE_URL = 'https://api.coingecko.com/api/v3';
+const marketApi = axios.create({
+  baseURL: 'https://api.coingecko.com/api/v3',
+  timeout: 15_000,
+  headers: { Accept: 'application/json' },
+});
 
-export const fetchMarketData = async () => {
-  const response = await axios.get(`${BASE_URL}/coins/markets`, {
+interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+}
+
+const cache = new Map<string, CacheEntry<unknown>>();
+const pending = new Map<string, Promise<unknown>>();
+
+interface CoinGeckoTrendingItem {
+  id: string;
+  name: string;
+  symbol: string;
+  small: string;
+  market_cap_rank?: number | null;
+  score: number;
+}
+
+const cachedRequest = async <T>(
+  key: string,
+  ttl: number,
+  loader: () => Promise<T>,
+  force = false,
+): Promise<T> => {
+  const cached = cache.get(key) as CacheEntry<T> | undefined;
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.value;
+
+  if (!force) {
+    const inFlight = pending.get(key) as Promise<T> | undefined;
+    if (inFlight) return inFlight;
+  }
+
+  const request = loader()
+    .then((value) => {
+      cache.set(key, { value, expiresAt: Date.now() + ttl });
+      return value;
+    })
+    .finally(() => pending.delete(key));
+
+  pending.set(key, request);
+  return request;
+};
+
+export const fetchMarketData = async (
+  currency: CurrencyCode = 'usd',
+  force = false,
+): Promise<Coin[]> => cachedRequest(`markets:${currency}`, 55_000, async () => {
+  const response = await marketApi.get<Coin[]>('/coins/markets', {
     params: {
-      vs_currency: 'usd',
+      vs_currency: currency,
       order: 'market_cap_desc',
       per_page: 100,
       page: 1,
-      sparkline: false,
+      sparkline: true,
+      price_change_percentage: '7d,30d',
+      precision: 'full',
     },
   });
   return response.data;
-};
+}, force);
 
-export const fetchCoinHistory = async (coinId: string, days: number = 7) => {
-  const response = await axios.get(`${BASE_URL}/coins/${coinId}/market_chart`, {
-    params: {
-      vs_currency: 'usd',
-      days: days,
-    },
+export const fetchCoinHistory = async (
+  coinId: string,
+  days = 7,
+  currency: CurrencyCode = 'usd',
+): Promise<ChartData[]> => cachedRequest(`history:${coinId}:${days}:${currency}`, 5 * 60_000, async () => {
+  const response = await marketApi.get<{
+    prices: [number, number][];
+    market_caps: [number, number][];
+    total_volumes: [number, number][];
+  }>(`/coins/${encodeURIComponent(coinId)}/market_chart`, {
+    params: { vs_currency: currency, days, precision: 'full' },
   });
-  // Transform [timestamp, price] array into object array for Recharts
-  return response.data.prices.map((price: [number, number]) => ({
-    timestamp: price[0],
-    price: price[1],
+
+  return response.data.prices.map(([timestamp, price], index) => ({
+    timestamp,
+    price,
+    marketCap: response.data.market_caps[index]?.[1],
+    volume: response.data.total_volumes[index]?.[1],
   }));
-};
+});
 
-export const fetchMarketMetrics = async () => {
-  try {
-    const response = await axios.get(`${BASE_URL}/global`);
-    const globalData = response.data.data;
-    const spotVolume = globalData.total_volume.usd;
+export const fetchMarketMetrics = async (
+  currency: CurrencyCode = 'usd',
+  force = false,
+): Promise<MarketMetrics> => cachedRequest(`global:${currency}`, 55_000, async () => {
+  const response = await marketApi.get('/global');
+  const data = response.data.data;
 
-    // Simulate Futures and Liquidations based on spot volume for demonstration
-    // Real-time liquidation APIs require premium keys or websocket feeds.
-    const futuresVolume = spotVolume * 1.8; // Futures volume is typically higher
-    const openInterest = futuresVolume * 0.15;
-    const longLiq = (spotVolume * 0.002) * (0.3 + Math.random() * 0.7);
-    const shortLiq = (spotVolume * 0.002) * (0.3 + Math.random() * 0.7);
+  return {
+    totalMarketCap: data.total_market_cap?.[currency] ?? 0,
+    totalVolume24h: data.total_volume?.[currency] ?? 0,
+    marketCapChange24h: data.market_cap_change_percentage_24h_usd ?? 0,
+    bitcoinDominance: data.market_cap_percentage?.btc ?? 0,
+    activeCryptocurrencies: data.active_cryptocurrencies ?? 0,
+    trackedMarkets: data.markets ?? 0,
+    updatedAt: (data.updated_at ?? Math.floor(Date.now() / 1000)) * 1000,
+  };
+}, force);
 
-    return {
-      spotVolume24h: spotVolume,
-      futuresVolume24h: futuresVolume,
-      openInterest: openInterest,
-      longLiquidations24h: longLiq,
-      shortLiquidations24h: shortLiq,
-    };
-  } catch (err) {
-    console.error("Failed to fetch global metrics", err);
-    return null;
-  }
-};
+export const fetchCoinDetail = async (coinId: string): Promise<CoinDetail> => (
+  cachedRequest(`detail:${coinId}`, 2 * 60_000, async () => {
+    const response = await marketApi.get<CoinDetail>(`/coins/${encodeURIComponent(coinId)}`, {
+      params: {
+        localization: false,
+        tickers: false,
+        community_data: false,
+        developer_data: false,
+        sparkline: false,
+      },
+    });
+    return response.data;
+  })
+);
 
-export const fetchCoinDetail = async (coinId: string) => {
-  const response = await axios.get(`${BASE_URL}/coins/${coinId}`, {
-    params: {
-      localization: false,
-      tickers: false,
-      community_data: false,
-      developer_data: false,
-      sparkline: false,
-    },
+export const fetchTrendingCoins = async (): Promise<TrendingCoin[]> => (
+  cachedRequest('trending', 5 * 60_000, async () => {
+    const response = await marketApi.get<{ coins?: { item: CoinGeckoTrendingItem }[] }>('/search/trending');
+    return (response.data.coins ?? []).map(({ item }) => ({
+      id: item.id,
+      name: item.name,
+      symbol: item.symbol,
+      image: item.small,
+      marketCapRank: item.market_cap_rank ?? null,
+      score: item.score,
+    }));
+  })
+);
+
+export const requestAIAnalysis = async (payload: AIAnalysisRequest): Promise<AIAnalysis> => {
+  const response = await axios.post<AIAnalysis>('/api/analyze', payload, {
+    timeout: 30_000,
+    headers: { 'Content-Type': 'application/json' },
   });
   return response.data;
 };
 
-export const generateAIAnalysis = async (
-  coinName: string,
-  price: number,
-  change24h: number,
-  chartData7d: { timestamp: number; price: number }[],
-  chartData30d: { timestamp: number; price: number }[],
-  chartData1y: { timestamp: number; price: number }[]
-) => {
-  const apiKey = process.env.REACT_APP_DEEPSEEK_API_KEY;
-  if (!apiKey || apiKey === 'your_deepseek_api_key_here') {
-    // Fallback to mock if API key is not configured
-    await new Promise(res => setTimeout(res, 1500));
-    const trend = change24h >= 0 ? "bullish" : "bearish";
-    const strength = Math.abs(change24h) > 5 ? "strong" : Math.abs(change24h) > 2 ? "moderate" : "mild";
-    return `${coinName} is exhibiting a ${strength} ${trend} bias with a 24h change of ${change24h.toFixed(2)}%. Current price: $${price.toLocaleString()}.\n\n⚠️ API Key Not Configured: Add your DeepSeek API key to .env for real-time AI futures analysis.\n\nRisk Level: ${Math.abs(change24h) > 5 ? 'High' : Math.abs(change24h) > 2 ? 'Medium' : 'Low'} — always size positions accordingly.`;
+export const getApiErrorMessage = (error: unknown): string => {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<{ error?: string }>;
+    if (axiosError.response?.status === 429) {
+      return 'The market data provider is rate-limiting requests. Please wait a moment and retry.';
+    }
+    if (axiosError.response?.data?.error) return axiosError.response.data.error;
+    if (axiosError.code === 'ECONNABORTED') return 'The request timed out. Please retry.';
+    if (!axiosError.response) return 'The data service could not be reached. Check your connection and retry.';
   }
-
-  // Sample chart data points for the prompt (take representative samples to stay within token limits)
-  const sample7d = sampleChartData(chartData7d, 20);
-  const sample30d = sampleChartData(chartData30d, 20);
-  const sample1y = sampleChartData(chartData1y, 30);
-
-  const prompt = `You are an expert crypto futures trading analyst. Analyze the following real-time chart data for ${coinName} (current price: $${price.toLocaleString()}, 24h change: ${change24h.toFixed(2)}%) and provide a comprehensive futures trading recommendation.
-
-PRICE HISTORY DATA:
-
-7-Day Chart (close prices):
-${sample7d.map(d => `  ${new Date(d.timestamp).toISOString().split('T')[0]}: $${d.price.toFixed(4)}`).join('\n')}
-
-30-Day Chart (close prices):
-${sample30d.map(d => `  ${new Date(d.timestamp).toISOString().split('T')[0]}: $${d.price.toFixed(4)}`).join('\n')}
-
-1-Year Chart (close prices):
-${sample1y.map(d => `  ${new Date(d.timestamp).toISOString().split('T')[0]}: $${d.price.toFixed(4)}`).join('\n')}
-
-Based on the price action across these timeframes, provide a detailed analysis in the following format:
-
-1. TREND ANALYSIS: Identify the overall trend (short, medium, and long-term). Note key support and resistance levels from the data.
-
-2. TECHNICAL SIGNALS: Analyze price patterns, momentum, and potential reversal/continuation signals visible in the data.
-
-3. FUTURES TRADING RECOMMENDATION: 
-   - Give a clear LONG or SHORT recommendation for futures trading
-   - Provide suggested entry price range
-   - Suggest stop-loss level
-   - Suggest take-profit targets (at least 2 levels)
-
-4. RISK ASSESSMENT: Rate the risk level (Low/Medium/High) and explain why. Note any upcoming volatility concerns.
-
-5. CONVICTION LEVEL: Rate your conviction in this trade setup from 1-10.
-
-Keep the response concise but actionable. Format with clear section headers. Do NOT include generic disclaimers — I understand the risks of futures trading.`;
-
-  try {
-    const response = await axios.post(
-      'https://api.deepseek.com/v1/chat/completions',
-      {
-        model: 'deepseek-v4-pro',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional crypto futures trading analyst. You analyze real price data and provide actionable LONG/SHORT trading recommendations with specific entry, stop-loss, and take-profit levels. Be direct and specific.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        temperature: 0.3,
-        max_tokens: 1500,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      }
-    );
-
-    return response.data.choices[0].message.content;
-  } catch (err: any) {
-    console.error('DeepSeek API error:', err?.response?.data || err);
-    // Fall back to the mock analysis on API failure
-    const trend = change24h >= 0 ? 'bullish' : 'bearish';
-    const strength = Math.abs(change24h) > 5 ? 'strong' : Math.abs(change24h) > 2 ? 'moderate' : 'mild';
-    return `${coinName} is exhibiting a ${strength} ${trend} bias with a 24h change of ${change24h.toFixed(2)}%. Current price: $${price.toLocaleString()}.\n\n⚠️ DeepSeek API Error: Falling back to basic analysis. Check your API key and network connection.\n\nRisk Level: ${Math.abs(change24h) > 5 ? 'High' : Math.abs(change24h) > 2 ? 'Medium' : 'Low'} — always size positions accordingly.`;
-  }
-};
-
-// Helper: sample evenly-spaced data points from a chart array
-const sampleChartData = (data: { timestamp: number; price: number }[], count: number) => {
-  if (data.length <= count) return data;
-  const step = Math.floor(data.length / count);
-  const sampled: { timestamp: number; price: number }[] = [];
-  for (let i = 0; i < data.length && sampled.length < count; i += step) {
-    sampled.push(data[i]);
-  }
-  return sampled;
+  return 'Something went wrong while loading data. Please retry.';
 };

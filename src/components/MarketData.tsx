@@ -1,61 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { fetchMarketMetrics } from '../services/api';
-import { MarketMetrics } from '../types/crypto';
+import React from 'react';
+import { Activity, BarChart3, Bitcoin, Building2, Coins, TrendingUp } from 'lucide-react';
+import { useMarket } from '../context/MarketContext';
+import { formatCompactCurrency, formatDateTime, formatNumber, formatPercent } from '../utils/format';
 import '../styles/MarketData.css';
 
 const MarketData: React.FC = () => {
-  const [metrics, setMetrics] = useState<MarketMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { metrics, loading, currency, lastUpdated } = useMarket();
 
-  useEffect(() => {
-    const getMetrics = async () => {
-      const data = await fetchMarketMetrics();
-      setMetrics(data);
-      setLoading(false);
-    };
-    getMetrics();
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-    return `$${value.toLocaleString()}`;
-  };
-
-  if (loading) {
-    return <div className="market-data-panel loading">Loading Market Data...</div>;
+  if (loading && !metrics) {
+    return (
+      <section className="market-data-panel market-data-skeleton" aria-label="Loading global market data">
+        <div className="skeleton-line skeleton-title" />
+        <div className="metrics-grid">
+          {Array.from({ length: 6 }).map((_, index) => <div className="metric-card skeleton-card" key={index} />)}
+        </div>
+      </section>
+    );
   }
 
-  if (!metrics) {
-    return <div className="market-data-panel loading error">Market data temporarily unavailable.</div>;
-  }
+  if (!metrics) return null;
+
+  const metricItems = [
+    { label: 'Total Market Cap', value: formatCompactCurrency(metrics.totalMarketCap, currency), icon: Coins },
+    { label: '24h Volume', value: formatCompactCurrency(metrics.totalVolume24h, currency), icon: BarChart3 },
+    {
+      label: 'Market Cap (24h)',
+      value: formatPercent(metrics.marketCapChange24h),
+      icon: TrendingUp,
+      tone: metrics.marketCapChange24h >= 0 ? 'up' : 'down',
+    },
+    { label: 'BTC Dominance', value: formatPercent(metrics.bitcoinDominance, false), icon: Bitcoin },
+    { label: 'Active Assets', value: formatNumber(metrics.activeCryptocurrencies), icon: Activity },
+    { label: 'Tracked Markets', value: formatNumber(metrics.trackedMarkets), icon: Building2 },
+  ];
 
   return (
-    <div className="market-data-panel">
-      <h3 className="panel-title">Global Market Overview</h3>
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <span className="metric-label">Spot Vol (24h)</span>
-          <span className="metric-value">{formatCurrency(metrics.spotVolume24h)}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Futures Vol (24h)</span>
-          <span className="metric-value">{formatCurrency(metrics.futuresVolume24h)}</span>
-        </div>
-        <div className="metric-card">
-          <span className="metric-label">Open Interest</span>
-          <span className="metric-value">{formatCurrency(metrics.openInterest)}</span>
-        </div>
-        <div className="metric-card liq-card">
-          <span className="metric-label">Liq. Longs (24h)</span>
-          <span className="metric-value down">{formatCurrency(metrics.longLiquidations24h)}</span>
-        </div>
-        <div className="metric-card liq-card">
-          <span className="metric-label">Liq. Shorts (24h)</span>
-          <span className="metric-value up">{formatCurrency(metrics.shortLiquidations24h)}</span>
-        </div>
+    <section className="market-data-panel" aria-labelledby="market-overview-title">
+      <div className="panel-heading-row">
+        <h2 className="panel-title" id="market-overview-title">Global Market Overview</h2>
+        <span className="data-timestamp">CoinGecko · {formatDateTime(lastUpdated ?? metrics.updatedAt)}</span>
       </div>
-    </div>
+      <div className="metrics-grid">
+        {metricItems.map(({ label, value, icon: Icon, tone }) => (
+          <div className="metric-card" key={label}>
+            <span className="metric-icon" aria-hidden="true"><Icon size={15} /></span>
+            <span className="metric-label">{label}</span>
+            <span className={`metric-value ${tone ?? ''}`}>{value}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 };
 

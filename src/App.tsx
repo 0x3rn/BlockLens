@@ -1,239 +1,57 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import { Link, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import CoinTable from './components/CoinTable';
-import MarketData from './components/MarketData';
-import CoinDetailPage from './components/CoinDetail';
-import { fetchMarketData } from './services/api';
-import { useWatchlist } from './hooks/useWatchlist';
-import { Coin } from './types/crypto';
-import { BarChart3, Briefcase, Sparkles, Info } from 'lucide-react';
 import './styles/App.css';
 
-const HomePage: React.FC<{
-  coins: Coin[];
-  watchlist: string[];
-  toggleWatchlist: (id: string) => void;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-}> = ({ coins, watchlist, toggleWatchlist, activeTab, setActiveTab }) => {
-  const navigate = useNavigate();
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const MarketsPage = lazy(() => import('./pages/MarketsPage'));
+const AnalysisPage = lazy(() => import('./pages/AnalysisPage'));
+const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
+const ComparePage = lazy(() => import('./pages/ComparePage'));
+const CoinDetailPage = lazy(() => import('./components/CoinDetail'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-  const handleNavigateToCoin = useCallback((coinId: string) => {
-    navigate(`/coin/${coinId}`);
-  }, [navigate]);
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }); }, [pathname]);
+  return null;
+};
 
-  const renderDashboard = () => (
-    <main className="app-container app-container--wide">
-      <MarketData />
-      <div className="coin-table-prompt">
-        <div className="prompt-icon-wrap">
-          <Info size={20} className="prompt-icon" />
-        </div>
-        <span>Select a coin to see more details and get AI trading analysis</span>
-      </div>
-      <div className="full-width-table">
-        <CoinTable
-          coins={coins}
-          watchlist={watchlist}
-          onToggleWatchlist={toggleWatchlist}
-        />
-      </div>
-    </main>
-  );
+const PageLoader: React.FC = () => (
+  <main className="app-container page-stack"><div className="route-loader" role="status"><span /> Loading workspace…</div></main>
+);
 
-  const renderAIAnalysis = () => (
-    <main className="app-container app-container--wide">
-      <div className="markets-header">
-        <div className="markets-title-wrap">
-          <div className="markets-icon portfolio-icon">
-            <Sparkles size={28} />
-          </div>
-          <div>
-            <h2>AI Trading Analysis</h2>
-            <p>Select a coin below to view detailed AI-powered futures trading insights</p>
-          </div>
-        </div>
-      </div>
-      <div className="coin-table-prompt">
-        <div className="prompt-icon-wrap">
-          <Info size={20} className="prompt-icon" />
-        </div>
-        <span>Select a coin to see more details and get AI trading analysis</span>
-      </div>
-      <div className="full-width-table">
-        <CoinTable
-          coins={coins}
-          watchlist={watchlist}
-          onToggleWatchlist={toggleWatchlist}
-        />
-      </div>
-    </main>
-  );
-
-  const renderMarkets = () => (
-    <main className="app-container app-container--wide">
-      <div className="markets-header">
-        <div className="markets-title-wrap">
-          <BarChart3 size={28} className="markets-icon" />
-          <div>
-            <h2>Markets</h2>
-            <p>Top 100 cryptocurrencies by market cap</p>
-          </div>
-        </div>
-        <div className="markets-stats">
-          <div className="markets-stat-item">
-            <span className="stat-label">Total Coins</span>
-            <span className="stat-value">{coins.length}</span>
-          </div>
-          <div className="markets-stat-item">
-            <span className="stat-label">Watchlist</span>
-            <span className="stat-value accent">{watchlist.length}</span>
-          </div>
-        </div>
-      </div>
-      <div className="coin-table-prompt">
-        <div className="prompt-icon-wrap">
-          <Info size={20} className="prompt-icon" />
-        </div>
-        <span>Select a coin to see more details and get AI trading analysis</span>
-      </div>
-      <div className="full-width-table">
-        <CoinTable
-          coins={coins}
-          watchlist={watchlist}
-          onToggleWatchlist={toggleWatchlist}
-        />
-      </div>
-    </main>
-  );
-
-  const renderWatchlist = () => {
-    const watchlistCoins = coins.filter(c => watchlist.includes(c.id));
-    const totalValue = watchlistCoins.reduce((sum, c) => sum + (c.current_price || 0), 0);
-
-    return (
-      <main className="app-container app-container--wide">
-        <div className="markets-header">
-          <div className="markets-title-wrap">
-            <Briefcase size={28} className="markets-icon portfolio-icon" />
-            <div>
-              <h2>Watchlist</h2>
-              <p>Track your watchlisted assets</p>
-            </div>
-          </div>
-          {watchlistCoins.length > 0 && (
-            <div className="markets-stats">
-              <div className="markets-stat-item">
-                <span className="stat-label">Assets</span>
-                <span className="stat-value">{watchlistCoins.length}</span>
-              </div>
-              <div className="markets-stat-item">
-                <span className="stat-label">Total Value</span>
-                <span className="stat-value accent">${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {watchlistCoins.length === 0 ? (
-          <div className="portfolio-empty">
-            <div className="empty-icon-wrap">
-              <Sparkles size={48} className="empty-icon" />
-            </div>
-            <h3>Your watchlist is empty</h3>
-            <p>Add coins to your watchlist by clicking the star icon on any coin in the Dashboard or Markets tab. Your selected assets and their total value will appear here.</p>
-            <button className="portfolio-cta" onClick={() => setActiveTab('markets')}>
-              Browse Markets
-            </button>
-          </div>
-        ) : (
-          <div className="portfolio-grid">
-            {watchlistCoins.map(coin => (
-              <div key={coin.id} className="portfolio-card" onClick={() => handleNavigateToCoin(coin.id)}>
-                <div className="portfolio-card-top">
-                  <img src={coin.image} alt={coin.name} className="portfolio-coin-img" />
-                  <div className="portfolio-coin-info">
-                    <span className="portfolio-coin-name">{coin.name}</span>
-                    <span className="portfolio-coin-symbol">{coin.symbol?.toUpperCase()}</span>
-                  </div>
-                  <div className="portfolio-rank">#{coin.market_cap_rank}</div>
-                </div>
-                <div className="portfolio-card-price">
-                  <span className="portfolio-price">${coin.current_price?.toLocaleString()}</span>
-                  <span className={`portfolio-change ${(coin.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
-                    {(coin.price_change_percentage_24h ?? 0) >= 0 ? '▲' : '▼'} {Math.abs(coin.price_change_percentage_24h ?? 0).toFixed(2)}%
-                  </span>
-                </div>
-                <div className="portfolio-card-marketcap">
-                  <span>Market Cap</span>
-                  <span>${(coin.market_cap || 0).toLocaleString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-    );
-  };
-
-  return (
-    <div className="dashboard-root">
-      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
-      {activeTab === 'dashboard' && renderDashboard()}
-      {activeTab === 'ai' && renderAIAnalysis()}
-      {activeTab === 'markets' && renderMarkets()}
-      {activeTab === 'watchlist' && renderWatchlist()}
-      <footer className="site-footer">
-        <p>Made with ❤️ by <a href="https://somto.xyz" target="_blank" rel="noopener noreferrer">Somto Ike</a></p>
-      </footer>
+const AppShell: React.FC = () => (
+  <div className="dashboard-root">
+    <a className="skip-link" href="#main-content">Skip to content</a>
+    <ScrollToTop />
+    <Navbar />
+    <div id="main-content">
+      <Suspense fallback={<PageLoader />}><Outlet /></Suspense>
     </div>
-  );
-};
+    <footer className="site-footer">
+      <p><strong>BlockLens</strong> is an educational market workspace. Data may be delayed and is not financial advice.</p>
+      <p>Market data by <a href="https://www.coingecko.com/" target="_blank" rel="noreferrer">CoinGecko</a> · Built by <a href="https://somto.xyz" target="_blank" rel="noreferrer">Somto Ike</a> · <Link to="/markets">Markets</Link></p>
+    </footer>
+  </div>
+);
 
-const App: React.FC = () => {
-  const [coins, setCoins] = useState<Coin[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const { watchlist, toggleWatchlist } = useWatchlist();
-
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        const data = await fetchMarketData();
-        setCoins(data);
-      } catch (err) {
-        console.error("Failed to fetch coins", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getData();
-    const interval = setInterval(getData, 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (loading) return <div className="loading">Loading Dashboard...</div>;
-
-  return (
-    <>
-      <Routes>
-        <Route path="/" element={
-          <HomePage
-            coins={coins}
-            watchlist={watchlist}
-            toggleWatchlist={toggleWatchlist}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-          />
-        } />
-        <Route path="/coin/:coinId" element={<CoinDetailPage />} />
-      </Routes>
-      <Analytics />
-    </>
-  );
-};
+const App: React.FC = () => (
+  <>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="markets" element={<MarketsPage />} />
+        <Route path="analysis" element={<AnalysisPage />} />
+        <Route path="watchlist" element={<PortfolioPage />} />
+        <Route path="compare" element={<ComparePage />} />
+        <Route path="coin/:coinId" element={<CoinDetailPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+    <Analytics />
+  </>
+);
 
 export default App;

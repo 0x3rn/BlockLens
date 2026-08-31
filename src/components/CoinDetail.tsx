@@ -1,272 +1,170 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
-import { ArrowLeft, Bot, AlertTriangle, TrendingUp, Activity, Layers } from 'lucide-react';
-import { fetchCoinDetail, fetchCoinHistory, generateAIAnalysis } from '../services/api';
-import { CoinDetail as CoinDetailType } from '../types/crypto';
+import React, { useEffect, useRef, useState } from 'react';
+import { Activity, ArrowLeft, Bot, ExternalLink, Layers, Star, TrendingUp, WalletCards } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { DataState } from './DataState';
 import PriceChart from './PriceChart';
+import { useMarket } from '../context/MarketContext';
+import { fetchCoinDetail, getApiErrorMessage } from '../services/api';
+import { usePageMeta } from '../hooks/usePageMeta';
+import { CoinDetail as CoinDetailType } from '../types/crypto';
+import { formatCompactCurrency, formatCurrency, formatDate, formatNumber, formatPercent } from '../utils/format';
 import '../styles/CoinDetail.css';
+
+const plainText = (value = ''): string => value
+  .replace(/<[^>]+>/g, ' ')
+  .replace(/&amp;/g, '&')
+  .replace(/&quot;/g, '"')
+  .replace(/&#39;/g, "'")
+  .replace(/\s+/g, ' ')
+  .trim();
 
 const CoinDetailPage: React.FC = () => {
   const { coinId } = useParams<{ coinId: string }>();
-  const navigate = useNavigate();
-  const aiSectionRef = useRef<HTMLDivElement>(null);
+  const { currency, watchlist, toggleWatchlist } = useMarket();
   const [coin, setCoin] = useState<CoinDetailType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [analysis, setAnalysis] = useState<string>('');
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  // Pre-fetch chart data for AI analysis
-  const chartData7dRef = useRef<{ timestamp: number; price: number }[]>([]);
-  const chartData30dRef = useRef<{ timestamp: number; price: number }[]>([]);
-  const chartData1yRef = useRef<{ timestamp: number; price: number }[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const requestVersion = useRef(0);
+  usePageMeta(
+    coin ? `${coin.name} Price & Market Data` : 'Asset Profile',
+    coin
+      ? `Inspect ${coin.name} price history, market statistics, supply, and scenario-based research tools.`
+      : 'Inspect crypto asset price history, market statistics, supply, and research tools.',
+  );
 
   useEffect(() => {
-    if (!coinId) return;
-    const loadChartData = async () => {
-      try {
-        const [data7d, data30d, data1y] = await Promise.all([
-          fetchCoinHistory(coinId, 7),
-          fetchCoinHistory(coinId, 30),
-          fetchCoinHistory(coinId, 365),
-        ]);
-        chartData7dRef.current = data7d;
-        chartData30dRef.current = data30d;
-        chartData1yRef.current = data1y;
-      } catch (err) {
-        console.error('Failed to pre-fetch chart data for AI', err);
-      }
-    };
-    loadChartData();
-  }, [coinId]);
-
-  const scrollToAIAnalysis = () => {
-    aiSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  useEffect(() => {
-    if (!coinId) return;
-    const loadCoin = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchCoinDetail(coinId);
-        setCoin(data);
-      } catch (err) {
-        console.error('Failed to fetch coin detail', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadCoin();
-  }, [coinId]);
-
-  const handleAnalyze = useCallback(async () => {
-    if (!coin) return;
-    setAnalysisLoading(true);
-    setAnalysis('');
-    try {
-      const result = await generateAIAnalysis(
-        coin.name,
-        coin.market_data.current_price.usd,
-        coin.market_data.price_change_percentage_24h,
-        chartData7dRef.current,
-        chartData30dRef.current,
-        chartData1yRef.current
-      );
-      setAnalysis(result);
-    } catch (err) {
-      setAnalysis('Error generating analysis. Please try again later.');
-    } finally {
-      setAnalysisLoading(false);
+    if (!coinId) {
+      setLoading(false);
+      setError('No asset was specified.');
+      return;
     }
-  }, [coin]);
 
-  const formatCurrency = (value: number | null | undefined): string => {
-    if (value == null) return 'N/A';
-    if (value >= 1e12) return `$${(value / 1e12).toFixed(2)}T`;
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+    const version = ++requestVersion.current;
+    setLoading(true);
+    setError(null);
+    fetchCoinDetail(coinId)
+      .then((data) => {
+        if (version !== requestVersion.current) return;
+        setCoin(data);
+      })
+      .catch((loadError) => {
+        if (version === requestVersion.current) setError(getApiErrorMessage(loadError));
+      })
+      .finally(() => {
+        if (version === requestVersion.current) setLoading(false);
+      });
 
-  const formatPercent = (value: number | null | undefined): { text: string; className: string } => {
-    if (value == null) return { text: 'N/A', className: '' };
-    const isUp = value >= 0;
-    return {
-      text: `${isUp ? '+' : ''}${value.toFixed(2)}%`,
-      className: isUp ? 'up' : 'down',
-    };
-  };
-
-  const formatDate = (dateStr: string): string => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
+    return () => { requestVersion.current += 1; };
+  }, [coinId]);
 
   if (loading) {
-    return <div className="loading">Loading Coin Data...</div>;
+    return <main className="app-container page-stack"><div className="detail-skeleton" aria-label="Loading asset profile" /></main>;
   }
 
-  if (!coin) {
+  if (error || !coin || !coinId) {
     return (
-      <div className="coin-detail-wrapper">
-        <div className="coin-detail-container">
-          <button className="back-btn" onClick={() => navigate('/')}>
-            <ArrowLeft size={18} /> Back to Dashboard
-          </button>
-          <div className="loading">Coin not found.</div>
-        </div>
-      </div>
+      <main className="app-container page-stack">
+        <Link className="back-link" to="/markets"><ArrowLeft size={16} /> Back to markets</Link>
+        <DataState title="Asset profile unavailable" message={error ?? 'This asset could not be found.'} />
+      </main>
     );
   }
 
-  const { market_data } = coin;
-
-  const priceChanges = [
-    { label: '24 Hours', value: market_data.price_change_percentage_24h },
-    { label: '7 Days', value: market_data.price_change_percentage_7d },
-    { label: '30 Days', value: market_data.price_change_percentage_30d },
-    { label: '90 Days', value: market_data.price_change_percentage_90d },
-    { label: '180 Days', value: market_data.price_change_percentage_180d },
-    { label: '1 Year', value: market_data.price_change_percentage_1y },
-  ];
-
-  const supplyInfo = [
-    { label: 'Circulating Supply', value: market_data.circulating_supply },
-    { label: 'Total Supply', value: market_data.total_supply },
-    { label: 'Max Supply', value: market_data.max_supply },
-  ];
-
+  const market = coin.market_data;
+  const description = plainText(coin.description?.en);
+  const homepage = coin.links?.homepage?.find((url) => /^https?:\/\//i.test(url));
+  const isWatched = watchlist.includes(coin.id);
+  const changes = [
+    ['24 hours', market.price_change_percentage_24h],
+    ['7 days', market.price_change_percentage_7d],
+    ['30 days', market.price_change_percentage_30d],
+    ['90 days', market.price_change_percentage_90d],
+    ['180 days', market.price_change_percentage_180d],
+    ['1 year', market.price_change_percentage_1y],
+  ] as const;
   const highlights = [
-    { label: 'Market Cap Rank', value: `#${market_data.market_cap_rank}` },
-    { label: 'Market Cap', value: formatCurrency(market_data.market_cap.usd) },
-    { label: '24h Volume', value: formatCurrency(market_data.total_volume.usd) },
-    { label: 'All-Time High', value: formatCurrency(market_data.ath.usd) },
-    { label: 'ATH Date', value: formatDate(market_data.ath_date.usd) },
-    { label: 'All-Time Low', value: formatCurrency(market_data.atl.usd) },
-    { label: 'ATL Date', value: formatDate(market_data.atl_date.usd) },
-  ];
+    ['Market cap', formatCompactCurrency(market.market_cap[currency], currency)],
+    ['24h volume', formatCompactCurrency(market.total_volume[currency], currency)],
+    ['24h high', formatCurrency(market.high_24h[currency], currency)],
+    ['24h low', formatCurrency(market.low_24h[currency], currency)],
+    ['All-time high', formatCurrency(market.ath[currency], currency)],
+    ['ATH date', formatDate(market.ath_date[currency])],
+    ['All-time low', formatCurrency(market.atl[currency], currency)],
+    ['ATL date', formatDate(market.atl_date[currency])],
+  ] as const;
+  const supply = [
+    ['Circulating supply', market.circulating_supply],
+    ['Total supply', market.total_supply],
+    ['Maximum supply', market.max_supply],
+  ] as const;
 
   return (
-    <div className="coin-detail-wrapper">
-      <div className="coin-detail-container">
-        <button className="back-btn" onClick={() => navigate('/')}>
-          <ArrowLeft size={18} /> Back to Dashboard
-        </button>
-
-        {/* Top Nav Links */}
-        <div className="coin-detail-nav">
-          <button className="ai-nav-link" onClick={scrollToAIAnalysis}>
-            <Bot size={16} />
-            AI-Analysis
-          </button>
-        </div>
-
-        {/* Header */}
-        <div className="coin-detail-header">
-          <div className="coin-detail-identity">
-            <img src={coin.image.large} alt={coin.name} className="coin-detail-img" />
-            <div>
-              <h1>{coin.name} <span className="coin-detail-symbol">{coin.symbol.toUpperCase()}</span></h1>
-            </div>
-          </div>
-          <div className="coin-detail-price">
-            <span className="detail-current-price">
-              {formatCurrency(market_data.current_price.usd)}
-            </span>
-            <span className={`detail-price-change ${formatPercent(market_data.price_change_percentage_24h).className}`}>
-              {formatPercent(market_data.price_change_percentage_24h).text}
-            </span>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <div className="coin-detail-chart-section">
-          <PriceChart coinId={coinId!} />
-        </div>
-
-        {/* Price Changes Grid */}
-        <div className="coin-detail-section">
-          <div className="section-header">
-            <TrendingUp size={18} className="section-icon" />
-            <h2>Price Change Percentages</h2>
-          </div>
-          <div className="price-changes-grid">
-            {priceChanges.map((pc) => {
-              const fmt = formatPercent(pc.value);
-              return (
-                <div key={pc.label} className="price-change-card">
-                  <span className="pc-label">{pc.label}</span>
-                  <span className={`pc-value ${fmt.className}`}>{fmt.text}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Coin Highlights */}
-        <div className="coin-detail-section">
-          <div className="section-header">
-            <Activity size={18} className="section-icon" />
-            <h2>Coin Highlights</h2>
-          </div>
-          <div className="highlights-grid">
-            {highlights.map((h) => (
-              <div key={h.label} className="highlight-card">
-                <span className="highlight-label">{h.label}</span>
-                <span className="highlight-value">{h.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Supply Info */}
-        <div className="coin-detail-section">
-          <div className="section-header">
-            <Layers size={18} className="section-icon" />
-            <h2>Supply Information</h2>
-          </div>
-          <div className="supply-grid">
-            {supplyInfo.map((s) => (
-              <div key={s.label} className="supply-card">
-                <span className="supply-label">{s.label}</span>
-                <span className="supply-value">
-                  {s.value != null ? s.value.toLocaleString() : '∞'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* AI Analysis */}
-        <div className="coin-detail-section" ref={aiSectionRef}>
-          <div className="section-header">
-            <Bot size={18} className="section-icon ai-icon" />
-            <h2>AI Trading Analysis</h2>
-          </div>
-          <div className="ai-analysis-card">
-            <div className="disclaimer-alert">
-              <AlertTriangle size={16} className="warning-icon" />
-              <p><strong>Disclaimer:</strong> AI suggestions are for informational purposes only and do not constitute financial advice. Trading crypto involves significant risk.</p>
-            </div>
-            <div className="ai-action">
-              <p>Ready to analyze <strong>{coin.name}</strong> based on current trends and sentiment.</p>
-              <button className="analyze-btn" onClick={handleAnalyze} disabled={analysisLoading}>
-                {analysisLoading ? 'Analyzing...' : 'Generate AI Analysis'}
-              </button>
-            </div>
-            {analysis && (
-              <div className="ai-result">
-                <h4>Analysis Result:</h4>
-                <ReactMarkdown>{analysis}</ReactMarkdown>
-              </div>
-            )}
-          </div>
-        </div>
+    <main className="app-container page-stack coin-detail-container">
+      <div className="detail-topline">
+        <Link className="back-link" to="/markets"><ArrowLeft size={16} /> Back to markets</Link>
+        <span className="data-source-label">Market data by CoinGecko</span>
       </div>
-    </div>
+
+      <header className="coin-detail-header">
+        <div className="coin-detail-identity">
+          <img src={coin.image.large} alt="" className="coin-detail-img" />
+          <div>
+            <span className="eyebrow">Market cap rank #{market.market_cap_rank}</span>
+            <h1>{coin.name} <span className="coin-detail-symbol">{coin.symbol.toUpperCase()}</span></h1>
+            <div className="detail-meta-line">
+              <span>Spot market</span>
+              {coin.last_updated && <span>Updated {formatDate(coin.last_updated)}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="coin-detail-price">
+          <span className="detail-current-price">{formatCurrency(market.current_price[currency], currency)}</span>
+          <span className={`detail-price-change ${(market.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>
+            {formatPercent(market.price_change_percentage_24h)} · 24h
+          </span>
+        </div>
+        <div className="detail-actions">
+          <button type="button" className={`secondary-button ${isWatched ? 'is-active' : ''}`} onClick={() => toggleWatchlist(coin.id)} aria-pressed={isWatched}>
+            <Star size={16} fill={isWatched ? 'currentColor' : 'none'} /> {isWatched ? 'Watching' : 'Watch asset'}
+          </button>
+          <Link className="secondary-button" to={`/watchlist?coin=${coin.id}`}><WalletCards size={16} /> Add position</Link>
+          <Link className="primary-button" to={`/analysis?coin=${coin.id}`}><Bot size={16} /> Create AI brief</Link>
+        </div>
+      </header>
+
+      <section className="coin-detail-chart-section">
+        <PriceChart coinId={coin.id} coinName={coin.name} currency={currency} />
+      </section>
+
+      <section className="coin-detail-section" aria-labelledby="changes-title">
+        <div className="section-heading compact-heading"><div><span className="eyebrow"><TrendingUp size={13} /> Momentum</span><h2 id="changes-title">Price performance</h2></div></div>
+        <div className="price-changes-grid">
+          {changes.map(([label, value]) => <div className="price-change-card" key={label}><span>{label}</span><strong className={(value ?? 0) >= 0 ? 'text-up' : 'text-down'}>{formatPercent(value)}</strong></div>)}
+        </div>
+      </section>
+
+      <section className="coin-detail-section" aria-labelledby="highlights-title">
+        <div className="section-heading compact-heading"><div><span className="eyebrow"><Activity size={13} /> Current profile</span><h2 id="highlights-title">Market highlights</h2></div></div>
+        <dl className="highlights-grid">
+          {highlights.map(([label, value]) => <div className="highlight-card" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+        </dl>
+      </section>
+
+      <section className="coin-detail-section" aria-labelledby="supply-title">
+        <div className="section-heading compact-heading"><div><span className="eyebrow"><Layers size={13} /> Token supply</span><h2 id="supply-title">Supply information</h2></div></div>
+        <dl className="supply-grid">
+          {supply.map(([label, value]) => <div className="supply-card" key={label}><dt>{label}</dt><dd>{value == null ? 'No fixed limit reported' : formatNumber(value)}</dd></div>)}
+        </dl>
+      </section>
+
+      {(description || homepage) && (
+        <section className="coin-about coin-detail-section" aria-labelledby="about-title">
+          <div className="section-heading compact-heading"><div><span className="eyebrow">Asset overview</span><h2 id="about-title">About {coin.name}</h2></div></div>
+          {description && <p>{description}</p>}
+          {homepage && <a className="text-link" href={homepage} target="_blank" rel="noreferrer">Official website <ExternalLink size={14} /></a>}
+        </section>
+      )}
+    </main>
   );
 };
 
