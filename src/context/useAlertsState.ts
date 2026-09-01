@@ -20,15 +20,23 @@ const isAlerts = (value: unknown): value is PriceAlert[] => (
       && typeof alert.createdAt === 'string';
   })
 );
+const cloudOwnerKey = 'blocklens_alerts_cloud_user';
 
 export const useAlertsState = (activeCurrency: CurrencyCode) => {
   const { user } = useAuth();
+  const client = supabase;
   const [alerts, setAlerts] = usePersistentState<PriceAlert[]>(
     'blocklens_alerts',
     [],
     isAlerts,
   );
   const cloudReady = useRef(false);
+  const alertsRef = useRef(alerts);
+  const pendingChanges = useRef(new Map<string, PriceAlert | null>());
+
+  useEffect(() => {
+    alertsRef.current = alerts;
+  }, [alerts]);
 
   const createAlertId = () => {
     if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
@@ -42,11 +50,17 @@ export const useAlertsState = (activeCurrency: CurrencyCode) => {
   useEffect(() => {
     let cancelled = false;
     cloudReady.current = false;
-    if (!supabase || !user) return undefined;
-    void supabase.from('price_alerts').select('id, coin_id, condition, threshold, currency, created_at, triggered_at').eq('user_id', user.id).order('created_at', { ascending: true })
-      .then(({ data }) => {
-        if (cancelled) return;
-        setAlerts((data ?? []).map((row) => ({
+    pendingChanges.current.clear();
+    if (!client || !user) return undefined;
+    const loadCloudAlerts = async () => {
+      const { data, error } = await client
+        .from('price_alerts')
+        .select('id, coin_id, condition, threshold, currency, created_at, triggered_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+      if (cancelled || error) return;
+
+      const remoteAlerts = (data ?? []).map((row) => ({
           id: row.id,
           coinId: row.coin_id,
           condition: row.condition as AlertCondition,
@@ -54,24 +68,64 @@ export const useAlertsState = (activeCurrency: CurrencyCode) => {
           currency: row.currency as CurrencyCode,
           createdAt: row.created_at,
           ...(row.triggered_at ? { triggeredAt: row.triggered_at } : {}),
-        })));
-        cloudReady.current = true;
+      }));
+      const nextById = new Map<string, PriceAlert>();
+      let previousOwner: string | null = null;
+      try { previousOwner = window.localStorage.getItem(cloudOwnerKey); } catch { /* Storage can be unavailable. */ }
+      const canMigrateLocal = !previousOwner || previousOwner === user.id;
+      (remoteAlerts.length > 0 || !canMigrateLocal ? remoteAlerts : alertsRef.current).forEach((alert) => nextById.set(alert.id, alert));
+      pendingChanges.current.forEach((alert, id) => {
+        if (alert) nextById.set(id, alert);
+        else nextById.delete(id);
       });
+      const resolvedAlerts = [...nextById.values()];
+      alertsRef.current = resolvedAlerts;
+      setAlerts(resolvedAlerts);
+      cloudReady.current = true;
+      try { window.localStorage.setItem(cloudOwnerKey, user.id); } catch { /* Storage can be unavailable. */ }
+
+      const resolvedIds = new Set(resolvedAlerts.map((alert) => alert.id));
+      const removedIds = remoteAlerts.filter((alert) => !resolvedIds.has(alert.id)).map((alert) => alert.id);
+      if (removedIds.length > 0) {
+        await client.from('price_alerts').delete().eq('user_id', user.id).in('id', removedIds);
+      }
+      if (resolvedAlerts.length > 0) {
+        await client.from('price_alerts').upsert(resolvedAlerts.map((alert) => ({
+          id: alert.id,
+          user_id: user.id,
+          coin_id: alert.coinId,
+          condition: alert.condition,
+          threshold: alert.threshold,
+          currency: alert.currency,
+          created_at: alert.createdAt,
+          triggered_at: alert.triggeredAt ?? null,
+        })), { onConflict: 'id' });
+      }
+    };
+
+    void loadCloudAlerts();
     return () => { cancelled = true; };
   }, [setAlerts, user]);
 
   const addAlert = useCallback((coinId: string, condition: AlertCondition, threshold: number, currency: PriceAlert['currency']) => {
     const id = createAlertId();
     const createdAt = new Date().toISOString();
-    setAlerts((previous) => [...previous.slice(-99), { id, coinId, condition, threshold, currency, createdAt }]);
-    if (supabase && user && cloudReady.current) {
-      void supabase.from('price_alerts').insert({ id, user_id: user.id, coin_id: coinId, condition, threshold, currency, created_at: createdAt });
+    const nextAlert = { id, coinId, condition, threshold, currency, createdAt };
+    alertsRef.current = [...alertsRef.current.slice(-99), nextAlert];
+    setAlerts(alertsRef.current);
+    if (client && user) {
+      if (!cloudReady.current) pendingChanges.current.set(id, nextAlert);
+      else void client.from('price_alerts').insert({ id, user_id: user.id, coin_id: coinId, condition, threshold, currency, created_at: createdAt });
     }
   }, [setAlerts, user]);
 
   const removeAlert = useCallback((id: string) => {
-    setAlerts((previous) => previous.filter((alert) => alert.id !== id));
-    if (supabase && user && cloudReady.current) void supabase.from('price_alerts').delete().eq('user_id', user.id).eq('id', id);
+    alertsRef.current = alertsRef.current.filter((alert) => alert.id !== id);
+    setAlerts(alertsRef.current);
+    if (client && user) {
+      if (!cloudReady.current) pendingChanges.current.set(id, null);
+      else void client.from('price_alerts').delete().eq('user_id', user.id).eq('id', id);
+    }
   }, [setAlerts, user]);
 
   const evaluateAlerts = useCallback((nextCoins: Coin[]) => {
