@@ -20,7 +20,8 @@ const VOLUME_TOP = 291;
 const VOLUME_BOTTOM = 337;
 // Match the current 30m candle proportions across every interval and zoom level.
 const CANDLE_BODY_WIDTH = 10;
-const STANDARD_CANDLE_COUNT = 24;
+const DESKTOP_CANDLE_COUNT = 48;
+const MOBILE_CANDLE_COUNT = 24;
 
 const CandlestickChart: React.FC<CandlestickChartProps> = ({
   data,
@@ -55,13 +56,13 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   }, [data, interval]);
 
   const visibleData = useMemo(() => {
-    // Every interval defaults to 24 candles. The interval itself determines the
-    // span: 5m covers two hours, 1h covers one day, 4h covers four days,
-    // 12h covers twelve days, and 24h covers twenty-four days.
-    if (fullRange || data.length <= STANDARD_CANDLE_COUNT) return data;
-    const visibleCount = Math.max(6, Math.round(STANDARD_CANDLE_COUNT / zoom));
+    // Desktop defaults to 48 candles and mobile to 24. The interval itself
+    // determines the span covered by those candles.
+    const windowSize = chartWidth < 520 ? MOBILE_CANDLE_COUNT : DESKTOP_CANDLE_COUNT;
+    if (fullRange || data.length <= windowSize) return data;
+    const visibleCount = Math.max(6, Math.round(windowSize / zoom));
     return data.slice(-Math.min(data.length, visibleCount));
-  }, [data, fullRange, zoom]);
+  }, [data, fullRange, zoom, chartWidth]);
 
   const plotWidth = Math.max(1, chartWidth - left - RIGHT);
   const prices = visibleData.flatMap((candle) => [candle.high, candle.low]).filter(Number.isFinite);

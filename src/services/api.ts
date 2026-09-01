@@ -112,10 +112,10 @@ export const fetchCoinHistory = async (
     '5m': 1,
     '15m': 1,
     '30m': 1,
-    '1h': 1,
-    '4h': 4,
-    '12h': 12,
-    '24h': 24,
+    '1h': 2,
+    '4h': 8,
+    '12h': 24,
+    '24h': 48,
   };
 
 export const fetchCoinCandles = async (

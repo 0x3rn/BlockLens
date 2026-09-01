@@ -43,7 +43,7 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
 
       <div className="lens-stage" aria-label={snapshot.lead ? `${snapshot.lead.name} market snapshot` : 'Waiting for market data'}>
         <span className="lens-coordinate top left">BL / MARKET 01</span>
-        <span className="lens-coordinate top right">TOP 5 · NON-STABLE · 24H</span>
+        <span className="lens-coordinate top right">TOP 5 Assets · 24H</span>
         <div className="lens-axis horizontal" aria-hidden="true" />
         <div className="lens-axis vertical" aria-hidden="true" />
         <div className="lens-ring lens-ring-outer" aria-hidden="true" />
@@ -51,7 +51,8 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
         <div className="lens-scan" aria-hidden="true" />
 
         {snapshot.orbit.map((coin, index) => (
-          <span
+          <a
+            href={`/coin/${coin.id}`}
             className={`lens-orbit-token token-${index + 1}`}
             key={coin.id}
             aria-label={`${coin.name}, ${formatCurrency(coin.current_price, currency)}, ${formatPercent(coin.price_change_percentage_24h)} over 24 hours`}
@@ -64,28 +65,24 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
                 {coin.symbol.toUpperCase()} · {formatPercent(coin.price_change_percentage_24h)}
               </small>
             </span>
-          </span>
+          </a>
         ))}
 
-        <div className="lens-core">
-          {snapshot.lead ? (
-            <>
-              <img src={snapshot.lead.image} alt="" />
-              <span>{snapshot.lead.symbol.toUpperCase()} / {currency.toUpperCase()}</span>
-              <strong>{formatCurrency(snapshot.lead.current_price, currency)}</strong>
-              <small className={(snapshot.lead.price_change_percentage_24h ?? 0) >= 0 ? 'text-up' : 'text-down'}>
-                {formatPercent(snapshot.lead.price_change_percentage_24h)} · 24H
-              </small>
-            </>
-          ) : (
-            <><Crosshair size={23} aria-hidden="true" /><strong>Loading market</strong><small>Market feed pending</small></>
-          )}
-        </div>
+        {snapshot.lead ? <a className="lens-core" href={`/coin/${snapshot.lead.id}`} aria-label={`Open ${snapshot.lead.name} asset page`}>
+          <img src={snapshot.lead.image} alt="" />
+          <span>{snapshot.lead.symbol.toUpperCase()} / {currency.toUpperCase()}</span>
+          <strong>{formatCurrency(snapshot.lead.current_price, currency)}</strong>
+          <small className={(snapshot.lead.price_change_percentage_24h ?? 0) >= 0 ? 'text-up' : 'text-down'}>
+            {formatPercent(snapshot.lead.price_change_percentage_24h)} · 24H
+          </small>
+        </a> : <div className="lens-core">
+          <Crosshair size={23} aria-hidden="true" /><strong>Loading market</strong><small>Market feed pending</small>
+        </div>}
       </div>
 
       <div className="lens-readouts">
         <div>
-          <span>Non-stable asset breadth</span>
+          <span>Asset breadth</span>
           <strong>{snapshot.lead ? <>{snapshot.gainers}<small> up</small> · {snapshot.losers}<small> down</small> · {snapshot.flat}<small> flat</small></> : 'N/A'}</strong>
         </div>
         <div>
