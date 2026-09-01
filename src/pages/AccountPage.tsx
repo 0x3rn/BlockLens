@@ -49,8 +49,8 @@ const AccountPage: React.FC = () => {
       {!configured ? (
         <section className="account-card account-setup-card">
           <Cloud size={25} aria-hidden="true" />
-          <div><span className="eyebrow">Supabase is ready to connect</span><h2>Add your project variables</h2><p>Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in <code>.env.local</code> and redeploy. Until then, BlockLens safely keeps data on this device.</p></div>
-          <Link className="secondary-button" to="/watchlist">Continue locally <ArrowRight size={15} aria-hidden="true" /></Link>
+          <div><span className="eyebrow">Local mode</span><h2>Keep using BlockLens</h2><p>Your portfolio, watchlist, and alerts are saved on this device. Account sync is unavailable right now.</p></div>
+          <Link className="secondary-button" to="/watchlist">Continue <ArrowRight size={15} aria-hidden="true" /></Link>
         </section>
       ) : loading ? (
         <div className="account-card account-loading" role="status"><span className="route-loader-spinner" /> Loading account</div>

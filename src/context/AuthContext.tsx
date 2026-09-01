@@ -19,8 +19,8 @@ const disabledAuth: AuthContextValue = {
   user: null,
   session: null,
   error: null,
-  signIn: async () => ({ error: 'Account sync is not configured yet.' }),
-  signUp: async () => ({ error: 'Account sync is not configured yet.', needsConfirmation: false }),
+  signIn: async () => ({ error: 'Account sync is unavailable right now.' }),
+  signUp: async () => ({ error: 'Account sync is unavailable right now.', needsConfirmation: false }),
   signOut: async () => ({ error: null }),
 };
 
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
     session,
     error,
     signIn: async (email, password) => {
-      if (!supabase) return { error: 'Account sync is not configured yet.' };
+      if (!supabase) return { error: 'Account sync is unavailable right now.' };
       setError(null);
       const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       const message = result.error ? readableAuthError(result.error.message) : null;
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
       return { error: message };
     },
     signUp: async (email, password, displayName) => {
-      if (!supabase) return { error: 'Account sync is not configured yet.', needsConfirmation: false };
+      if (!supabase) return { error: 'Account sync is unavailable right now.', needsConfirmation: false };
       setError(null);
       const result = await supabase.auth.signUp({
         email: email.trim(),

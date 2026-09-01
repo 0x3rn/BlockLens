@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import { DataState } from './DataState';
 import PriceChart from './PriceChart';
 import { useMarket } from '../context/MarketContext';
+import { useToast } from '../context/ToastContext';
 import { fetchCoinDetail, getApiErrorMessage } from '../services/api';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { CoinDetail as CoinDetailType } from '../types/crypto';
@@ -21,6 +22,7 @@ const plainText = (value = ''): string => value
 const CoinDetailPage: React.FC = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const { currency, watchlist, toggleWatchlist } = useMarket();
+  const { showToast } = useToast();
   const [coin, setCoin] = useState<CoinDetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +126,7 @@ const CoinDetailPage: React.FC = () => {
           </span>
         </div>
         <div className="detail-actions">
-          <button type="button" className={`secondary-button ${isWatched ? 'is-active' : ''}`} onClick={() => toggleWatchlist(coin.id)} aria-pressed={isWatched}>
+          <button type="button" className={`secondary-button ${isWatched ? 'is-active' : ''}`} onClick={() => { toggleWatchlist(coin.id); showToast(`${coin.name} ${isWatched ? 'removed from' : 'added to'} your watchlist.`, isWatched ? 'info' : 'success'); }} aria-pressed={isWatched}>
             <Star size={16} fill={isWatched ? 'currentColor' : 'none'} /> {isWatched ? 'Watching' : 'Watch asset'}
           </button>
           <Link className="secondary-button" to={`/watchlist?coin=${coin.id}`}><WalletCards size={16} /> Add position</Link>

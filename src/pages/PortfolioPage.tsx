@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useMarket } from '../context/MarketContext';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { AlertCondition, CurrencyCode } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
@@ -31,6 +32,7 @@ const PortfolioPage: React.FC = () => {
     removeAlert,
   } = useMarket();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialCoinId = searchParams.get('coin') ?? coins[0]?.id ?? '';
@@ -84,9 +86,12 @@ const PortfolioPage: React.FC = () => {
     const parsedQuantity = Number(quantity);
     const parsedCost = Number(averageCost);
     if (!positionCoinId || !Number.isFinite(parsedQuantity) || parsedQuantity <= 0 || !Number.isFinite(parsedCost) || parsedCost < 0) return;
+    const coinName = coins.find((coin) => coin.id === positionCoinId)?.name ?? positionCoinId;
+    const updating = positions.some((position) => position.coinId === positionCoinId);
     upsertPosition({ coinId: positionCoinId, quantity: parsedQuantity, averageCost: parsedCost, currency });
     setQuantity('');
     setAverageCost('');
+    showToast(`${coinName} position ${updating ? 'updated' : 'added'} to your portfolio.`);
   };
 
   const editPosition = (coinId: string) => {
@@ -98,12 +103,27 @@ const PortfolioPage: React.FC = () => {
     document.getElementById('position-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
+  const handleRemovePosition = (coinId: string) => {
+    const coinName = coins.find((coin) => coin.id === coinId)?.name ?? coinId;
+    removePosition(coinId);
+    showToast(`${coinName} removed from your portfolio.`, 'info');
+  };
+
+  const handleToggleWatchlist = (coinId: string) => {
+    const coin = coins.find((item) => item.id === coinId);
+    const wasWatched = watchlist.includes(coinId);
+    toggleWatchlist(coinId);
+    showToast(`${coin?.name ?? coinId} ${wasWatched ? 'removed from' : 'added to'} your watchlist.`, wasWatched ? 'info' : 'success');
+  };
+
   const submitAlert = (event: FormEvent) => {
     event.preventDefault();
     const parsedThreshold = Number(threshold);
     if (!alertCoinId || !Number.isFinite(parsedThreshold) || parsedThreshold <= 0) return;
     addAlert(alertCoinId, condition, parsedThreshold, currency);
     setThreshold('');
+    const coinName = coins.find((coin) => coin.id === alertCoinId)?.name ?? alertCoinId;
+    showToast(`${coinName} price alert added.`);
   };
 
   const exportPortfolio = () => {
@@ -124,6 +144,7 @@ const PortfolioPage: React.FC = () => {
     link.download = `blocklens-portfolio-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+    showToast('Portfolio CSV exported.', 'info');
   };
 
   const importPortfolio = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -131,6 +152,7 @@ const PortfolioPage: React.FC = () => {
     if (!file) return;
     if (file.size > 250_000) {
       setImportMessage('This CSV is too large. Import a BlockLens export smaller than 250 KB.');
+      showToast('This CSV is too large to import.', 'error');
       event.target.value = '';
       return;
     }
@@ -159,8 +181,10 @@ const PortfolioPage: React.FC = () => {
         }
       });
       setImportMessage(`${imported} position${imported === 1 ? '' : 's'} imported.`);
+      showToast(imported > 0 ? `${imported} position${imported === 1 ? '' : 's'} imported.` : 'No valid positions found in this CSV.', imported > 0 ? 'success' : 'info');
     } catch {
       setImportMessage('This CSV could not be imported. Use a file exported by BlockLens.');
+      showToast('This CSV could not be imported.', 'error');
     } finally {
       event.target.value = '';
     }
@@ -235,7 +259,7 @@ const PortfolioPage: React.FC = () => {
                     <div><span>P&amp;L</span><strong className={(pnl ?? 0) >= 0 ? 'text-up' : 'text-down'}>{pnl == null ? 'N/A' : formatCurrency(pnl, currency)}</strong></div>
                     <div className="row-actions">
                       <button type="button" onClick={() => editPosition(position.coinId)} aria-label={`Edit ${coin?.name ?? position.coinId} position`}><Pencil size={15} /></button>
-                      <button type="button" onClick={() => removePosition(position.coinId)} aria-label={`Remove ${coin?.name ?? position.coinId} position`}><Trash2 size={15} /></button>
+                      <button type="button" onClick={() => handleRemovePosition(position.coinId)} aria-label={`Remove ${coin?.name ?? position.coinId} position`}><Trash2 size={15} /></button>
                     </div>
                   </article>
                 );
@@ -257,11 +281,11 @@ const PortfolioPage: React.FC = () => {
                   <div className="portfolio-card-top"><img src={coin.image} alt="" className="portfolio-coin-img" /><div className="portfolio-coin-info"><span className="portfolio-coin-name">{coin.name}</span><span className="portfolio-coin-symbol">{coin.symbol.toUpperCase()}</span></div><span className="portfolio-rank">#{coin.market_cap_rank}</span></div>
                   <div className="portfolio-card-price"><span className="portfolio-price">{formatCurrency(coin.current_price, currency)}</span><span className={`portfolio-change ${(coin.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>{formatPercent(coin.price_change_percentage_24h)}</span></div>
                 </Link>
-                <button type="button" className="remove-watch-button" onClick={() => toggleWatchlist(coin.id)}><Trash2 size={14} /> Remove</button>
+                <button type="button" className="remove-watch-button" onClick={() => handleToggleWatchlist(coin.id)}><Trash2 size={14} /> Remove</button>
               </article>
             ))}
             {unavailableWatchIds.map((id) => (
-              <article className="portfolio-card unavailable-card" key={id}><div><strong>{id}</strong><p>Outside the current top-100 snapshot. It remains saved.</p></div><button type="button" className="remove-watch-button" onClick={() => toggleWatchlist(id)}><Trash2 size={14} /> Remove</button></article>
+              <article className="portfolio-card unavailable-card" key={id}><div><strong>{id}</strong><p>Outside the current top-100 snapshot. It remains saved.</p></div><button type="button" className="remove-watch-button" onClick={() => handleToggleWatchlist(id)}><Trash2 size={14} /> Remove</button></article>
             ))}
           </div>
         )}
@@ -283,7 +307,7 @@ const PortfolioPage: React.FC = () => {
               const description = alert.condition === 'change'
                 ? `24h move reaches ${alert.threshold}%`
                 : `Price ${alert.condition} ${formatCurrency(alert.threshold, alert.currency)}`;
-              return <article className={`alert-row ${alert.triggeredAt ? 'triggered' : ''}`} key={alert.id}><span className="alert-status"><BellRing size={16} /></span><div><strong>{coin?.name ?? alert.coinId}</strong><span>{description}</span><small>{alert.triggeredAt ? `Triggered ${formatDateTime(alert.triggeredAt)}` : `Created ${formatDateTime(alert.createdAt)}`}</small></div><button type="button" onClick={() => removeAlert(alert.id)} aria-label={`Delete ${coin?.name ?? alert.coinId} alert`}><Trash2 size={15} /></button></article>;
+              return <article className={`alert-row ${alert.triggeredAt ? 'triggered' : ''}`} key={alert.id}><span className="alert-status"><BellRing size={16} /></span><div><strong>{coin?.name ?? alert.coinId}</strong><span>{description}</span><small>{alert.triggeredAt ? `Triggered ${formatDateTime(alert.triggeredAt)}` : `Created ${formatDateTime(alert.createdAt)}`}</small></div><button type="button" onClick={() => { removeAlert(alert.id); showToast(`${coin?.name ?? alert.coinId} price alert removed.`, 'info'); }} aria-label={`Delete ${coin?.name ?? alert.coinId} alert`}><Trash2 size={15} /></button></article>;
             })}
           </div>
         </div>

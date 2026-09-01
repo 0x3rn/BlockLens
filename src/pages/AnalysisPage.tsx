@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowRight, Bot, Crosshair, Gauge, LoaderCircle, Refresh
 import PriceChart from '../components/PriceChart';
 import { DataState } from '../components/DataState';
 import { useMarket } from '../context/MarketContext';
+import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { fetchCoinHistory, getApiErrorMessage, requestAIAnalysis } from '../services/api';
 import { AIAnalysis } from '../types/crypto';
@@ -11,6 +12,7 @@ import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 
 const AnalysisPage: React.FC = () => {
   const { coins, currency, refresh, error: marketError } = useMarket();
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCoin = searchParams.get('coin');
   const selectedCoin = useMemo(() => (
@@ -57,8 +59,11 @@ const AnalysisPage: React.FC = () => {
         dataAsOf: selectedCoin.last_updated ?? new Date().toISOString(),
       });
       setAnalysis(result);
+      showToast(`${selectedCoin.name} trading analysis generated.`);
     } catch (analysisError) {
-      setError(getApiErrorMessage(analysisError));
+      const message = getApiErrorMessage(analysisError);
+      setError(message);
+      showToast('Trading analysis could not be generated.', 'error');
     } finally {
       setLoading(false);
     }

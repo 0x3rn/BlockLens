@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Search, Star } from 'lucide-react';
 import { useMarket } from '../context/MarketContext';
+import { useToast } from '../context/ToastContext';
 import { Coin } from '../types/crypto';
 import { formatCompactCurrency, formatCurrency, formatPercent } from '../utils/format';
 import '../styles/Table.css';
@@ -27,6 +28,7 @@ const CoinTable: React.FC<CoinTableProps> = ({
   title = 'Cryptocurrency markets',
 }) => {
   const { currency, watchlist, toggleWatchlist } = useMarket();
+  const { showToast } = useToast();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<FilterKey>('all');
   const [page, setPage] = useState(1);
@@ -162,7 +164,10 @@ const CoinTable: React.FC<CoinTableProps> = ({
                       <button
                         type="button"
                         className={`watch-button ${isWatched ? 'star-active' : 'star-inactive'}`}
-                        onClick={() => toggleWatchlist(coin.id)}
+                        onClick={() => {
+                          toggleWatchlist(coin.id);
+                          showToast(`${coin.name} ${isWatched ? 'removed from' : 'added to'} your watchlist.`, isWatched ? 'info' : 'success');
+                        }}
                         aria-label={`${isWatched ? 'Remove' : 'Add'} ${coin.name} ${isWatched ? 'from' : 'to'} watchlist`}
                         aria-pressed={isWatched}
                       >

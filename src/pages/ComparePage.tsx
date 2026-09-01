@@ -12,6 +12,7 @@ import {
 import { GitCompareArrows, Plus, X } from 'lucide-react';
 import { DataState } from '../components/DataState';
 import { useMarket } from '../context/MarketContext';
+import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { fetchCoinHistory, getApiErrorMessage } from '../services/api';
 import { ChartData } from '../types/crypto';
@@ -25,6 +26,7 @@ const formatChartTick = (timestamp: number, days: number) => new Intl.DateTimeFo
 
 const ComparePage: React.FC = () => {
   const { coins, currency } = useMarket();
+  const { showToast } = useToast();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [candidate, setCandidate] = useState('');
   const [days, setDays] = useState(30);
@@ -83,8 +85,10 @@ const ComparePage: React.FC = () => {
 
   const addCoin = () => {
     if (!candidate || selectedIds.length >= 4) return;
+    const coinName = coins.find((coin) => coin.id === candidate)?.name ?? candidate;
     setSelectedIds((previous) => [...previous, candidate]);
     setCandidate('');
+    showToast(`${coinName} added to comparison.`);
   };
 
   return (
@@ -108,7 +112,7 @@ const ComparePage: React.FC = () => {
           <span className="compare-chip" style={{ '--coin-color': chartColors[index] } as React.CSSProperties} key={coin.id}>
             <span className="compare-series-dot" aria-hidden="true" />
             <img src={coin.image} alt="" /> {coin.name}
-            <button type="button" onClick={() => setSelectedIds((ids) => ids.filter((id) => id !== coin.id))} aria-label={`Remove ${coin.name}`} disabled={selectedIds.length === 1}><X size={13} /></button>
+            <button type="button" onClick={() => { setSelectedIds((ids) => ids.filter((id) => id !== coin.id)); showToast(`${coin.name} removed from comparison.`, 'info'); }} aria-label={`Remove ${coin.name}`} disabled={selectedIds.length === 1}><X size={13} /></button>
           </span>
         ))}
       </div>
