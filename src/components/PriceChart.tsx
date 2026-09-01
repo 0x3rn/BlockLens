@@ -74,7 +74,6 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
       }
     } catch (chartError) {
       if (requestVersion.current !== version) return;
-      setData([]);
       setError(getApiErrorMessage(chartError));
     } finally {
       if (requestVersion.current === version) setLoading(false);
@@ -147,15 +146,16 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
           <div className="skeleton-line" />
           <div className="skeleton-chart" />
         </div>
-      ) : error ? (
-        <DataState message={error} onRetry={loadChart} compact />
-      ) : renderedIsIntraday && candles.length === 0 ? (
-        <DataState title="No intraday candles" message="Intraday candle data is unavailable for this asset and interval." compact />
-      ) : !renderedIsIntraday && data.length === 0 ? (
-        <DataState title="No chart history" message="Historical pricing is unavailable for this asset and range." compact />
-      ) : renderedIsIntraday ? (
-        <CandlestickChart data={candles} currency={currency} interval={renderedRange as CandleInterval} coinName={coinName ?? coinId} showVolume={showVolume} showAverage={showAverage} logScale={logScale} />
       ) : (
+        <>
+          {error && <DataState message={error} onRetry={loadChart} compact />}
+          {!error && renderedIsIntraday && candles.length === 0 ? (
+            <DataState title="No intraday candles" message="Intraday candle data is unavailable for this asset and interval." onRetry={loadChart} compact />
+          ) : !error && !renderedIsIntraday && data.length === 0 ? (
+            <DataState title="No chart history" message="Historical pricing is unavailable for this asset and range." onRetry={loadChart} compact />
+          ) : renderedIsIntraday ? (
+            <CandlestickChart data={candles} currency={currency} interval={renderedRange as CandleInterval} coinName={coinName ?? coinId} showVolume={showVolume} showAverage={showAverage} logScale={logScale} />
+          ) : (
         <div
           className="chart-wrapper"
           role="img"
@@ -245,6 +245,8 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+          )}
+        </>
       )}
     </section>
   );

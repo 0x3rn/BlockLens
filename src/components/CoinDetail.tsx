@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, ArrowLeft, Bot, ExternalLink, Layers, Star, TrendingUp, WalletCards } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { DataState } from './DataState';
@@ -32,17 +32,17 @@ const CoinDetailPage: React.FC = () => {
       : 'Inspect crypto asset price history, market statistics, supply, and research tools.',
   );
 
-  useEffect(() => {
+  const loadCoin = useCallback(() => {
     if (!coinId) {
       setLoading(false);
       setError('No asset was specified.');
-      return;
+      return Promise.resolve();
     }
 
     const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
-    fetchCoinDetail(coinId)
+    return fetchCoinDetail(coinId)
       .then((data) => {
         if (version !== requestVersion.current) return;
         setCoin(data);
@@ -54,8 +54,12 @@ const CoinDetailPage: React.FC = () => {
         if (version === requestVersion.current) setLoading(false);
       });
 
-    return () => { requestVersion.current += 1; };
   }, [coinId]);
+
+  useEffect(() => {
+    void loadCoin();
+    return () => { requestVersion.current += 1; };
+  }, [loadCoin]);
 
   if (loading) {
     return <main className="app-container page-stack"><div className="detail-skeleton" aria-label="Loading asset profile" /></main>;
@@ -65,7 +69,7 @@ const CoinDetailPage: React.FC = () => {
     return (
       <main className="app-container page-stack">
         <Link className="back-link" to="/markets"><ArrowLeft size={16} /> Back to markets</Link>
-        <DataState title="Asset profile unavailable" message={error ?? 'This asset could not be found.'} />
+        <DataState title="Asset profile unavailable" message={error ?? 'This asset could not be found.'} onRetry={loadCoin} />
       </main>
     );
   }

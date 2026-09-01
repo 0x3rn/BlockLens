@@ -11,6 +11,7 @@ const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
 const ComparePage = lazy(() => import('./pages/ComparePage'));
 const CoinDetailPage = lazy(() => import('./components/CoinDetail'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const AccountPage = lazy(() => import('./pages/AccountPage'));
 
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation();
@@ -19,7 +20,7 @@ const ScrollToTop: React.FC = () => {
 };
 
 const PageLoader: React.FC = () => (
-  <main className="app-container page-stack"><div className="route-loader" role="status"><span /> Loading workspace…</div></main>
+  <main className="app-container page-stack"><div className="route-loader" role="status"><span /> Loading page…</div></main>
 );
 
 const RouteTransition: React.FC = () => {
@@ -49,7 +50,7 @@ const AppShell: React.FC = () => (
       <Suspense fallback={<PageLoader />}><Outlet /></Suspense>
     </div>
     <footer className="site-footer">
-      <p><strong>BlockLens</strong> is an educational market workspace. Data may be delayed and is not financial advice.</p>
+      <p><strong>BlockLens</strong> is an educational market tool. Data may be delayed and is not financial advice.</p>
       <p>Market data by <a href="https://www.coingecko.com/" target="_blank" rel="noreferrer">CoinGecko</a> · Built by <a href="https://somto.xyz" target="_blank" rel="noreferrer">Somto Ike</a> · <Link to="/markets">Markets</Link></p>
     </footer>
   </div>
@@ -64,6 +65,7 @@ const App: React.FC = () => (
         <Route path="analysis" element={<AnalysisPage />} />
         <Route path="watchlist" element={<PortfolioPage />} />
         <Route path="compare" element={<ComparePage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="coin/:coinId" element={<CoinDetailPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

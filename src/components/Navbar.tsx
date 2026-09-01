@@ -8,10 +8,12 @@ import {
   RefreshCw,
   TrendingUp,
   WalletCards,
+  UserRound,
 } from 'lucide-react';
 import { useMarket } from '../context/MarketContext';
 import { CurrencyCode } from '../types/crypto';
 import { formatDateTime } from '../utils/format';
+import { useAuth } from '../context/AuthContext';
 import '../styles/Navbar.css';
 
 const tabs = [
@@ -33,6 +35,7 @@ const Navbar: React.FC = () => {
     alerts,
   } = useMarket();
   const triggeredAlerts = alerts.filter((alert) => alert.triggeredAt).length;
+  const { configured, user } = useAuth();
 
   return (
     <>
@@ -88,6 +91,10 @@ const Navbar: React.FC = () => {
             >
               <RefreshCw size={15} className={refreshing ? 'is-spinning' : ''} aria-hidden="true" />
             </button>
+            <Link className="account-link" to="/account" aria-label={user ? `Account for ${user.email}` : 'Open account'} title={user?.email ?? 'Account'}>
+              <UserRound size={15} aria-hidden="true" />
+              <span>{configured && user ? 'Account' : 'Sign in'}</span>
+            </Link>
             <div
               className={`nav-live-indicator ${error ? 'has-error' : ''}`}
               title={error ?? `Updated ${formatDateTime(lastUpdated)}`}

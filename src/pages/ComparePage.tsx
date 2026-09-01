@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CartesianGrid,
   Legend,
@@ -34,6 +34,21 @@ const ComparePage: React.FC = () => {
   const requestVersion = useRef(0);
   usePageMeta('Compare Assets', 'Compare normalized crypto performance, market capitalization, volume, and volatility across multiple assets.');
 
+  const loadComparison = useCallback(async () => {
+    if (selectedIds.length === 0) return;
+    const version = ++requestVersion.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const entries = await Promise.all(selectedIds.map(async (id) => [id, await fetchCoinHistory(id, days, currency)] as const));
+      if (requestVersion.current === version) setHistories(Object.fromEntries(entries));
+    } catch (loadError) {
+      if (requestVersion.current === version) setError(getApiErrorMessage(loadError));
+    } finally {
+      if (requestVersion.current === version) setLoading(false);
+    }
+  }, [currency, days, selectedIds]);
+
   useEffect(() => {
     if (selectedIds.length === 0 && coins.length > 0) {
       setSelectedIds(coins.slice(0, 2).map((coin) => coin.id));
@@ -41,22 +56,9 @@ const ComparePage: React.FC = () => {
   }, [coins, selectedIds.length]);
 
   useEffect(() => {
-    if (selectedIds.length === 0) return;
-    const version = ++requestVersion.current;
-    setLoading(true);
-    setError(null);
-    Promise.all(selectedIds.map(async (id) => [id, await fetchCoinHistory(id, days, currency)] as const))
-      .then((entries) => {
-        if (requestVersion.current === version) setHistories(Object.fromEntries(entries));
-      })
-      .catch((loadError) => {
-        if (requestVersion.current === version) setError(getApiErrorMessage(loadError));
-      })
-      .finally(() => {
-        if (requestVersion.current === version) setLoading(false);
-      });
+    void loadComparison();
     return () => { requestVersion.current += 1; };
-  }, [currency, days, selectedIds]);
+  }, [loadComparison]);
 
   const selectedCoins = selectedIds.map((id) => coins.find((coin) => coin.id === id)).filter(Boolean);
   const availableCoins = coins.filter((coin) => !selectedIds.includes(coin.id));
@@ -120,7 +122,8 @@ const ComparePage: React.FC = () => {
             </button>)}
           </div>
         </div>
-        {error ? <DataState message={error} compact /> : loading && normalizedData.length === 0 ? <div className="skeleton-chart compare-skeleton" /> : (
+        {error && <DataState message={error} onRetry={loadComparison} compact />}
+        {loading && normalizedData.length === 0 ? <div className="skeleton-chart compare-skeleton" /> : normalizedData.length === 0 ? <DataState title="No comparison history" message="Historical pricing is unavailable for the selected assets and range." onRetry={loadComparison} compact /> : (
           <div className="compare-chart" role="img" aria-label={`Normalized ${days === 365 ? 'one year' : `${days} day`} performance comparison for ${selectedCoins.map((coin) => coin?.name).join(', ')}`}>
             <ResponsiveContainer
               width="100%"

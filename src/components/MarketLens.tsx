@@ -43,7 +43,7 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
 
       <div className="lens-stage" aria-label={snapshot.lead ? `${snapshot.lead.name} market snapshot` : 'Waiting for market data'}>
         <span className="lens-coordinate top left">BL / MARKET 01</span>
-        <span className="lens-coordinate top right">TOP 5 Assets · 24H</span>
+        <span className="lens-coordinate top right">TOP 5 Assets · 24H<span className="sr-only">top 5 · non-stable · 24h</span></span>
         <div className="lens-axis horizontal" aria-hidden="true" />
         <div className="lens-axis vertical" aria-hidden="true" />
         <div className="lens-ring lens-ring-outer" aria-hidden="true" />
@@ -82,7 +82,7 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
 
       <div className="lens-readouts">
         <div>
-          <span>Asset breadth</span>
+          <span><span className="sr-only">Non-stable asset breadth</span><span aria-hidden="true">Asset breadth</span></span>
           <strong>{snapshot.lead ? <>{snapshot.gainers}<small> up</small> · {snapshot.losers}<small> down</small> · {snapshot.flat}<small> flat</small></> : 'N/A'}</strong>
         </div>
         <div>

@@ -12,6 +12,7 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { useMarket } from '../context/MarketContext';
+import { useAuth } from '../context/AuthContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { AlertCondition, CurrencyCode } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
@@ -29,6 +30,7 @@ const PortfolioPage: React.FC = () => {
     addAlert,
     removeAlert,
   } = useMarket();
+  const { user } = useAuth();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const initialCoinId = searchParams.get('coin') ?? coins[0]?.id ?? '';
@@ -170,9 +172,9 @@ const PortfolioPage: React.FC = () => {
         <div className="markets-title-wrap">
           <span className="markets-icon portfolio-icon"><WalletCards size={25} aria-hidden="true" /></span>
           <div>
-            <span className="eyebrow">Saved on this device</span>
+            <span className="eyebrow">{user ? 'Synced account' : 'Saved on this device'}</span>
             <h1>Portfolio & Alerts</h1>
-            <p>Track quantities and cost basis locally. Nothing is uploaded or synced to an account.</p>
+            <p>{user ? 'Track quantities, cost basis, watchlist assets, and alerts across your devices.' : 'Track quantities and cost basis locally. Sign in to sync this portfolio across devices.'}</p>
           </div>
         </div>
         <div className="portfolio-file-actions">

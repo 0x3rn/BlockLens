@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, Bot, Crosshair, Gauge, LoaderCircle, RefreshCw, ShieldAlert, Target } from 'lucide-react';
 import PriceChart from '../components/PriceChart';
+import { DataState } from '../components/DataState';
 import { useMarket } from '../context/MarketContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { fetchCoinHistory, getApiErrorMessage, requestAIAnalysis } from '../services/api';
@@ -9,7 +10,7 @@ import { AIAnalysis } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 
 const AnalysisPage: React.FC = () => {
-  const { coins, currency } = useMarket();
+  const { coins, currency, refresh, error: marketError } = useMarket();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCoin = searchParams.get('coin');
   const selectedCoin = useMemo(() => (
@@ -38,7 +39,6 @@ const AnalysisPage: React.FC = () => {
     if (!selectedCoin) return;
     setLoading(true);
     setError(null);
-    setAnalysis(null);
     try {
       const [chartData7d, chartData30d, chartData1y] = await Promise.all([
         fetchCoinHistory(selectedCoin.id, 7, currency),
@@ -198,7 +198,7 @@ const AnalysisPage: React.FC = () => {
           )}
         </>
       ) : (
-        <div className="portfolio-empty"><Bot size={44} /><h2>No market data yet</h2><p>Retry the market feed before generating a brief.</p></div>
+        <DataState title="No market data yet" message={marketError ?? 'Retry the market feed before generating a brief.'} onRetry={refresh} />
       )}
     </main>
   );

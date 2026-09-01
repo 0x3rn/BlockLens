@@ -18,6 +18,30 @@ const marketApi = axios.create({
   headers: { Accept: 'application/json' },
 });
 
+const pause = (milliseconds: number) => new Promise<void>((resolve) => {
+  window.setTimeout(resolve, milliseconds);
+});
+
+const isRetryableMarketError = (error: unknown) => {
+  if (!axios.isAxiosError(error)) return true;
+  const status = error.response?.status;
+  return !status || status === 408 || status === 425 || status === 429 || status >= 500;
+};
+
+const requestWithRetry = async <T>(loader: () => Promise<T>, attempts = 3): Promise<T> => {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await loader();
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts - 1 || !isRetryableMarketError(error)) throw error;
+      await pause(650 * (attempt + 1));
+    }
+  }
+  throw lastError;
+};
+
 interface CacheEntry<T> {
   value: T;
   expiresAt: number;
@@ -49,7 +73,7 @@ const cachedRequest = async <T>(
     if (inFlight) return inFlight;
   }
 
-  const request = loader()
+  const request = requestWithRetry(loader)
     .then((value) => {
       cache.set(key, { value, expiresAt: Date.now() + ttl });
       return value;

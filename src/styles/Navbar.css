@@ -23,6 +23,8 @@
 .currency-control select:focus-visible { outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .currency-control option { color: var(--text-primary); background: var(--bg-card); }
 .refresh-button, .alert-indicator { display: grid; place-items: center; width: 34px; height: 34px; color: var(--text-secondary); background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; }
+.account-link { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 10px; color: var(--text-secondary); background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 8px; font-size: .68rem; font-weight: 700; }
+.account-link:hover { color: var(--accent); border-color: var(--border-glow); }
 .refresh-button:hover, .alert-indicator:hover { color: var(--accent); border-color: var(--border-glow); }
 .alert-indicator { position: relative; color: var(--amber); }
 .alert-indicator span { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; min-width: 16px; height: 16px; padding: 0 3px; color: #171006; background: var(--amber); border-radius: 99px; font: 800 .55rem var(--font-mono); }
