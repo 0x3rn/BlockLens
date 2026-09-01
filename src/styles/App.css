@@ -365,7 +365,7 @@ img { max-width: 100%; }
 .analysis-retry-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 38px; padding: 8px 12px; color: var(--text-primary); background: var(--bg-secondary); border: 1px solid var(--border-strong); border-radius: 7px; font-size: .72rem; font-weight: 750; }
 .analysis-retry-button:hover:not(:disabled) { color: var(--accent); background: var(--bg-card-hover); border-color: var(--border-glow); }
 
-.ai-brief { display: flex; flex-direction: column; gap: 22px; }
+.ai-brief { display: flex; flex-direction: column; gap: 22px; scroll-margin-top: 84px; }
 .brief-heading { display: grid; grid-template-columns: 1fr 150px; gap: 22px; }
 .brief-heading h2 { margin: 8px 0 7px; font-size: 1.45rem; }
 .brief-heading p { color: var(--text-secondary); font-size: .82rem; line-height: 1.65; }
@@ -439,6 +439,9 @@ img { max-width: 100%; }
 .not-found-card p { max-width: 480px; color: var(--text-secondary); line-height: 1.6; }
 .route-loader { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 55vh; color: var(--text-secondary); font-size: .8rem; }
 .route-loader span { width: 18px; height: 18px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+.route-transition { position: fixed; top: 66px; right: 0; left: 0; z-index: 90; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; color: var(--text-secondary); background: rgba(6,6,16,.9); border-bottom: 1px solid var(--border-subtle); backdrop-filter: blur(14px); font: 650 .68rem var(--font-mono); letter-spacing: .04em; text-transform: uppercase; }
+.route-transition span, .inline-spinner { width: 13px; height: 13px; border: 2px solid currentColor; border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+.inline-spinner { display: inline-block; flex: 0 0 13px; color: inherit; }
 .table-skeleton, .detail-skeleton, .skeleton-chart, .skeleton-card { background: #141629; animation: skeleton-pulse 1.4s ease-in-out infinite; }
 .table-skeleton { min-height: 510px; border-radius: var(--radius); }
 .detail-skeleton { min-height: 640px; border-radius: var(--radius); }
@@ -463,6 +466,7 @@ img { max-width: 100%; }
 }
 
 @media (max-width: 760px) {
+  .route-transition { top: 60px; }
   .app-container, .site-footer { width: min(100% - 28px, 1320px); }
   .app-container { padding-top: 22px; padding-bottom: 92px; }
   .page-stack { gap: 18px; }

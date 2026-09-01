@@ -27,7 +27,10 @@ const LiveMarketTape: React.FC = () => {
           <span className={`stream-status ${status}`}><i aria-hidden="true" />{status}</span>
           <small>Binance · live WebSocket</small>
           {hasConnectionIssue && (
-            <button type="button" onClick={retry}><RefreshCw size={13} aria-hidden="true" /> Reconnect</button>
+            <button type="button" onClick={retry} disabled={status === 'reconnecting'} aria-busy={status === 'reconnecting'}>
+              <RefreshCw size={13} className={status === 'reconnecting' ? 'is-spinning' : ''} aria-hidden="true" />
+              {status === 'reconnecting' ? 'Reconnecting...' : 'Reconnect'}
+            </button>
           )}
         </div>
       </div>

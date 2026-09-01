@@ -30,6 +30,7 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const [chartWidth, setChartWidth] = useState(720);
+  const [zoom, setZoom] = useState(1);
   const left = chartWidth < 520 ? 54 : 66;
 
   useEffect(() => {
@@ -42,8 +43,16 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => setZoom(1), [data, interval]);
+
+  const visibleData = useMemo(() => {
+    if (zoom <= 1) return data;
+    const visibleCount = Math.max(16, Math.round(data.length / zoom));
+    return data.slice(-visibleCount);
+  }, [data, zoom]);
+
   const plotWidth = chartWidth - left - RIGHT;
-  const prices = data.flatMap((candle) => [candle.high, candle.low]).filter(Number.isFinite);
+  const prices = visibleData.flatMap((candle) => [candle.high, candle.low]).filter(Number.isFinite);
   const rawMin = Math.min(...prices);
   const rawMax = Math.max(...prices);
   const safeMin = rawMin > 0 ? rawMin : 0.00000001;
@@ -53,8 +62,8 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   const pad = Math.max((valueMax - valueMin) * 0.06, 0.000001);
   const min = valueMin - pad;
   const max = valueMax + pad;
-  const volumeMax = Math.max(...data.map((candle) => candle.volume), 1);
-  const step = plotWidth / Math.max(data.length, 1);
+  const volumeMax = Math.max(...visibleData.map((candle) => candle.volume), 1);
+  const step = plotWidth / Math.max(visibleData.length, 1);
   const bodyWidth = Math.max(2, Math.min(10, step * 0.62));
 
   const y = (value: number) => {
@@ -64,28 +73,42 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
 
   const averagePath = useMemo(() => {
     if (!showAverage) return '';
-    return data.map((candle, index) => {
+    return visibleData.map((candle, index) => {
       const start = Math.max(0, index - 19);
-      const average = data.slice(start, index + 1).reduce((sum, item) => sum + item.close, 0) / (index - start + 1);
+      const average = visibleData.slice(start, index + 1).reduce((sum, item) => sum + item.close, 0) / (index - start + 1);
       const x = left + (index + 0.5) * step;
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y(average).toFixed(2)}`;
     }).join(' ');
-  }, [data, showAverage, step, left, min, max, logScale]);
+  }, [visibleData, showAverage, step, left, min, max, logScale]);
 
   const gridValues = Array.from({ length: 4 }, (_, index) => {
     const ratio = index / 3;
     const transformed = max - ratio * (max - min);
     return logScale ? Math.exp(transformed) : transformed;
   });
-  const tickIndexes = [0, Math.floor((data.length - 1) * 0.33), Math.floor((data.length - 1) * 0.66), Math.max(0, data.length - 1)];
+  const tickIndexes = [0, Math.floor((visibleData.length - 1) * 0.33), Math.floor((visibleData.length - 1) * 0.66), Math.max(0, visibleData.length - 1)];
+  const zoomIn = () => setZoom((value) => Math.min(6, value + 1));
+  const zoomOut = () => setZoom((value) => Math.max(1, value - 1));
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (event.deltaY < 0) zoomIn();
+    if (event.deltaY > 0) zoomOut();
+  };
 
   return (
     <div
       ref={chartRef}
       className="candle-chart"
       role="img"
-      aria-label={`${interval} candlestick chart for ${coinName}. ${data.length} candles.`}
+      aria-label={`${interval} candlestick chart for ${coinName}. ${visibleData.length} visible candles.`}
+      onWheel={handleWheel}
     >
+      <div className="candle-chart-toolbar" aria-label="Candle chart zoom controls">
+        <span>ZOOM {zoom}X</span>
+        <button type="button" onClick={zoomOut} disabled={zoom === 1} aria-label="Zoom out">−</button>
+        <button type="button" onClick={zoomIn} disabled={zoom === 6} aria-label="Zoom in">+</button>
+        <button type="button" onClick={() => setZoom(1)} disabled={zoom === 1}>Reset</button>
+      </div>
       <svg viewBox={`0 0 ${chartWidth} ${HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
         <g className="candle-grid">
           {gridValues.map((value, index) => {
@@ -99,13 +122,14 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
           })}
         </g>
 
-        {showVolume && data.map((candle, index) => {
+        {showVolume && visibleData.map((candle, index) => {
           const x = left + (index + 0.5) * step;
           const barHeight = (candle.volume / volumeMax) * (VOLUME_BOTTOM - VOLUME_TOP);
-          return <rect className="candle-volume" key={`volume-${candle.timestamp}`} x={x - bodyWidth / 2} y={VOLUME_BOTTOM - barHeight} width={bodyWidth} height={barHeight} />;
+          const up = candle.close >= candle.open;
+          return <rect className={`candle-volume ${up ? 'up' : 'down'}`} key={`volume-${candle.timestamp}`} x={x - bodyWidth / 2} y={VOLUME_BOTTOM - barHeight} width={bodyWidth} height={barHeight} />;
         })}
 
-        {data.map((candle, index) => {
+        {visibleData.map((candle, index) => {
           const x = left + (index + 0.5) * step;
           const openY = y(candle.open);
           const closeY = y(candle.close);
@@ -124,7 +148,7 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
         {showAverage && <path className="candle-average" d={averagePath} />}
 
         {tickIndexes.map((index, tickIndex) => {
-          const candle = data[index];
+          const candle = visibleData[index];
           if (!candle) return null;
           const x = left + (index + 0.5) * step;
           return <text className="candle-time" key={`tick-${tickIndex}`} x={x} y={HEIGHT - 8} textAnchor={tickIndex === 0 ? 'start' : tickIndex === tickIndexes.length - 1 ? 'end' : 'middle'}>{new Date(candle.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</text>;

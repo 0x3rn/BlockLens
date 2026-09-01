@@ -29,10 +29,10 @@ const MarketsPage: React.FC = () => {
       </header>
 
       {error && coins.length === 0 ? (
-        <DataState message={error} onRetry={() => void refresh()} />
+        <DataState message={error} onRetry={refresh} />
       ) : (
         <>
-          {error && <DataState title="Showing cached market data" message={error} onRetry={() => void refresh()} compact />}
+          {error && <DataState title="Showing cached market data" message={error} onRetry={refresh} compact />}
           {loading && coins.length === 0 ? <div className="table-skeleton" /> : <CoinTable coins={coins} pageSize={20} />}
         </>
       )}

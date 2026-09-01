@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, ArrowRight, Bot, Crosshair, Gauge, RefreshCw, ShieldAlert, Target } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Bot, Crosshair, Gauge, LoaderCircle, RefreshCw, ShieldAlert, Target } from 'lucide-react';
 import PriceChart from '../components/PriceChart';
 import { useMarket } from '../context/MarketContext';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -18,12 +18,21 @@ const AnalysisPage: React.FC = () => {
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const briefRef = useRef<HTMLElement>(null);
   usePageMeta('AI Trading Analysis', 'Generate conditional LONG, SHORT, or NO TRADE setups with transparent risk controls from live price and volume history.');
 
   useEffect(() => {
     setAnalysis(null);
     setError(null);
   }, [selectedCoin?.id, currency]);
+
+  useEffect(() => {
+    if (!analysis) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      briefRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [analysis]);
 
   const handleAnalyze = async () => {
     if (!selectedCoin) return;
@@ -100,9 +109,9 @@ const AnalysisPage: React.FC = () => {
                   {formatPercent(selectedCoin.price_change_percentage_24h)} today
                 </span>
               </div>
-              <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading}>
-                <Bot size={17} aria-hidden="true" />
-                {loading ? 'Building setup from 7D, 30D, and 1Y history…' : 'Generate trading analysis'}
+              <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading} aria-busy={loading}>
+                {loading ? <LoaderCircle size={17} className="is-spinning" aria-hidden="true" /> : <Bot size={17} aria-hidden="true" />}
+                {loading ? 'Generating trading analysis...' : 'Generate trading analysis'}
               </button>
               <Link className="text-link" to={`/coin/${selectedCoin.id}`}>
                 Open full asset profile <ArrowRight size={14} aria-hidden="true" />
@@ -120,15 +129,15 @@ const AnalysisPage: React.FC = () => {
                 <p>{error}</p>
                 <small>Your selected asset and chart remain unchanged.</small>
               </div>
-              <button type="button" className="analysis-retry-button" onClick={() => void handleAnalyze()} disabled={loading}>
+              <button type="button" className="analysis-retry-button" onClick={() => void handleAnalyze()} disabled={loading} aria-busy={loading}>
                 <RefreshCw size={15} className={loading ? 'is-spinning' : ''} aria-hidden="true" />
-                {loading ? 'Trying again…' : 'Try analysis again'}
+                {loading ? 'Retrying...' : 'Try analysis again'}
               </button>
             </section>
           )}
 
           {analysis && (
-            <section className="ai-brief" aria-labelledby="brief-headline">
+            <section ref={briefRef} className="ai-brief" aria-labelledby="brief-headline">
               <div className="brief-heading">
                 <div>
                   <span className={`stance-badge ${analysis.stance}`}>{analysis.stance} bias</span>

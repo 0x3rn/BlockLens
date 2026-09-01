@@ -44,11 +44,11 @@ const DashboardPage: React.FC = () => {
       </header>
 
       {error && coins.length > 0 && (
-        <DataState title="Showing the last available snapshot" message={error} onRetry={() => void refresh()} compact />
+        <DataState title="Showing the last available snapshot" message={error} onRetry={refresh} compact />
       )}
       {error && coins.length === 0 ? (
         <>
-          <DataState title="Market snapshot unavailable" message={error} onRetry={() => void refresh()} compact />
+          <DataState title="Market snapshot unavailable" message={error} onRetry={refresh} compact />
           <section className="feed-resilience-note" aria-labelledby="feed-resilience-title">
             <span className="feed-resilience-icon"><RadioTower size={18} aria-hidden="true" /></span>
             <div><span className="eyebrow">Independent live source</span><h2 id="feed-resilience-title">The exchange tape can keep listening</h2><p>CoinGecko powers the global snapshot, while the Binance event stream below connects independently. Your locally saved watchlist and portfolio also remain available.</p></div>

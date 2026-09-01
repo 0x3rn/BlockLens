@@ -103,7 +103,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
             <span className="chart-range-label">Candles</span>
             <div className="time-filters" aria-label="Intraday candle interval">
               {intradayIntervals.map((interval) => (
-                <button type="button" key={interval} onClick={() => setRange(interval)} className={range === interval ? 'active' : ''} aria-pressed={range === interval}>{interval}</button>
+                <button type="button" key={interval} onClick={() => setRange(interval)} className={range === interval ? 'active' : ''} aria-pressed={range === interval} aria-busy={loading && range === interval}>
+                  {loading && range === interval ? <span className="inline-spinner" aria-hidden="true" /> : null}{interval}
+                </button>
               ))}
             </div>
           </div>
@@ -111,7 +113,9 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
             <span className="chart-range-label">History</span>
             <div className="time-filters" aria-label="Chart time range">
               {[7, 30, 365].map((value) => (
-                <button type="button" key={value} onClick={() => setRange(value)} className={range === value ? 'active' : ''} aria-pressed={range === value}>{value === 365 ? '1Y' : `${value}D`}</button>
+                <button type="button" key={value} onClick={() => setRange(value)} className={range === value ? 'active' : ''} aria-pressed={range === value} aria-busy={loading && range === value}>
+                  {loading && range === value ? <span className="inline-spinner" aria-hidden="true" /> : null}{value === 365 ? '1Y' : `${value}D`}
+                </button>
               ))}
             </div>
           </div>
@@ -136,7 +140,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
           <div className="skeleton-chart" />
         </div>
       ) : error ? (
-        <DataState message={error} onRetry={() => void loadChart()} compact />
+        <DataState message={error} onRetry={loadChart} compact />
       ) : isIntraday && candles.length === 0 ? (
         <DataState title="No intraday candles" message="Intraday candle data is unavailable for this asset and interval." compact />
       ) : !isIntraday && data.length === 0 ? (
