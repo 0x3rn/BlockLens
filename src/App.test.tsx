@@ -75,6 +75,13 @@ describe('BlockLens routes', () => {
     expect(screen.getByRole('link', { name: /return to dashboard/i })).toHaveAttribute('href', '/');
   });
 
+  it('renders the simulated futures terminal', async () => {
+    renderRoute('/futures?coin=bitcoin');
+    expect(await screen.findByRole('heading', { name: /futures simulator/i })).toBeInTheDocument();
+    expect(screen.getByText(/no exchange orders/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /open long/i })).toBeInTheDocument();
+  });
+
   it('does not evaluate a saved price threshold against a different currency feed', async () => {
     window.localStorage.setItem('blocklens_currency', JSON.stringify('eur'));
     window.localStorage.setItem('blocklens_alerts', JSON.stringify([{

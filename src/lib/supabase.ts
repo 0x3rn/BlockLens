@@ -47,6 +47,12 @@ export type Database = {
         Update: { id?: string; user_id?: string; coin_id?: string; action?: string; quantity?: number; average_cost?: number; currency?: string; created_at?: string };
         Relationships: [];
       };
+      paper_futures_accounts: {
+        Row: { id: string; user_id: string; balance: number; realized_pnl: number; positions: Json; trades: Json; updated_at: string };
+        Insert: { id?: string; user_id: string; balance: number; realized_pnl: number; positions: Json; trades: Json; updated_at?: string };
+        Update: { id?: string; user_id?: string; balance?: number; realized_pnl?: number; positions?: Json; trades?: Json; updated_at?: string };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

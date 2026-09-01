@@ -74,7 +74,7 @@
 .lens-readouts { position: relative; z-index: 2; display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 1px; overflow: hidden; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; }
 .lens-readouts > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 9px 10px; background: rgba(10,11,24,.96); }
 .lens-readouts span { color: var(--text-muted); font-size: .55rem; text-transform: uppercase; letter-spacing: .04em; }
-.lens-readouts strong { overflow: hidden; font: 680 .65rem var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.lens-readouts strong { overflow: hidden; font: 680 .62rem var(--font-mono); line-height: 1.35; text-overflow: ellipsis; white-space: normal; }
 .lens-readouts small { color: var(--text-muted); font-size: .52rem; }
 
 @keyframes lens-scan { to { transform: rotate(360deg); } }

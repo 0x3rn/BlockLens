@@ -29,7 +29,7 @@ const LiveMarketTape: React.FC = () => {
           {hasConnectionIssue && (
             <button type="button" onClick={retry} disabled={status === 'reconnecting'} aria-busy={status === 'reconnecting'}>
               <RefreshCw size={13} className={status === 'reconnecting' ? 'is-spinning' : ''} aria-hidden="true" />
-              {status === 'reconnecting' ? 'Reconnecting...' : 'Reconnect'}
+              {status === 'reconnecting' ? 'Reconnecting' : 'Reconnect'}
             </button>
           )}
         </div>

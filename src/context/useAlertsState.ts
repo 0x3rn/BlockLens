@@ -20,15 +20,14 @@ const isAlerts = (value: unknown): value is PriceAlert[] => (
       && typeof alert.createdAt === 'string';
   })
 );
-const cloudOwnerKey = 'blocklens_alerts_cloud_user';
-
 export const useAlertsState = (activeCurrency: CurrencyCode) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const client = supabase;
   const [alerts, setAlerts] = usePersistentState<PriceAlert[]>(
     'blocklens_alerts',
     [],
     isAlerts,
+    !authLoading && !user,
   );
   const cloudReady = useRef(false);
   const alertsRef = useRef(alerts);
@@ -70,10 +69,7 @@ export const useAlertsState = (activeCurrency: CurrencyCode) => {
           ...(row.triggered_at ? { triggeredAt: row.triggered_at } : {}),
       }));
       const nextById = new Map<string, PriceAlert>();
-      let previousOwner: string | null = null;
-      try { previousOwner = window.localStorage.getItem(cloudOwnerKey); } catch { /* Storage can be unavailable. */ }
-      const canMigrateLocal = !previousOwner || previousOwner === user.id;
-      (remoteAlerts.length > 0 || !canMigrateLocal ? remoteAlerts : alertsRef.current).forEach((alert) => nextById.set(alert.id, alert));
+      remoteAlerts.forEach((alert) => nextById.set(alert.id, alert));
       pendingChanges.current.forEach((alert, id) => {
         if (alert) nextById.set(id, alert);
         else nextById.delete(id);
@@ -82,7 +78,6 @@ export const useAlertsState = (activeCurrency: CurrencyCode) => {
       alertsRef.current = resolvedAlerts;
       setAlerts(resolvedAlerts);
       cloudReady.current = true;
-      try { window.localStorage.setItem(cloudOwnerKey, user.id); } catch { /* Storage can be unavailable. */ }
 
       const resolvedIds = new Set(resolvedAlerts.map((alert) => alert.id));
       const removedIds = remoteAlerts.filter((alert) => !resolvedIds.has(alert.id)).map((alert) => alert.id);

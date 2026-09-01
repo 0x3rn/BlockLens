@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import {
   BellRing,
   Bot,
+  CandlestickChart,
   GitCompareArrows,
   History,
   LayoutDashboard,
@@ -23,6 +24,7 @@ const tabs = [
   { to: '/analysis', label: 'AI Brief', mobileLabel: 'AI', icon: Bot },
   { to: '/watchlist', label: 'Portfolio', mobileLabel: 'Portfolio', icon: WalletCards },
   { to: '/history', label: 'History', mobileLabel: 'History', icon: History },
+  { to: '/futures', label: 'Futures', mobileLabel: 'Trade', icon: CandlestickChart },
   { to: '/compare', label: 'Compare', mobileLabel: 'Compare', icon: GitCompareArrows },
 ];
 

@@ -21,14 +21,13 @@ const isPortfolio = (value: unknown): value is PortfolioPosition[] => (
       && typeof position.updatedAt === 'string';
   })
 );
-const cloudOwnerKey = 'blocklens_portfolio_cloud_user';
-
 export const usePortfolio = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [positions, setPositions] = usePersistentState<PortfolioPosition[]>(
     'blocklens_portfolio',
     [],
     isPortfolio,
+    !authLoading && !user,
   );
   const portfolioIdRef = useRef<string | null>(null);
   const cloudReady = useRef(false);
@@ -84,10 +83,7 @@ export const usePortfolio = () => {
         updatedAt: row.updated_at,
       }));
       const nextByCoin = new Map<string, PortfolioPosition>();
-      let previousOwner: string | null = null;
-      try { previousOwner = window.localStorage.getItem(cloudOwnerKey); } catch { /* Storage can be unavailable. */ }
-      const canMigrateLocal = !previousOwner || previousOwner === user.id;
-      (remotePositions.length > 0 || !canMigrateLocal ? remotePositions : positionsRef.current).forEach((position) => nextByCoin.set(position.coinId, position));
+      remotePositions.forEach((position) => nextByCoin.set(position.coinId, position));
       pendingChanges.current.forEach((position, coinId) => {
         if (position) nextByCoin.set(coinId, position);
         else nextByCoin.delete(coinId);
@@ -96,7 +92,6 @@ export const usePortfolio = () => {
       positionsRef.current = resolvedPositions;
       setPositions(resolvedPositions);
       cloudReady.current = true;
-      try { window.localStorage.setItem(cloudOwnerKey, user.id); } catch { /* Storage can be unavailable. */ }
 
       const resolvedIds = new Set(resolvedPositions.map((position) => position.coinId));
       const removedIds = remotePositions.filter((position) => !resolvedIds.has(position.coinId)).map((position) => position.coinId);

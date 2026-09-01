@@ -23,6 +23,12 @@ const CANDLE_BODY_WIDTH = 10;
 const DESKTOP_CANDLE_COUNT = 48;
 const MOBILE_CANDLE_COUNT = 24;
 
+const formatCandleTick = (timestamp: number, showDate: boolean) => (
+  showDate
+    ? new Date(timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })
+    : new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+);
+
 const CandlestickChart: React.FC<CandlestickChartProps> = ({
   data,
   currency,
@@ -100,6 +106,8 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
     return logScale ? Math.exp(transformed) : transformed;
   });
   const tickIndexes = [0, Math.floor((visibleData.length - 1) * 0.33), Math.floor((visibleData.length - 1) * 0.66), Math.max(0, visibleData.length - 1)];
+  const chartSpan = visibleData.length > 1 ? visibleData[visibleData.length - 1].timestamp - visibleData[0].timestamp : 0;
+  const showDateOnTicks = chartSpan >= 24 * 60 * 60_000;
   const lastIndex = Math.max(0, visibleData.length - 1);
   const selectedIndex = hoveredIndex === null ? lastIndex : Math.min(lastIndex, hoveredIndex);
   const selectedCandle = visibleData[selectedIndex];
@@ -216,7 +224,7 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
           const candle = visibleData[index];
           if (!candle) return null;
           const x = left + (index + 0.5) * step;
-          return <text className="candle-time" key={`tick-${tickIndex}`} x={x} y={HEIGHT - 8} textAnchor={tickIndex === 0 ? 'start' : tickIndex === tickIndexes.length - 1 ? 'end' : 'middle'}>{new Date(candle.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</text>;
+          return <text className="candle-time" key={`tick-${tickIndex}`} x={x} y={HEIGHT - 8} textAnchor={tickIndex === 0 ? 'start' : tickIndex === tickIndexes.length - 1 ? 'end' : 'middle'}>{formatCandleTick(candle.timestamp, showDateOnTicks)}</text>;
         })}
       </svg>
     </div>

@@ -124,7 +124,7 @@ const AnalysisPage: React.FC = () => {
               </div>
               <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading} aria-busy={loading}>
                 {loading ? <LoaderCircle size={17} className="is-spinning" aria-hidden="true" /> : <Bot size={17} aria-hidden="true" />}
-                {loading ? 'Generating trading analysis...' : 'Generate trading analysis'}
+                {loading ? 'Generating trading analysis' : 'Generate trading analysis'}
               </button>
               <Link className="text-link" to={`/coin/${selectedCoin.id}`}>
                 Open full asset profile <ArrowRight size={14} aria-hidden="true" />
@@ -144,7 +144,7 @@ const AnalysisPage: React.FC = () => {
               </div>
               <button type="button" className="analysis-retry-button" onClick={() => void handleAnalyze()} disabled={loading} aria-busy={loading}>
                 <RefreshCw size={15} className={loading ? 'is-spinning' : ''} aria-hidden="true" />
-                {loading ? 'Retrying...' : 'Try analysis again'}
+                {loading ? 'Retrying' : 'Try analysis again'}
               </button>
             </section>
           )}

@@ -22,6 +22,7 @@ interface PriceChartProps {
   coinId: string;
   coinName?: string;
   currency?: CurrencyCode;
+  defaultRange?: CandleInterval | number;
 }
 
 type ChartPointWithAverage = ChartData & { movingAverage?: number };
@@ -40,10 +41,10 @@ const formatChartTick = (timestamp: number, days: number) => new Intl.DateTimeFo
   ? { month: 'short', year: '2-digit' }
   : { month: 'short', day: 'numeric' }).format(timestamp);
 
-const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'usd' }) => {
+const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'usd', defaultRange = 7 }) => {
   const [data, setData] = useState<ChartData[]>([]);
   const [candles, setCandles] = useState<CandleData[]>([]);
-  const [range, setRange] = useState<number | CandleInterval>(7);
+  const [range, setRange] = useState<number | CandleInterval>(defaultRange);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showVolume, setShowVolume] = useState(true);
@@ -89,7 +90,8 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
     setLoadedRange(null);
     setData([]);
     setCandles([]);
-  }, [coinId, currency]);
+    setRange(defaultRange);
+  }, [coinId, currency, defaultRange]);
 
   const chartData = useMemo(() => addMovingAverage(data), [data]);
   const priceRange = useMemo(() => {

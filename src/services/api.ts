@@ -123,60 +123,82 @@ export const fetchCoinHistory = async (
   }));
 });
 
-  const candleIntervalMs: Record<CandleInterval, number> = {
+const candleIntervalMs: Record<CandleInterval, number> = {
   '5m': 5 * 60_000,
   '15m': 15 * 60_000,
   '30m': 30 * 60_000,
-    '1h': 60 * 60_000,
-    '4h': 4 * 60 * 60_000,
-    '12h': 12 * 60 * 60_000,
-    '24h': 24 * 60 * 60_000,
-  };
-  const candleHistoryDays: Record<CandleInterval, number> = {
-    '5m': 1,
-    '15m': 1,
-    '30m': 1,
-    '1h': 2,
-    '4h': 8,
-    '12h': 24,
-    '24h': 48,
-  };
+  '1h': 60 * 60_000,
+  '4h': 4 * 60 * 60_000,
+  '12h': 12 * 60 * 60_000,
+  '24h': 24 * 60 * 60_000,
+};
+const candleHistoryDays: Record<CandleInterval, number> = {
+  '5m': 1,
+  '15m': 1,
+  '30m': 1,
+  '1h': 2,
+  '4h': 8,
+  '12h': 24,
+  '24h': 48,
+};
+
+const MIN_CANDLE_COUNT = 48;
+
+const candleRecoveryDays = (interval: CandleInterval) => {
+  const requestedDays = candleHistoryDays[interval];
+  const requiredDays = Math.ceil((MIN_CANDLE_COUNT * candleIntervalMs[interval]) / (24 * 60 * 60_000));
+  return Math.min(90, Math.max(requestedDays * 2, requiredDays * 2));
+};
 
 export const fetchCoinCandles = async (
   coinId: string,
   interval: CandleInterval,
   currency: CurrencyCode = 'usd',
-): Promise<CandleData[]> => cachedRequest(`candles:${coinId}:${interval}:${currency}`, 30_000, async () => {
-  const response = await marketApi.get<{
-    prices: [number, number][];
-    total_volumes: [number, number][];
-  }>(`/coins/${encodeURIComponent(coinId)}/market_chart`, {
-    params: { vs_currency: currency, days: candleHistoryDays[interval], precision: 'full' },
-  });
+): Promise<CandleData[]> => cachedRequest(`candles:v2:${coinId}:${interval}:${currency}`, 30_000, async () => {
+  const parseCandles = (payload: { prices: [number, number][]; total_volumes: [number, number][] }) => {
+    const bucketSize = candleIntervalMs[interval];
+    const buckets = new Map<number, CandleData>();
+    let previousVolume: number | null = null;
+    payload.prices.forEach(([timestamp, price], index) => {
+      const volumeTotal = payload.total_volumes[index]?.[1];
+      const volume = typeof volumeTotal === 'number' && Number.isFinite(volumeTotal) && previousVolume != null
+        ? Math.max(0, volumeTotal - previousVolume)
+        : 0;
+      if (typeof volumeTotal === 'number' && Number.isFinite(volumeTotal)) previousVolume = volumeTotal;
+      if (!Number.isFinite(timestamp) || !Number.isFinite(price)) return;
+      const bucket = Math.floor(timestamp / bucketSize) * bucketSize;
+      const current = buckets.get(bucket);
+      if (!current) {
+        buckets.set(bucket, { timestamp: bucket, open: price, high: price, low: price, close: price, volume });
+        return;
+      }
+      current.high = Math.max(current.high, price);
+      current.low = Math.min(current.low, price);
+      current.close = price;
+      current.volume += volume;
+    });
+    return [...buckets.values()].sort((a, b) => a.timestamp - b.timestamp);
+  };
 
-  const bucketSize = candleIntervalMs[interval];
-  const buckets = new Map<number, CandleData>();
-  let previousVolume: number | null = null;
-  response.data.prices.forEach(([timestamp, price], index) => {
-    const volumeTotal = response.data.total_volumes[index]?.[1];
-    const volume = typeof volumeTotal === 'number' && Number.isFinite(volumeTotal) && previousVolume != null
-      ? Math.max(0, volumeTotal - previousVolume)
-      : 0;
-    if (typeof volumeTotal === 'number' && Number.isFinite(volumeTotal)) previousVolume = volumeTotal;
-    if (!Number.isFinite(timestamp) || !Number.isFinite(price)) return;
-    const bucket = Math.floor(timestamp / bucketSize) * bucketSize;
-    const current = buckets.get(bucket);
-    if (!current) {
-      buckets.set(bucket, { timestamp: bucket, open: price, high: price, low: price, close: price, volume });
-      return;
-    }
-    current.high = Math.max(current.high, price);
-    current.low = Math.min(current.low, price);
-    current.close = price;
-    current.volume += volume;
-  });
+  const requestCandles = async (days: number) => {
+    const response = await marketApi.get<{
+      prices: [number, number][];
+      total_volumes: [number, number][];
+    }>(`/coins/${encodeURIComponent(coinId)}/market_chart`, {
+      params: { vs_currency: currency, days, precision: 'full' },
+    });
+    return parseCandles(response.data);
+  };
 
-  const candles = [...buckets.values()].sort((a, b) => a.timestamp - b.timestamp);
+  const requestedDays = candleHistoryDays[interval];
+  let candles = await requestCandles(requestedDays);
+
+  // CoinGecko can occasionally return a partial window during a rate-limit or
+  // provider hiccup. Re-request a wider, still truthful market window before
+  // exposing a chart with only a handful of candles.
+  if (candles.length < MIN_CANDLE_COUNT && interval !== '5m' && interval !== '15m' && interval !== '30m') {
+    candles = await requestCandles(candleRecoveryDays(interval));
+  }
 
   if (candles.length < 2) throw new Error('Intraday candles are not available for this asset.');
   return candles;

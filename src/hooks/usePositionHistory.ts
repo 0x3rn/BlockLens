@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
 const MAX_HISTORY = 100;
-const cloudOwnerKey = 'blocklens_position_history_cloud_user';
 
 const isPositionHistory = (value: unknown): value is PositionHistoryEntry[] => (
   Array.isArray(value) && value.length <= MAX_HISTORY && value.every((item) => {
@@ -35,11 +34,12 @@ const createId = () => {
 };
 
 export const usePositionHistory = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [history, setHistory] = usePersistentState<PositionHistoryEntry[]>(
     'blocklens_position_history',
     [],
     isPositionHistory,
+    !authLoading && !user,
   );
   const historyRef = useRef(history);
   const cloudReady = useRef(false);
@@ -74,11 +74,8 @@ export const usePositionHistory = () => {
         currency: row.currency as CurrencyCode,
         createdAt: row.created_at,
       }));
-      let previousOwner: string | null = null;
-      try { previousOwner = window.localStorage.getItem(cloudOwnerKey); } catch { /* Storage can be unavailable. */ }
-      const canMigrateLocal = !previousOwner || previousOwner === user.id;
       const byId = new Map<string, PositionHistoryEntry>();
-      (remote.length > 0 || !canMigrateLocal ? remote : historyRef.current).forEach((entry) => byId.set(entry.id, entry));
+      remote.forEach((entry) => byId.set(entry.id, entry));
       pendingCreates.current.forEach((entry) => byId.set(entry.id, entry));
       const resolved = [...byId.values()]
         .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -86,7 +83,6 @@ export const usePositionHistory = () => {
       historyRef.current = resolved;
       setHistory(resolved);
       cloudReady.current = true;
-      try { window.localStorage.setItem(cloudOwnerKey, user.id); } catch { /* Storage can be unavailable. */ }
 
       const remoteIds = new Set(remote.map((entry) => entry.id));
       const localOnly = resolved.filter((entry) => !remoteIds.has(entry.id));

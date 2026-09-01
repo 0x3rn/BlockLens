@@ -34,7 +34,7 @@ export const DataState: React.FC<DataStateProps> = ({
     </div>
     {onRetry && (
       <button type="button" className="secondary-button" onClick={() => void handleRetry()} disabled={retrying}>
-        {retrying ? <LoaderCircle size={15} className="is-spinning" aria-hidden="true" /> : <RefreshCw size={15} aria-hidden="true" />} {retrying ? 'Retrying...' : 'Retry'}
+        {retrying ? <LoaderCircle size={15} className="is-spinning" aria-hidden="true" /> : <RefreshCw size={15} aria-hidden="true" />} {retrying ? 'Retrying' : 'Retry'}
       </button>
     )}
   </div>

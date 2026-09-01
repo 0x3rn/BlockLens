@@ -182,6 +182,48 @@ export interface PositionHistoryEntry {
   createdAt: string;
 }
 
+export type FuturesSide = 'long' | 'short';
+export type PaperFuturesTradeAction = 'open' | 'close' | 'liquidated' | 'stop-loss' | 'take-profit';
+
+export interface PaperFuturesPosition {
+  id: string;
+  coinId: string;
+  coinName: string;
+  symbol: string;
+  side: FuturesSide;
+  quantity: number;
+  entryPrice: number;
+  margin: number;
+  leverage: number;
+  stopLoss: number | null;
+  takeProfit: number | null;
+  openedAt: string;
+}
+
+export interface PaperFuturesTrade {
+  id: string;
+  coinId: string;
+  coinName: string;
+  symbol: string;
+  side: FuturesSide;
+  action: PaperFuturesTradeAction;
+  quantity: number;
+  price: number;
+  margin: number;
+  leverage: number;
+  fee: number;
+  realizedPnl: number;
+  createdAt: string;
+}
+
+export interface PaperFuturesAccount {
+  balance: number;
+  realizedPnl: number;
+  positions: PaperFuturesPosition[];
+  trades: PaperFuturesTrade[];
+  updatedAt: string;
+}
+
 export interface AIAnalysisRequest {
   coinId: string;
   coinName: string;

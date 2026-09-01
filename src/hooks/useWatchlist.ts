@@ -8,15 +8,14 @@ const isStringArray = (value: unknown): value is string[] => (
   && value.length <= 500
   && value.every((item) => typeof item === 'string' && /^[a-z0-9-]{1,100}$/.test(item))
 );
-const cloudOwnerKey = 'blocklens_watchlist_cloud_user';
-
 export const useWatchlist = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const client = supabase;
   const [watchlist, setWatchlist] = usePersistentState<string[]>(
     'blocklens_watchlist',
     [],
     isStringArray,
+    !authLoading && !user,
   );
   const cloudReady = useRef(false);
   const watchlistRef = useRef(watchlist);
@@ -41,10 +40,7 @@ export const useWatchlist = () => {
       if (cancelled || error) return;
 
       const remoteIds = (data ?? []).map((item) => item.coin_id);
-      let previousOwner: string | null = null;
-      try { previousOwner = window.localStorage.getItem(cloudOwnerKey); } catch { /* Storage can be unavailable. */ }
-      const canMigrateLocal = !previousOwner || previousOwner === user.id;
-      const nextIds = new Set(remoteIds.length > 0 || !canMigrateLocal ? remoteIds : watchlistRef.current);
+      const nextIds = new Set(remoteIds);
       pendingChanges.current.forEach((added, id) => {
         if (added) nextIds.add(id);
         else nextIds.delete(id);
@@ -53,7 +49,6 @@ export const useWatchlist = () => {
       watchlistRef.current = resolvedIds;
       setWatchlist(resolvedIds);
       cloudReady.current = true;
-      try { window.localStorage.setItem(cloudOwnerKey, user.id); } catch { /* Storage can be unavailable. */ }
 
       const remoteSet = new Set(remoteIds);
       const addedIds = resolvedIds.filter((id) => !remoteSet.has(id));

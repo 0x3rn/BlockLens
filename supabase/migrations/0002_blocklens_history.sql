@@ -24,13 +24,26 @@ create table if not exists public.position_history (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.paper_futures_accounts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade unique,
+  balance numeric(40, 18) not null check (balance >= 0),
+  realized_pnl numeric(40, 18) not null default 0,
+  positions jsonb not null default '[]'::jsonb,
+  trades jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create index if not exists ai_analysis_history_user_created_idx
   on public.ai_analysis_history(user_id, created_at desc);
 create index if not exists position_history_user_created_idx
   on public.position_history(user_id, created_at desc);
+create index if not exists paper_futures_accounts_user_id_idx
+  on public.paper_futures_accounts(user_id);
 
 alter table public.ai_analysis_history enable row level security;
 alter table public.position_history enable row level security;
+alter table public.paper_futures_accounts enable row level security;
 
 drop policy if exists "Users manage their AI analysis history" on public.ai_analysis_history;
 create policy "Users manage their AI analysis history"
@@ -44,5 +57,12 @@ create policy "Users manage their position history"
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
 
+drop policy if exists "Users manage their paper futures account" on public.paper_futures_accounts;
+create policy "Users manage their paper futures account"
+  on public.paper_futures_accounts for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
 grant select, insert, update, delete on public.ai_analysis_history to authenticated;
 grant select, insert, update, delete on public.position_history to authenticated;
+grant select, insert, update, delete on public.paper_futures_accounts to authenticated;

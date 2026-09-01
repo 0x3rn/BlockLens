@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { Json, supabase } from '../lib/supabase';
 
 const MAX_HISTORY = 50;
-const cloudOwnerKey = 'blocklens_ai_history_cloud_user';
 
 const isAIAnalysis = (value: unknown): value is AIAnalysis => {
   if (!value || typeof value !== 'object') return false;
@@ -76,11 +75,12 @@ const toHistoryEntry = (row: {
 };
 
 export const useAIHistory = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [history, setHistory] = usePersistentState<AIAnalysisHistoryEntry[]>(
     'blocklens_ai_history',
     [],
     isAIHistory,
+    !authLoading && !user,
   );
   const historyRef = useRef(history);
   const cloudReady = useRef(false);
@@ -107,11 +107,8 @@ export const useAIHistory = () => {
       if (cancelled || error || !data) return;
 
       const remote = data.map(toHistoryEntry).filter((entry): entry is AIAnalysisHistoryEntry => Boolean(entry));
-      let previousOwner: string | null = null;
-      try { previousOwner = window.localStorage.getItem(cloudOwnerKey); } catch { /* Storage can be unavailable. */ }
-      const canMigrateLocal = !previousOwner || previousOwner === user.id;
       const byId = new Map<string, AIAnalysisHistoryEntry>();
-      (remote.length > 0 || !canMigrateLocal ? remote : historyRef.current).forEach((entry) => byId.set(entry.id, entry));
+      remote.forEach((entry) => byId.set(entry.id, entry));
       pendingCreates.current.forEach((entry) => byId.set(entry.id, entry));
       const resolved = [...byId.values()]
         .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
@@ -119,7 +116,6 @@ export const useAIHistory = () => {
       historyRef.current = resolved;
       setHistory(resolved);
       cloudReady.current = true;
-      try { window.localStorage.setItem(cloudOwnerKey, user.id); } catch { /* Storage can be unavailable. */ }
 
       const remoteIds = new Set(remote.map((entry) => entry.id));
       const localOnly = resolved.filter((entry) => !remoteIds.has(entry.id));

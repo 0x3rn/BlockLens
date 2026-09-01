@@ -83,7 +83,7 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
       <div className="lens-readouts">
         <div>
           <span><span className="sr-only">Non-stable asset breadth</span><span aria-hidden="true">Asset breadth</span></span>
-          <strong>{snapshot.lead ? <>{snapshot.gainers}<small> up</small> · {snapshot.losers}<small> down</small> · {snapshot.flat}<small> flat</small></> : 'N/A'}</strong>
+          <strong>{snapshot.lead ? `${snapshot.gainers} up, ${snapshot.losers} down, ${snapshot.flat} flat` : 'N/A'}</strong>
         </div>
         <div>
           <span>Biggest 24h gainer</span>

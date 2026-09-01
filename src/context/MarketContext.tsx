@@ -1,12 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchMarketData, fetchMarketMetrics, getApiErrorMessage } from '../services/api';
-import { Coin, CurrencyCode, MarketMetrics, PortfolioPosition, PriceAlert, AlertCondition, AIAnalysisHistoryEntry, PositionHistoryEntry } from '../types/crypto';
+import { Coin, CurrencyCode, MarketMetrics, PortfolioPosition, PriceAlert, AlertCondition, AIAnalysisHistoryEntry, PositionHistoryEntry, PaperFuturesAccount } from '../types/crypto';
 import { useAlertsState } from './useAlertsState';
 import { useCurrency } from '../hooks/useCurrency';
 import { usePortfolio } from '../hooks/usePortfolio';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { useAIHistory } from '../hooks/useAIHistory';
 import { usePositionHistory } from '../hooks/usePositionHistory';
+import { FuturesActionResult, OpenFuturesPositionInput, usePaperFutures } from '../hooks/usePaperFutures';
 
 interface MarketContextValue {
   coins: Coin[];
@@ -26,6 +27,10 @@ interface MarketContextValue {
   aiHistory: AIAnalysisHistoryEntry[];
   saveAIAnalysis: (entry: Omit<AIAnalysisHistoryEntry, 'id' | 'createdAt'>) => void;
   positionHistory: PositionHistoryEntry[];
+  paperFutures: PaperFuturesAccount;
+  openFuturesPosition: (input: OpenFuturesPositionInput) => FuturesActionResult;
+  closeFuturesPosition: (positionId: string, price: number, action?: 'close' | 'liquidated' | 'stop-loss' | 'take-profit') => FuturesActionResult;
+  checkFuturesPosition: (positionId: string, markPrice: number) => FuturesActionResult | null;
   alerts: PriceAlert[];
   addAlert: (coinId: string, condition: AlertCondition, threshold: number, currency: CurrencyCode) => void;
   removeAlert: (id: string) => void;
@@ -47,6 +52,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
   const { positions, upsertPosition: persistPosition, removePosition: persistRemovePosition } = usePortfolio();
   const { history: aiHistory, saveAnalysis: saveAIAnalysis } = useAIHistory();
   const { history: positionHistory, recordPositionEvent } = usePositionHistory();
+  const { account: paperFutures, openPosition: openFuturesPosition, closePosition: closeFuturesPosition, checkPosition: checkFuturesPosition } = usePaperFutures();
   const { alerts, addAlert, removeAlert, evaluateAlerts } = useAlertsState(currency);
 
   const upsertPosition = useCallback((position: Omit<PortfolioPosition, 'updatedAt'>) => {
@@ -140,6 +146,10 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     aiHistory,
     saveAIAnalysis,
     positionHistory,
+    paperFutures,
+    openFuturesPosition,
+    closeFuturesPosition,
+    checkFuturesPosition,
     alerts,
     addAlert,
     removeAlert,
@@ -156,6 +166,10 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     aiHistory,
     saveAIAnalysis,
     positionHistory,
+    paperFutures,
+    openFuturesPosition,
+    closeFuturesPosition,
+    checkFuturesPosition,
     refreshing,
     removeAlert,
     removePosition,
