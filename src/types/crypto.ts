@@ -56,7 +56,7 @@ export interface ChartData {
   volume?: number;
 }
 
-export type CandleInterval = '5m' | '15m' | '30m' | '1h' | '4h';
+export type CandleInterval = '5m' | '15m' | '30m' | '1h' | '4h' | '12h' | '24h';
 
 export interface CandleData {
   timestamp: number;

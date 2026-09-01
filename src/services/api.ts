@@ -99,13 +99,24 @@ export const fetchCoinHistory = async (
   }));
 });
 
-const candleIntervalMs: Record<CandleInterval, number> = {
+  const candleIntervalMs: Record<CandleInterval, number> = {
   '5m': 5 * 60_000,
   '15m': 15 * 60_000,
   '30m': 30 * 60_000,
-  '1h': 60 * 60_000,
-  '4h': 4 * 60 * 60_000,
-};
+    '1h': 60 * 60_000,
+    '4h': 4 * 60 * 60_000,
+    '12h': 12 * 60 * 60_000,
+    '24h': 24 * 60 * 60_000,
+  };
+  const candleHistoryDays: Record<CandleInterval, number> = {
+    '5m': 1,
+    '15m': 1,
+    '30m': 1,
+    '1h': 1,
+    '4h': 4,
+    '12h': 12,
+    '24h': 24,
+  };
 
 export const fetchCoinCandles = async (
   coinId: string,
@@ -116,7 +127,7 @@ export const fetchCoinCandles = async (
     prices: [number, number][];
     total_volumes: [number, number][];
   }>(`/coins/${encodeURIComponent(coinId)}/market_chart`, {
-    params: { vs_currency: currency, days: 1, precision: 'full' },
+    params: { vs_currency: currency, days: candleHistoryDays[interval], precision: 'full' },
   });
 
   const bucketSize = candleIntervalMs[interval];

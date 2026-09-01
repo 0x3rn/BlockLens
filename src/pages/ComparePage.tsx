@@ -45,7 +45,6 @@ const ComparePage: React.FC = () => {
     const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
-    setHistories({});
     Promise.all(selectedIds.map(async (id) => [id, await fetchCoinHistory(id, days, currency)] as const))
       .then((entries) => {
         if (requestVersion.current === version) setHistories(Object.fromEntries(entries));
@@ -116,8 +115,8 @@ const ComparePage: React.FC = () => {
         <div className="chart-header">
           <div><span className="eyebrow">Indexed performance</span><h2 id="comparison-chart-title">Growth of 100</h2></div>
           <div className="time-filters" aria-label="Comparison time range">
-            {[7, 30, 365].map((value) => <button type="button" key={value} onClick={() => setDays(value)} className={days === value ? 'active' : ''} aria-pressed={days === value} aria-busy={loading && days === value}>
-              {loading && days === value ? <span className="inline-spinner" aria-hidden="true" /> : null}{value === 365 ? '1Y' : `${value}D`}
+            {[7, 30, 365].map((value) => <button type="button" key={value} onClick={() => setDays(value)} className={days === value ? 'active' : ''} aria-pressed={days === value}>
+              {value === 365 ? '1Y' : `${value}D`}
             </button>)}
           </div>
         </div>
