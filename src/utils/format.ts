@@ -57,6 +57,30 @@ export const formatCompactCurrency = (
   }).format(value);
 };
 
+/** Price labels for chart axes: preserve locale and precision without a currency symbol. */
+export const formatPriceAxis = (
+  value: number | null | undefined,
+  currency: CurrencyCode = 'usd',
+): string => {
+  if (value == null || !Number.isFinite(value)) return 'N/A';
+
+  const absolute = Math.abs(value);
+  const options: Intl.NumberFormatOptions = { useGrouping: true };
+  if (absolute >= 1_000_000) {
+    options.notation = 'compact';
+    options.maximumFractionDigits = 2;
+  } else if (absolute >= 1_000) {
+    options.maximumFractionDigits = 2;
+  } else if (absolute >= 1) {
+    options.minimumFractionDigits = 2;
+    options.maximumFractionDigits = 4;
+  } else {
+    options.maximumSignificantDigits = 5;
+  }
+
+  return new Intl.NumberFormat(currencyLocales[currency], options).format(value);
+};
+
 export const formatPercent = (
   value: number | null | undefined,
   includeSign = true,

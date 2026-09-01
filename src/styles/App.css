@@ -382,9 +382,7 @@ img { max-width: 100%; }
 .brief-facts > div { display: flex; flex-direction: column; gap: 4px; padding: 11px; background: var(--bg-secondary); border-radius: 8px; }
 .brief-facts span { color: var(--text-muted); font-size: .63rem; }
 .brief-facts strong { font: 650 .7rem var(--font-mono); text-transform: capitalize; }
-.trade-setup-card { display: flex; flex-direction: column; gap: 15px; padding: 18px; background: var(--bg-secondary); border: 1px solid var(--border-strong); border-left: 3px solid var(--amber); border-radius: 10px; }
-.trade-setup-card.long { border-left-color: var(--accent); }
-.trade-setup-card.short { border-left-color: var(--down); }
+.trade-setup-card { display: flex; flex-direction: column; gap: 15px; padding: 18px; background: var(--bg-secondary); border: 1px solid var(--border-strong); border-radius: 10px; }
 .trade-setup-heading { display: flex; align-items: center; gap: 10px; }
 .trade-setup-heading h3 { margin-top: 3px; font: 800 1.05rem var(--font-mono); letter-spacing: .04em; }
 .trade-setup-icon { display: grid; place-items: center; width: 38px; height: 38px; color: var(--amber); background: var(--amber-dim); border-radius: 9px; }
@@ -407,11 +405,11 @@ img { max-width: 100%; }
 .levels-grid > div > div { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; }
 .levels-grid strong { padding: 5px 8px; background: var(--bg-elevated); border-radius: 6px; font: .68rem var(--font-mono); }
 .scenario-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.scenario-card { position: relative; padding: 15px; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 9px; }
-.scenario-card::before { content: ''; position: absolute; top: 13px; left: 13px; width: 8px; height: 8px; border-radius: 2px; background: var(--amber); }
-.scenario-card.bullish::before { background: var(--accent); }
-.scenario-card.bearish::before { background: var(--down); }
-.scenario-card h3 { margin-bottom: 12px; padding-left: 17px; font-size: .86rem; }
+.scenario-card { padding: 15px; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 9px; }
+.scenario-card h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .86rem; }
+.scenario-card h3::before { content: ''; width: 8px; height: 8px; flex: 0 0 8px; border-radius: 2px; background: var(--amber); }
+.scenario-card.bullish h3::before { background: var(--accent); }
+.scenario-card.bearish h3::before { background: var(--down); }
 .scenario-card dl { display: flex; flex-direction: column; gap: 10px; }
 .scenario-card dt { color: var(--text-muted); font-size: .62rem; text-transform: uppercase; }
 .scenario-card dd { margin: 3px 0 0; color: var(--text-secondary); font-size: .72rem; line-height: 1.5; }

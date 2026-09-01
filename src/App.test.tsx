@@ -53,8 +53,8 @@ describe('BlockLens routes', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /see the market clearly/i })).toBeInTheDocument(), { timeout: 3000 });
     expect(await screen.findByText(/global market overview/i)).toBeInTheDocument();
     expect(screen.getByText(/market lens/i)).toBeInTheDocument();
-    expect(screen.getByText(/top 4 · 24h snapshot/i)).toBeInTheDocument();
-    expect(screen.getByText(/top-100 asset breadth/i)).toBeInTheDocument();
+    expect(screen.getByText(/top 5 · non-stable · 24h/i)).toBeInTheDocument();
+    expect(screen.getByText(/non-stable asset breadth/i)).toBeInTheDocument();
     expect(screen.getByText(/biggest 24h gainer/i)).toBeInTheDocument();
     expect(screen.getByText(/biggest 24h loser/i)).toBeInTheDocument();
     expect(screen.getAllByText(/coingecko/i).length).toBeGreaterThan(0);

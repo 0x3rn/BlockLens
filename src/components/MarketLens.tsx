@@ -9,14 +9,19 @@ interface MarketLensProps {
   currency: CurrencyCode;
 }
 
+const stablecoinSymbols = new Set([
+  'usdt', 'usdc', 'dai', 'usds', 'usde', 'usdg', 'pyusd', 'fdusd', 'tusd', 'usdd', 'rlusd', 'usd1',
+]);
+
 const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
   const snapshot = useMemo(() => {
-    const measured = coins.filter((coin) => coin.price_change_percentage_24h != null);
+    const assets = coins.filter((coin) => !stablecoinSymbols.has(coin.symbol.toLowerCase()));
+    const measured = assets.filter((coin) => coin.price_change_percentage_24h != null);
     const positive = measured.filter((coin) => (coin.price_change_percentage_24h ?? 0) > 0);
     const negative = measured.filter((coin) => (coin.price_change_percentage_24h ?? 0) < 0);
     return {
-      lead: coins[0] ?? null,
-      orbit: coins.slice(1, 4),
+      lead: assets[0] ?? null,
+      orbit: assets.slice(1, 5),
       biggestGainer: positive.reduce<Coin | null>((current, coin) => (
         !current || (coin.price_change_percentage_24h ?? 0) > (current.price_change_percentage_24h ?? 0) ? coin : current
       ), null),
@@ -38,7 +43,7 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
 
       <div className="lens-stage" aria-label={snapshot.lead ? `${snapshot.lead.name} market snapshot` : 'Waiting for market data'}>
         <span className="lens-coordinate top left">BL / MARKET 01</span>
-        <span className="lens-coordinate top right">TOP 4 · 24H SNAPSHOT</span>
+        <span className="lens-coordinate top right">TOP 5 · NON-STABLE · 24H</span>
         <div className="lens-axis horizontal" aria-hidden="true" />
         <div className="lens-axis vertical" aria-hidden="true" />
         <div className="lens-ring lens-ring-outer" aria-hidden="true" />
@@ -80,19 +85,19 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
 
       <div className="lens-readouts">
         <div>
-          <span>Top-100 asset breadth</span>
-          <strong>{snapshot.lead ? <>{snapshot.gainers}<small> up</small> · {snapshot.losers}<small> down</small> · {snapshot.flat}<small> flat</small></> : '—'}</strong>
+          <span>Non-stable asset breadth</span>
+          <strong>{snapshot.lead ? <>{snapshot.gainers}<small> up</small> · {snapshot.losers}<small> down</small> · {snapshot.flat}<small> flat</small></> : 'N/A'}</strong>
         </div>
         <div>
           <span>Biggest 24h gainer</span>
           <strong className="text-up">
-            {snapshot.biggestGainer ? `${snapshot.biggestGainer.symbol.toUpperCase()} ${formatPercent(snapshot.biggestGainer.price_change_percentage_24h)}` : '—'}
+            {snapshot.biggestGainer ? `${snapshot.biggestGainer.symbol.toUpperCase()} ${formatPercent(snapshot.biggestGainer.price_change_percentage_24h)}` : 'N/A'}
           </strong>
         </div>
         <div>
           <span>Biggest 24h loser</span>
           <strong className="text-down">
-            {snapshot.biggestLoser ? `${snapshot.biggestLoser.symbol.toUpperCase()} ${formatPercent(snapshot.biggestLoser.price_change_percentage_24h)}` : '—'}
+            {snapshot.biggestLoser ? `${snapshot.biggestLoser.symbol.toUpperCase()} ${formatPercent(snapshot.biggestLoser.price_change_percentage_24h)}` : 'N/A'}
           </strong>
         </div>
       </div>

@@ -57,16 +57,17 @@
 .lens-core strong { max-width: 96px; margin-top: 3px; overflow: hidden; font: 760 .75rem var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .lens-core small { margin-top: 3px; font: 650 .5rem var(--font-mono); }
 
-.lens-orbit-token { position: absolute; z-index: 4; display: flex; align-items: flex-start; gap: 5px; width: 108px; padding: 6px; color: var(--text-secondary); background: #101122; border: 1px solid var(--border-subtle); border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,.25); }
+.lens-orbit-token { position: absolute; z-index: 4; display: flex; align-items: center; gap: 5px; width: 108px; min-height: 48px; padding: 6px; color: var(--text-secondary); background: #101122; border: 1px solid var(--border-subtle); border-radius: 5px; box-shadow: 0 5px 15px rgba(0,0,0,.25); }
 .lens-orbit-token img { width: 16px; height: 16px; margin-top: 1px; flex: 0 0 16px; border-radius: 50%; }
 .lens-orbit-copy { display: flex; flex-direction: column; min-width: 0; }
 .lens-orbit-copy b, .lens-orbit-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lens-orbit-copy b { color: var(--text-secondary); font: 650 .5rem var(--font-body); }
 .lens-orbit-copy strong { margin-top: 2px; color: var(--text-primary); font: 680 .52rem var(--font-mono); }
 .lens-orbit-copy small { margin-top: 2px; font: 650 .45rem var(--font-mono); }
-.lens-orbit-token.token-1 { top: 29px; right: 15px; }
-.lens-orbit-token.token-2 { bottom: 24px; right: 24px; }
-.lens-orbit-token.token-3 { bottom: 36px; left: 14px; }
+.lens-orbit-token.token-1 { top: 32px; left: 40px; }
+.lens-orbit-token.token-2 { top: 32px; right: 40px; }
+.lens-orbit-token.token-3 { bottom: 32px; left: 40px; }
+.lens-orbit-token.token-4 { bottom: 32px; right: 40px; }
 
 .lens-readouts { position: relative; z-index: 2; display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 1px; overflow: hidden; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: 8px; }
 .lens-readouts > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 9px 10px; background: rgba(10,11,24,.96); }
@@ -86,9 +87,10 @@
   .lens-ring-outer, .lens-scan { width: 170px; height: 170px; }
   .lens-ring-inner { width: 112px; height: 112px; }
   .lens-orbit-token { width: 100px; }
-  .lens-orbit-token.token-1 { right: 3px; }
-  .lens-orbit-token.token-2 { right: 5px; }
-  .lens-orbit-token.token-3 { left: 3px; }
+  .lens-orbit-token.token-1 { top: 30px; left: 14px; }
+  .lens-orbit-token.token-2 { top: 30px; right: 14px; }
+  .lens-orbit-token.token-3 { bottom: 30px; left: 14px; }
+  .lens-orbit-token.token-4 { bottom: 30px; right: 14px; }
   .lens-readouts { grid-template-columns: 1fr 1fr; }
   .lens-readouts > div:first-child { grid-column: 1 / -1; }
 }

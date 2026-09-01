@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCurrency, formatPercent } from './format';
+import { formatCurrency, formatPercent, formatPriceAxis } from './format';
 
 describe('market formatting', () => {
   it('does not round micro-priced assets to zero', () => {
@@ -12,5 +12,10 @@ describe('market formatting', () => {
     expect(formatPercent(3.456)).toBe('+3.46%');
     expect(formatPercent(-2)).toBe('-2.00%');
     expect(formatPercent(null)).toBe('N/A');
+  });
+
+  it('keeps chart price axes free of currency symbols', () => {
+    expect(formatPriceAxis(102345.67, 'usd')).not.toContain('$');
+    expect(formatPriceAxis(0.000012345, 'usd')).toContain('0.000012');
   });
 });

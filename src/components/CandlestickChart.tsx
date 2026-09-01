@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CandleData, CurrencyCode } from '../types/crypto';
-import { formatCompactCurrency, formatCurrency } from '../utils/format';
+import { formatCompactCurrency, formatCurrency, formatPriceAxis } from '../utils/format';
 
 interface CandlestickChartProps {
   data: CandleData[];
@@ -12,9 +12,7 @@ interface CandlestickChartProps {
   logScale: boolean;
 }
 
-const WIDTH = 1000;
 const HEIGHT = 360;
-const LEFT = 66;
 const RIGHT = 18;
 const TOP = 14;
 const PRICE_BOTTOM = 278;
@@ -30,7 +28,21 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   showAverage,
   logScale,
 }) => {
-  const plotWidth = WIDTH - LEFT - RIGHT;
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [chartWidth, setChartWidth] = useState(720);
+  const left = chartWidth < 520 ? 54 : 66;
+
+  useEffect(() => {
+    const element = chartRef.current;
+    if (!element) return undefined;
+    const updateWidth = () => setChartWidth(Math.max(320, Math.round(element.clientWidth)));
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  const plotWidth = chartWidth - left - RIGHT;
   const prices = data.flatMap((candle) => [candle.high, candle.low]).filter(Number.isFinite);
   const rawMin = Math.min(...prices);
   const rawMax = Math.max(...prices);
@@ -55,10 +67,10 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
     return data.map((candle, index) => {
       const start = Math.max(0, index - 19);
       const average = data.slice(start, index + 1).reduce((sum, item) => sum + item.close, 0) / (index - start + 1);
-      const x = LEFT + (index + 0.5) * step;
+      const x = left + (index + 0.5) * step;
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y(average).toFixed(2)}`;
     }).join(' ');
-  }, [data, showAverage, step, min, max, logScale]);
+  }, [data, showAverage, step, left, min, max, logScale]);
 
   const gridValues = Array.from({ length: 4 }, (_, index) => {
     const ratio = index / 3;
@@ -69,31 +81,32 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
 
   return (
     <div
+      ref={chartRef}
       className="candle-chart"
       role="img"
       aria-label={`${interval} candlestick chart for ${coinName}. ${data.length} candles.`}
     >
-      <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
+      <svg viewBox={`0 0 ${chartWidth} ${HEIGHT}`} preserveAspectRatio="none" aria-hidden="true">
         <g className="candle-grid">
           {gridValues.map((value, index) => {
             const lineY = TOP + (index / 3) * (PRICE_BOTTOM - TOP);
             return (
               <g key={`grid-${index}`}>
-                <line x1={LEFT} x2={WIDTH - RIGHT} y1={lineY} y2={lineY} />
-                <text x={LEFT - 10} y={lineY + 4} textAnchor="end">{formatCompactCurrency(value, currency)}</text>
+                <line x1={left} x2={chartWidth - RIGHT} y1={lineY} y2={lineY} />
+                <text x={left - 10} y={lineY + 4} textAnchor="end">{formatPriceAxis(value, currency)}</text>
               </g>
             );
           })}
         </g>
 
         {showVolume && data.map((candle, index) => {
-          const x = LEFT + (index + 0.5) * step;
+          const x = left + (index + 0.5) * step;
           const barHeight = (candle.volume / volumeMax) * (VOLUME_BOTTOM - VOLUME_TOP);
           return <rect className="candle-volume" key={`volume-${candle.timestamp}`} x={x - bodyWidth / 2} y={VOLUME_BOTTOM - barHeight} width={bodyWidth} height={barHeight} />;
         })}
 
         {data.map((candle, index) => {
-          const x = LEFT + (index + 0.5) * step;
+          const x = left + (index + 0.5) * step;
           const openY = y(candle.open);
           const closeY = y(candle.close);
           const up = candle.close >= candle.open;
@@ -113,7 +126,7 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
         {tickIndexes.map((index, tickIndex) => {
           const candle = data[index];
           if (!candle) return null;
-          const x = LEFT + (index + 0.5) * step;
+          const x = left + (index + 0.5) * step;
           return <text className="candle-time" key={`tick-${tickIndex}`} x={x} y={HEIGHT - 8} textAnchor={tickIndex === 0 ? 'start' : tickIndex === tickIndexes.length - 1 ? 'end' : 'middle'}>{new Date(candle.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</text>;
         })}
       </svg>

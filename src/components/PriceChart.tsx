@@ -13,7 +13,7 @@ import {
 import { Activity, BarChart3, Scale } from 'lucide-react';
 import { fetchCoinCandles, fetchCoinHistory, getApiErrorMessage } from '../services/api';
 import { CandleData, CandleInterval, ChartData, CurrencyCode } from '../types/crypto';
-import { formatCompactCurrency, formatCurrency } from '../utils/format';
+import { formatCompactCurrency, formatCurrency, formatPriceAxis } from '../utils/format';
 import CandlestickChart from './CandlestickChart';
 import { DataState } from './DataState';
 import '../styles/Chart.css';
@@ -181,7 +181,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
                 yAxisId="price"
                 domain={['auto', 'auto']}
                 scale={logScale ? 'log' : 'auto'}
-                tickFormatter={(value) => formatCompactCurrency(value, currency)}
+                tickFormatter={(value) => formatPriceAxis(value, currency)}
                 tick={{ fontSize: 10, fill: '#858bab', fontFamily: 'JetBrains Mono' }}
                 axisLine={false}
                 tickLine={false}

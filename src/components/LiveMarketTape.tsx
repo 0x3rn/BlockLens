@@ -20,7 +20,7 @@ const LiveMarketTape: React.FC = () => {
         <div>
           <span className="eyebrow"><Activity size={14} aria-hidden="true" /> Exchange activity</span>
           <h2 id="live-market-title">Live Market Tape</h2>
-          <p>Real trade prints and forced orders—not estimated dashboard figures.</p>
+          <p>Streaming spot trades and forced-order events from Binance, shown as they arrive.</p>
         </div>
         <div className="live-tape-source">
           <span className="tape-index">BL / TAPE 01</span>
@@ -73,7 +73,7 @@ const LiveMarketTape: React.FC = () => {
         </article>
       </div>
 
-      <p className="tape-footnote">Binance exchange activity only. Liquidation totals cover events observed during this browser session and reset on reload; they are not market-wide 24-hour totals.</p>
+      <p className="tape-footnote">Source: Binance exchange activity. Liquidation totals cover events observed during this browser session and reset on reload, so they are not market-wide 24-hour totals.</p>
     </section>
   );
 };

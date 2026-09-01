@@ -29,7 +29,7 @@ const MarketData: React.FC = () => {
       icon: TrendingUp,
       tone: metrics.marketCapChange24h >= 0 ? 'up' : 'down',
     },
-    { label: 'BTC Dominance', value: formatPercent(metrics.bitcoinDominance, false), icon: Bitcoin },
+    { label: 'BTC Dominance', value: formatPercent(metrics.bitcoinDominance, false), icon: Bitcoin, iconTone: 'bitcoin' },
     { label: 'Active Assets', value: formatNumber(metrics.activeCryptocurrencies), icon: Activity },
     { label: 'Tracked Markets', value: formatNumber(metrics.trackedMarkets), icon: Building2 },
   ];
@@ -41,9 +41,9 @@ const MarketData: React.FC = () => {
         <span className="data-timestamp">CoinGecko · {formatDateTime(lastUpdated ?? metrics.updatedAt)}</span>
       </div>
       <div className="metrics-grid">
-        {metricItems.map(({ label, value, icon: Icon, tone }) => (
+        {metricItems.map(({ label, value, icon: Icon, tone, iconTone }) => (
           <div className="metric-card" key={label}>
-            <span className="metric-icon" aria-hidden="true"><Icon size={15} /></span>
+            <span className={`metric-icon ${iconTone ?? ''}`} aria-hidden="true"><Icon size={15} /></span>
             <span className="metric-label">{label}</span>
             <span className={`metric-value ${tone ?? ''}`}>{value}</span>
           </div>
