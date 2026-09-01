@@ -46,7 +46,7 @@
   .nav-links { display: none; }
   .nav-logo { font-size: 1.05rem; }
   .logo-icon-wrap { width: 31px; height: 31px; }
-  .mobile-bottom-nav { position: fixed; z-index: 100; inset: auto 0 0; display: grid; grid-template-columns: repeat(5, 1fr); padding: 7px max(8px, env(safe-area-inset-left)) calc(7px + env(safe-area-inset-bottom)); background: rgba(6,6,16,.97); border-top: 1px solid var(--border-subtle); backdrop-filter: blur(18px); }
+  .mobile-bottom-nav { position: fixed; z-index: 100; inset: auto 0 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 7px max(8px, env(safe-area-inset-left)) calc(7px + env(safe-area-inset-bottom)); background: rgba(6,6,16,.97); border-top: 1px solid var(--border-subtle); backdrop-filter: blur(18px); }
   .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding: 6px 2px; color: var(--text-muted); border-radius: 7px; font-size: .56rem; }
   .mobile-nav-item.active { color: var(--accent); background: var(--accent-dim); }
 }

@@ -4,6 +4,7 @@ import {
   BellRing,
   Bot,
   GitCompareArrows,
+  History,
   LayoutDashboard,
   RefreshCw,
   TrendingUp,
@@ -21,6 +22,7 @@ const tabs = [
   { to: '/markets', label: 'Markets', mobileLabel: 'Markets', icon: TrendingUp },
   { to: '/analysis', label: 'AI Brief', mobileLabel: 'AI', icon: Bot },
   { to: '/watchlist', label: 'Portfolio', mobileLabel: 'Portfolio', icon: WalletCards },
+  { to: '/history', label: 'History', mobileLabel: 'History', icon: History },
   { to: '/compare', label: 'Compare', mobileLabel: 'Compare', icon: GitCompareArrows },
 ];
 

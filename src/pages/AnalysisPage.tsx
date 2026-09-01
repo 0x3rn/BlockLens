@@ -11,7 +11,7 @@ import { AIAnalysis } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 
 const AnalysisPage: React.FC = () => {
-  const { coins, currency, refresh, error: marketError } = useMarket();
+  const { coins, currency, refresh, error: marketError, saveAIAnalysis } = useMarket();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCoin = searchParams.get('coin');
@@ -59,6 +59,14 @@ const AnalysisPage: React.FC = () => {
         dataAsOf: selectedCoin.last_updated ?? new Date().toISOString(),
       });
       setAnalysis(result);
+      saveAIAnalysis({
+        coinId: selectedCoin.id,
+        coinName: selectedCoin.name,
+        coinSymbol: selectedCoin.symbol,
+        currency,
+        price: selectedCoin.current_price,
+        analysis: result,
+      });
       showToast(`${selectedCoin.name} trading analysis generated.`);
     } catch (analysisError) {
       const message = getApiErrorMessage(analysisError);

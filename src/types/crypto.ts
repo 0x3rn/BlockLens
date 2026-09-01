@@ -159,6 +159,29 @@ export interface AIAnalysis {
   generatedAt: string;
 }
 
+export interface AIAnalysisHistoryEntry {
+  id: string;
+  coinId: string;
+  coinName: string;
+  coinSymbol: string;
+  currency: CurrencyCode;
+  price: number;
+  analysis: AIAnalysis;
+  createdAt: string;
+}
+
+export type PositionHistoryAction = 'added' | 'updated' | 'removed';
+
+export interface PositionHistoryEntry {
+  id: string;
+  coinId: string;
+  action: PositionHistoryAction;
+  quantity: number;
+  averageCost: number;
+  currency: CurrencyCode;
+  createdAt: string;
+}
+
 export interface AIAnalysisRequest {
   coinId: string;
   coinName: string;

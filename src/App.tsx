@@ -8,6 +8,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const MarketsPage = lazy(() => import('./pages/MarketsPage'));
 const AnalysisPage = lazy(() => import('./pages/AnalysisPage'));
 const PortfolioPage = lazy(() => import('./pages/PortfolioPage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const ComparePage = lazy(() => import('./pages/ComparePage'));
 const CoinDetailPage = lazy(() => import('./components/CoinDetail'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -64,6 +65,7 @@ const App: React.FC = () => (
         <Route path="markets" element={<MarketsPage />} />
         <Route path="analysis" element={<AnalysisPage />} />
         <Route path="watchlist" element={<PortfolioPage />} />
+        <Route path="history" element={<HistoryPage />} />
         <Route path="compare" element={<ComparePage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="coin/:coinId" element={<CoinDetailPage />} />

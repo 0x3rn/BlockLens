@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 export type Database = {
   public: {
     Tables: {
@@ -31,6 +33,18 @@ export type Database = {
         Row: { id: string; user_id: string; coin_id: string; condition: string; threshold: number; currency: string; created_at: string; triggered_at: string | null };
         Insert: { id?: string; user_id: string; coin_id: string; condition: string; threshold: number; currency: string; created_at?: string; triggered_at?: string | null };
         Update: { id?: string; user_id?: string; coin_id?: string; condition?: string; threshold?: number; currency?: string; created_at?: string; triggered_at?: string | null };
+        Relationships: [];
+      };
+      ai_analysis_history: {
+        Row: { id: string; user_id: string; coin_id: string; coin_name: string; coin_symbol: string; currency: string; price: number; analysis: Json; created_at: string };
+        Insert: { id?: string; user_id: string; coin_id: string; coin_name: string; coin_symbol: string; currency: string; price: number; analysis: Json; created_at?: string };
+        Update: { id?: string; user_id?: string; coin_id?: string; coin_name?: string; coin_symbol?: string; currency?: string; price?: number; analysis?: Json; created_at?: string };
+        Relationships: [];
+      };
+      position_history: {
+        Row: { id: string; user_id: string; coin_id: string; action: string; quantity: number; average_cost: number; currency: string; created_at: string };
+        Insert: { id?: string; user_id: string; coin_id: string; action: string; quantity: number; average_cost: number; currency: string; created_at?: string };
+        Update: { id?: string; user_id?: string; coin_id?: string; action?: string; quantity?: number; average_cost?: number; currency?: string; created_at?: string };
         Relationships: [];
       };
     };
