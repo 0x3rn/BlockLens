@@ -1,49 +1,118 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CandleData, CurrencyCode } from '../types/crypto';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  CandlestickData,
+  CandlestickSeries,
+  ColorType,
+  CrosshairMode,
+  HistogramData,
+  HistogramSeries,
+  IChartApi,
+  ISeriesApi,
+  LineSeries,
+  LineStyle,
+  MouseEventParams,
+  PriceScaleMode,
+  Time,
+  createChart,
+} from 'lightweight-charts';
+import { CandleData, CandleInterval, CurrencyCode } from '../types/crypto';
 import { formatCurrency, formatPriceAxis } from '../utils/format';
 
 interface CandlestickChartProps {
   data: CandleData[];
   currency: CurrencyCode;
-  interval: string;
+  interval: CandleInterval;
+  coinSymbol?: string;
   coinName: string;
   showVolume: boolean;
   showAverage: boolean;
   logScale: boolean;
 }
 
-const HEIGHT = 360;
-const RIGHT = 18;
-const TOP = 48;
-const PRICE_BOTTOM = 268;
-const VOLUME_TOP = 291;
-const VOLUME_BOTTOM = 337;
-// Match the current 30m candle proportions across every interval and zoom level.
-const CANDLE_BODY_WIDTH = 10;
 const DESKTOP_CANDLE_COUNT = 48;
-const MOBILE_CANDLE_COUNT = 24;
+const MOBILE_CANDLE_COUNT = 36;
+const CHART_HEIGHT = 360;
+const BAR_SPACING = 10;
+const PRICE_SCALE_WIDTH = 68;
+const candleIntervalMs: Record<CandleInterval, number> = {
+  '5m': 5 * 60_000,
+  '15m': 15 * 60_000,
+  '30m': 30 * 60_000,
+  '1h': 60 * 60_000,
+  '4h': 4 * 60 * 60_000,
+  '12h': 12 * 60 * 60_000,
+  '24h': 24 * 60 * 60_000,
+};
+const UP_COLOR = '#00e58b';
+const DOWN_COLOR = '#ff5b76';
+const MUTED_TEXT = '#858bab';
+const CHART_BG = '#0a0b18';
 
-const formatCandleTick = (timestamp: number, showDate: boolean) => (
-  showDate
-    ? new Date(timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' })
-    : new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-);
+const getCandleTime = (timestamp: number) => Math.floor(timestamp / 1000) as unknown as Time;
+
+const getTimeMilliseconds = (time: Time) => {
+  if (typeof time === 'number') return time * 1000;
+  if (typeof time === 'string') return new Date(time).getTime();
+  return Date.UTC(time.year, time.month - 1, time.day);
+};
+
+const formatAxisPrice = (price: number) => {
+  const absolute = Math.abs(price);
+  if (absolute >= 1_000_000_000) return `${(price / 1_000_000_000).toFixed(1)}B`;
+  if (absolute >= 1_000_000) return `${(price / 1_000_000).toFixed(1)}M`;
+  if (absolute >= 1_000) return `${(price / 1_000).toFixed(absolute >= 10_000 ? 0 : 1)}k`;
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(price);
+};
+
+const formatCountdown = (milliseconds: number) => {
+  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const hours = Math.floor(seconds / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const remainder = seconds % 60;
+  return [hours, minutes, remainder].map((value) => String(value).padStart(2, '0')).join(':');
+};
+
+const formatTime = (timestamp: number, showDate: boolean) => new Intl.DateTimeFormat(undefined, showDate
+  ? { month: 'short', day: 'numeric' }
+  : { hour: '2-digit', minute: '2-digit' }).format(timestamp);
 
 const CandlestickChart: React.FC<CandlestickChartProps> = ({
   data,
   currency,
   interval,
+  coinSymbol,
   coinName,
   showVolume,
   showAverage,
   logScale,
 }) => {
   const chartRef = useRef<HTMLDivElement>(null);
+  const mountRef = useRef<HTMLDivElement>(null);
+  const chartApiRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null);
+  const averageSeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const candleDataRef = useRef<CandleData[]>(data);
+  const candleLookupRef = useRef(new Map<number, CandleData>());
   const [chartWidth, setChartWidth] = useState(720);
   const [zoom, setZoom] = useState(1);
   const [fullRange, setFullRange] = useState(false);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const left = chartWidth < 520 ? 64 : 76;
+  const [selectedCandle, setSelectedCandle] = useState<CandleData | undefined>(data.at(-1));
+  const [livePrice, setLivePrice] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const [livePriceY, setLivePriceY] = useState<number | null>(null);
+
+  const targetCount = chartWidth < 520 ? MOBILE_CANDLE_COUNT : DESKTOP_CANDLE_COUNT;
+  const visibleCount = fullRange
+    ? data.length
+    : Math.min(data.length, Math.max(6, Math.round(targetCount / zoom)));
+  const chartSpan = data.length > 1 ? data[data.length - 1].timestamp - data[0].timestamp : 0;
+  const showDateOnTicks = chartSpan >= 24 * 60 * 60_000;
+  const latestCandle = data.at(-1);
+  const markerPrice = livePrice ?? latestCandle?.close;
+  const markerTone = markerPrice != null && latestCandle && markerPrice >= latestCandle.open ? 'up' : 'down';
+  const candleEndsAt = latestCandle ? latestCandle.timestamp + candleIntervalMs[interval] : 0;
+  const countdown = candleEndsAt > 0 ? formatCountdown(candleEndsAt - now) : '--:--:--';
 
   useEffect(() => {
     const element = chartRef.current;
@@ -58,62 +127,217 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
   useEffect(() => {
     setZoom(1);
     setFullRange(false);
-    setHoveredIndex(null);
+    setSelectedCandle(data.at(-1));
   }, [data, interval]);
 
-  const visibleData = useMemo(() => {
-    // Desktop defaults to 48 candles and mobile to 24. The interval itself
-    // determines the span covered by those candles.
-    const windowSize = chartWidth < 520 ? MOBILE_CANDLE_COUNT : DESKTOP_CANDLE_COUNT;
-    if (fullRange || data.length <= windowSize) return data;
-    const visibleCount = Math.max(6, Math.round(windowSize / zoom));
-    return data.slice(-Math.min(data.length, visibleCount));
-  }, [data, fullRange, zoom, chartWidth]);
+  useEffect(() => {
+    candleDataRef.current = data;
+    candleLookupRef.current = new Map(data.map((candle) => [Math.floor(candle.timestamp / 1000), candle]));
+  }, [data]);
 
-  const plotWidth = Math.max(1, chartWidth - left - RIGHT);
-  const prices = visibleData.flatMap((candle) => [candle.high, candle.low]).filter(Number.isFinite);
-  const rawMin = prices.length ? Math.min(...prices) : 0;
-  const rawMax = prices.length ? Math.max(...prices) : 1;
-  const safeMin = rawMin > 0 ? rawMin : 0.00000001;
-  const safeMax = rawMax > safeMin ? rawMax : safeMin * 1.01;
-  const valueMin = logScale ? Math.log(safeMin) : safeMin;
-  const valueMax = logScale ? Math.log(safeMax) : safeMax;
-  const pad = Math.max((valueMax - valueMin) * 0.08, 0.000001);
-  const min = valueMin - pad;
-  const max = valueMax + pad;
-  const volumeMax = Math.max(...visibleData.map((candle) => candle.volume), 1);
-  const step = plotWidth / Math.max(visibleData.length, 1);
-  const bodyWidth = CANDLE_BODY_WIDTH;
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
-  const y = (value: number) => {
-    const transformed = logScale ? Math.log(Math.max(value, 0.00000001)) : value;
-    return TOP + ((max - transformed) / Math.max(max - min, 0.000001)) * (PRICE_BOTTOM - TOP);
-  };
+  useEffect(() => {
+    setLivePrice(null);
+    const normalizedSymbol = coinSymbol?.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (currency !== 'usd' || !normalizedSymbol || typeof window === 'undefined' || typeof window.WebSocket === 'undefined') {
+      return undefined;
+    }
 
-  const averagePath = useMemo(() => {
-    if (!showAverage || !visibleData.length) return '';
-    return visibleData.map((candle, index) => {
+    let active = true;
+    let socket: WebSocket | null = null;
+    try {
+      socket = new WebSocket(`wss://stream.binance.com:9443/ws/${normalizedSymbol.toLowerCase()}usdt@trade`);
+    } catch {
+      return undefined;
+    }
+    socket.onmessage = (event) => {
+      if (!active) return;
+      try {
+        const payload = JSON.parse(String(event.data)) as { p?: string };
+        const price = Number(payload.p);
+        if (Number.isFinite(price) && price > 0) setLivePrice(price);
+      } catch {
+        // Ignore malformed stream messages and keep the chart running on its latest candle.
+      }
+    };
+    return () => {
+      active = false;
+      socket?.close();
+    };
+  }, [coinSymbol, currency]);
+
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return undefined;
+
+    const chart = createChart(mount, {
+      autoSize: true,
+      height: CHART_HEIGHT,
+      layout: {
+        background: { type: ColorType.Solid, color: CHART_BG },
+        textColor: MUTED_TEXT,
+        fontFamily: 'JetBrains Mono',
+        attributionLogo: false,
+      },
+      grid: {
+        vertLines: { color: 'rgba(255,255,255,.045)' },
+        horzLines: { color: 'rgba(255,255,255,.07)', style: LineStyle.Dashed },
+      },
+      rightPriceScale: {
+        borderVisible: false,
+        scaleMargins: { top: 0.08, bottom: 0.08 },
+        minimumWidth: 58,
+      },
+      leftPriceScale: { visible: false },
+      timeScale: {
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 0,
+        barSpacing: BAR_SPACING,
+        minBarSpacing: 4,
+        fixRightEdge: true,
+        lockVisibleTimeRangeOnResize: true,
+      },
+      crosshair: {
+        mode: CrosshairMode.Magnet,
+        vertLine: { color: 'rgba(255,255,255,.22)', style: LineStyle.Dashed, labelVisible: false },
+        horzLine: { color: 'rgba(255,255,255,.22)', style: LineStyle.Dashed, labelVisible: true },
+      },
+      handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+      handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+      localization: {
+        priceFormatter: formatAxisPrice,
+        timeFormatter: (time: Time) => formatTime(getTimeMilliseconds(time), showDateOnTicks),
+      },
+    });
+
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: UP_COLOR,
+      downColor: DOWN_COLOR,
+      borderVisible: false,
+      wickVisible: true,
+      wickUpColor: UP_COLOR,
+      wickDownColor: DOWN_COLOR,
+      priceLineVisible: false,
+      lastValueVisible: false,
+    });
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceScaleId: 'volume',
+      priceFormat: { type: 'volume' },
+      base: 0,
+      lastValueVisible: false,
+      priceLineVisible: false,
+    }, 1);
+    volumeSeries.priceScale().applyOptions({ visible: false });
+    const averageSeries = chart.addSeries(LineSeries, {
+      color: '#a855f7',
+      lineWidth: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+      visible: false,
+    });
+
+    chartApiRef.current = chart;
+    candleSeriesRef.current = candleSeries;
+    volumeSeriesRef.current = volumeSeries;
+    averageSeriesRef.current = averageSeries;
+
+    const handleCrosshairMove = (param: MouseEventParams) => {
+      const currentSeries = candleSeriesRef.current;
+      if (!currentSeries) return;
+      const bar = param.seriesData.get(currentSeries) as CandlestickData | undefined;
+      if (!bar || typeof bar.time !== 'number') {
+        setSelectedCandle(candleDataRef.current.at(-1));
+        return;
+      }
+      setSelectedCandle(candleLookupRef.current.get(Number(bar.time)) ?? candleDataRef.current.at(-1));
+    };
+    chart.subscribeCrosshairMove(handleCrosshairMove);
+
+    return () => {
+      chart.unsubscribeCrosshairMove(handleCrosshairMove);
+      chart.remove();
+      chartApiRef.current = null;
+      candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      averageSeriesRef.current = null;
+    };
+  }, [showDateOnTicks]);
+
+  useEffect(() => {
+    const chart = chartApiRef.current;
+    const candleSeries = candleSeriesRef.current;
+    const volumeSeries = volumeSeriesRef.current;
+    const averageSeries = averageSeriesRef.current;
+    if (!chart || !candleSeries || !volumeSeries || !averageSeries) return;
+
+    const candleData: CandlestickData[] = data.map((candle) => ({
+      time: getCandleTime(candle.timestamp),
+      open: candle.open,
+      high: candle.high,
+      low: candle.low,
+      close: candle.close,
+    }));
+    const volumeData: HistogramData[] = data.map((candle) => ({
+      time: getCandleTime(candle.timestamp),
+      value: Math.max(0, candle.volume),
+      color: candle.close >= candle.open ? 'rgba(0,229,139,.52)' : 'rgba(255,91,116,.52)',
+    }));
+    const averageData = data.map((candle, index) => {
       const start = Math.max(0, index - 19);
-      const average = visibleData.slice(start, index + 1).reduce((sum, item) => sum + item.close, 0) / (index - start + 1);
-      const x = left + (index + 0.5) * step;
-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y(average).toFixed(2)}`;
-    }).join(' ');
-  }, [visibleData, showAverage, step, left, min, max, logScale]);
+      const average = data.slice(start, index + 1).reduce((sum, item) => sum + item.close, 0) / (index - start + 1);
+      return { time: getCandleTime(candle.timestamp), value: average };
+    });
 
-  const gridValues = Array.from({ length: 5 }, (_, index) => {
-    const ratio = index / 4;
-    const transformed = max - ratio * (max - min);
-    return logScale ? Math.exp(transformed) : transformed;
-  });
-  const tickIndexes = [0, Math.floor((visibleData.length - 1) * 0.33), Math.floor((visibleData.length - 1) * 0.66), Math.max(0, visibleData.length - 1)];
-  const chartSpan = visibleData.length > 1 ? visibleData[visibleData.length - 1].timestamp - visibleData[0].timestamp : 0;
-  const showDateOnTicks = chartSpan >= 24 * 60 * 60_000;
-  const lastIndex = Math.max(0, visibleData.length - 1);
-  const selectedIndex = hoveredIndex === null ? lastIndex : Math.min(lastIndex, hoveredIndex);
-  const selectedCandle = visibleData[selectedIndex];
-  const selectedX = left + (selectedIndex + 0.5) * step;
-  const lastPriceY = selectedCandle ? y(selectedCandle.close) : PRICE_BOTTOM;
-  const priceTagY = Math.max(TOP + 2, Math.min(PRICE_BOTTOM - 12, lastPriceY - 9));
+    candleSeries.setData(candleData);
+    volumeSeries.setData(volumeData);
+    averageSeries.setData(averageData);
+    volumeSeries.applyOptions({ visible: showVolume });
+    averageSeries.applyOptions({ visible: showAverage });
+    candleSeries.priceScale().applyOptions({ mode: logScale ? PriceScaleMode.Logarithmic : PriceScaleMode.Normal });
+
+    const volumePane = chart.panes()[1];
+    volumePane?.setHeight(showVolume ? 84 : 1);
+    const spacing = Math.max(4, Math.min(26, (chartWidth - PRICE_SCALE_WIDTH - 4) / Math.max(visibleCount, 1)));
+    chart.timeScale().applyOptions({ barSpacing: spacing });
+    if (data.length > 0) {
+      const rangeCount = fullRange ? data.length : visibleCount;
+      chart.timeScale().setVisibleLogicalRange({
+        from: Math.max(0, data.length - rangeCount),
+        to: data.length - 1,
+      });
+    }
+  }, [chartWidth, data, fullRange, logScale, showAverage, showVolume, visibleCount]);
+
+  useEffect(() => {
+    const series = candleSeriesRef.current;
+    const element = chartRef.current;
+    if (!series || !element || markerPrice == null) {
+      setLivePriceY(null);
+      return;
+    }
+    const coordinate = series.priceToCoordinate(markerPrice);
+    const chartRect = element.getBoundingClientRect();
+    const tvElement = element.querySelector<HTMLElement>('.tv-lightweight-charts');
+    const firstCanvas = element.querySelector<HTMLCanvasElement>('.tv-lightweight-charts canvas');
+    if (coordinate == null || !tvElement || !firstCanvas) {
+      setLivePriceY(null);
+      return;
+    }
+    const tvRect = tvElement.getBoundingClientRect();
+    const paneRect = firstCanvas.getBoundingClientRect();
+    const offset = tvRect.top - chartRect.top;
+    const paneTop = paneRect.top - chartRect.top;
+    const paneBottom = paneRect.bottom - chartRect.top;
+    const y = Math.max(paneTop + 4, Math.min(paneBottom - 4, offset + coordinate));
+    setLivePriceY(y);
+  }, [chartWidth, data, fullRange, logScale, markerPrice, showVolume, visibleCount]);
 
   const zoomIn = () => {
     setFullRange(false);
@@ -132,101 +356,49 @@ const CandlestickChart: React.FC<CandlestickChartProps> = ({
     if (event.deltaY < 0) zoomIn();
     if (event.deltaY > 0) zoomOut();
   };
-  const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!visibleData.length) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const svgX = ((event.clientX - bounds.left) / Math.max(bounds.width, 1)) * chartWidth;
-    const index = Math.round((svgX - left) / step - 0.5);
-    setHoveredIndex(Math.max(0, Math.min(lastIndex, index)));
-  };
+
+  const selected = selectedCandle ?? data.at(-1);
+  const selectedTime = selected ? formatTime(selected.timestamp, showDateOnTicks) : '';
 
   return (
-    <div
-      ref={chartRef}
-      className="candle-chart"
-      role="img"
-      aria-label={`${interval} candlestick chart for ${coinName}. ${visibleData.length} visible candles.`}
-      onWheel={handleWheel}
-    >
-      <div className="candle-readout" aria-live="polite">
-        <span className="candle-readout-title">{interval} · {selectedCandle ? new Date(selectedCandle.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-        {selectedCandle && (
-          <span className="candle-readout-values">
-            <b>O</b> {formatCurrency(selectedCandle.open, currency)}
-            <b>H</b> {formatCurrency(selectedCandle.high, currency)}
-            <b>L</b> {formatCurrency(selectedCandle.low, currency)}
-            <b>C</b> <em className={selectedCandle.close >= selectedCandle.open ? 'up' : 'down'}>{formatCurrency(selectedCandle.close, currency)}</em>
-          </span>
+    <div className="candle-chart-shell">
+      <div
+        ref={chartRef}
+        className="candle-chart"
+        role="img"
+        aria-label={`${interval} candlestick chart for ${coinName}. ${visibleCount} visible candles.`}
+        onWheel={handleWheel}
+      >
+        <div ref={mountRef} className="candle-chart-mount" aria-hidden="true" />
+        <div className="candle-readout" aria-live="polite">
+          <span className="candle-readout-title">{interval} · {selectedTime}</span>
+          {selected && (
+            <span className="candle-readout-values">
+              <b>O</b> {formatCurrency(selected.open, currency)}
+              <b>H</b> {formatCurrency(selected.high, currency)}
+              <b>L</b> {formatCurrency(selected.low, currency)}
+              <b>C</b> <em className={selected.close >= selected.open ? 'up' : 'down'}>{formatCurrency(selected.close, currency)}</em>
+            </span>
+          )}
+        </div>
+        <div className="candle-chart-toolbar" aria-label="Candle chart zoom controls">
+          <span>{fullRange ? `ALL · ${data.length}` : `VIEW · ${visibleCount}`}</span>
+          <button type="button" onClick={zoomOut} disabled={fullRange || zoom === 1} aria-label="Zoom out">−</button>
+          <button type="button" onClick={zoomIn} disabled={zoom === 6} aria-label="Zoom in">+</button>
+          <button type="button" onClick={() => setFullRange(true)} disabled={fullRange}>All</button>
+          <button type="button" onClick={resetView} disabled={!fullRange && zoom === 1}>Reset</button>
+        </div>
+        {livePriceY != null && markerPrice != null && (
+          <>
+            <div className={`candle-live-line ${markerTone}`} style={{ top: livePriceY }} aria-hidden="true" />
+            <div className={`candle-live-marker ${markerTone}`} style={{ top: livePriceY }} aria-label={`Live price ${formatPriceAxis(markerPrice)}. Candle closes in ${countdown}`}>
+              <strong>{formatPriceAxis(markerPrice)}</strong>
+              <time>{countdown}</time>
+            </div>
+          </>
         )}
       </div>
-      <div className="candle-chart-toolbar" aria-label="Candle chart zoom controls">
-        <span>{fullRange ? `ALL · ${data.length}` : `VIEW · ${visibleData.length}`}</span>
-        <button type="button" onClick={zoomOut} disabled={fullRange || zoom === 1} aria-label="Zoom out">−</button>
-        <button type="button" onClick={zoomIn} disabled={zoom === 6} aria-label="Zoom in">+</button>
-        <button type="button" onClick={() => setFullRange(true)} disabled={fullRange}>All</button>
-        <button type="button" onClick={resetView} disabled={!fullRange && zoom === 1}>Reset</button>
-      </div>
-      <svg
-        viewBox={`0 0 ${chartWidth} ${HEIGHT}`}
-        preserveAspectRatio="none"
-        aria-hidden="true"
-        onPointerMove={handlePointerMove}
-        onPointerLeave={() => setHoveredIndex(null)}
-      >
-        <g className="candle-grid">
-          {gridValues.map((value, index) => {
-            const lineY = TOP + (index / 4) * (PRICE_BOTTOM - TOP);
-            return (
-              <g key={`grid-${index}`}>
-                <line x1={left} x2={chartWidth - RIGHT} y1={lineY} y2={lineY} />
-                <text x={left - 10} y={lineY + 4} textAnchor="end">{formatPriceAxis(value, currency)}</text>
-              </g>
-            );
-          })}
-          <line className="candle-volume-divider" x1={left} x2={chartWidth - RIGHT} y1={VOLUME_TOP - 8} y2={VOLUME_TOP - 8} />
-          <text className="candle-pane-label" x={left} y={VOLUME_TOP - 15}>VOL</text>
-        </g>
-
-        {showVolume && visibleData.map((candle, index) => {
-          const x = left + (index + 0.5) * step;
-          const barHeight = (candle.volume / volumeMax) * (VOLUME_BOTTOM - VOLUME_TOP);
-          const up = candle.close >= candle.open;
-          return <rect className={`candle-volume ${up ? 'up' : 'down'}`} key={`volume-${candle.timestamp}`} x={x - bodyWidth / 2} y={VOLUME_BOTTOM - barHeight} width={bodyWidth} height={Math.max(1, barHeight)} />;
-        })}
-
-        {visibleData.map((candle, index) => {
-          const x = left + (index + 0.5) * step;
-          const openY = y(candle.open);
-          const closeY = y(candle.close);
-          const up = candle.close >= candle.open;
-          const top = Math.min(openY, closeY);
-          const bodyHeight = Math.max(4, Math.abs(closeY - openY));
-          return (
-            <g className={`candle ${up ? 'up' : 'down'}`} key={`candle-${candle.timestamp}`}>
-              <title>{`${new Date(candle.timestamp).toLocaleString()} · O ${formatCurrency(candle.open, currency)} · H ${formatCurrency(candle.high, currency)} · L ${formatCurrency(candle.low, currency)} · C ${formatCurrency(candle.close, currency)}`}</title>
-              <line className="candle-wick" x1={x} x2={x} y1={y(candle.high)} y2={y(candle.low)} />
-              <rect className="candle-body" x={x - bodyWidth / 2} y={top} width={bodyWidth} height={bodyHeight} />
-            </g>
-          );
-        })}
-
-        {showAverage && <path className="candle-average" d={averagePath} />}
-        {selectedCandle && <>
-          <line className="candle-crosshair-x" x1={selectedX} x2={selectedX} y1={TOP} y2={VOLUME_BOTTOM} />
-          <line className="candle-last-price" x1={left} x2={chartWidth - RIGHT} y1={lastPriceY} y2={lastPriceY} />
-          <g className="candle-price-tag">
-            <rect x={chartWidth - RIGHT - 64} y={priceTagY} width="64" height="18" rx="3" />
-            <text x={chartWidth - RIGHT - 7} y={priceTagY + 12} textAnchor="end">{formatPriceAxis(selectedCandle.close, currency)}</text>
-          </g>
-        </>}
-
-        {tickIndexes.map((index, tickIndex) => {
-          const candle = visibleData[index];
-          if (!candle) return null;
-          const x = left + (index + 0.5) * step;
-          return <text className="candle-time" key={`tick-${tickIndex}`} x={x} y={HEIGHT - 8} textAnchor={tickIndex === 0 ? 'start' : tickIndex === tickIndexes.length - 1 ? 'end' : 'middle'}>{formatCandleTick(candle.timestamp, showDateOnTicks)}</text>;
-        })}
-      </svg>
+      <a className="candle-chart-attribution" href="https://www.tradingview.com/" target="_blank" rel="noreferrer">TradingView</a>
     </div>
   );
 };

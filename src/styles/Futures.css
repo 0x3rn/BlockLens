@@ -7,6 +7,12 @@
 .futures-notice > svg { flex: 0 0 auto; color: var(--amber); }
 .futures-notice p { font-size: .73rem; line-height: 1.5; }
 .futures-notice strong { color: var(--text-primary); }
+.futures-sync-state { display: flex; align-items: center; gap: 9px; padding: 10px 12px; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 8px; font-size: .7rem; line-height: 1.45; }
+.futures-sync-state > svg { flex: 0 0 auto; color: var(--amber); }
+.futures-sync-state p { flex: 1; min-width: 0; }
+.futures-sync-state.error { color: #ff9aaa; background: var(--down-dim); border-color: rgba(255,91,116,.22); }
+.futures-sync-state.error > svg { color: var(--down); }
+.futures-sync-state .futures-feed-retry { margin-left: auto; }
 .futures-account-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius); }
 .futures-account-bar > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 15px 17px; background: var(--bg-card); }
 .futures-account-bar span { color: var(--text-muted); font-size: .63rem; }
@@ -16,6 +22,7 @@
 .futures-live-price { display: flex; align-items: flex-end; gap: 12px; min-width: 0; }
 .futures-live-price > span { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); font: 650 .63rem var(--font-mono); text-transform: uppercase; white-space: nowrap; }
 .futures-status-dot.live { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-dim); }
+.futures-status-dot.polling { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-dim); }
 .futures-status-dot.reconnecting, .futures-status-dot.connecting { background: var(--amber); }
 .futures-status-dot.fallback { background: var(--text-muted); }
 .futures-live-price > strong { color: var(--text-primary); font: 750 1.16rem var(--font-mono); white-space: nowrap; }
@@ -120,6 +127,8 @@
   .futures-account-bar > div { padding: 13px 12px; }
   .futures-account-bar strong { font-size: .79rem; }
   .futures-notice { align-items: flex-start; }
+  .futures-sync-state { align-items: flex-start; flex-wrap: wrap; }
+  .futures-sync-state .futures-feed-retry { margin-left: 22px; }
   .futures-order-preview { grid-template-columns: 1fr 1fr; }
   .futures-order-preview > div:last-child { grid-column: 1 / -1; }
   .futures-market-stats { grid-template-columns: 1fr 1fr; }

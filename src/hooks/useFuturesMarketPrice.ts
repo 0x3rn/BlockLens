@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Coin } from '../types/crypto';
 
-export type FuturesPriceStatus = 'connecting' | 'live' | 'reconnecting' | 'fallback';
+export type FuturesPriceStatus = 'connecting' | 'live' | 'reconnecting' | 'polling' | 'fallback';
 
 const getStreamSymbol = (coin: Coin) => {
   const base = coin.symbol.replace(/[^a-z0-9]/gi, '').toLowerCase();
@@ -19,6 +19,8 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
     let active = true;
     let socket: WebSocket | null = null;
     let retryTimer: number | undefined;
+    let pollingTimer: number | undefined;
+    let pollingAbort: AbortController | null = null;
     let attempt = 0;
     const streamSymbol = coin ? getStreamSymbol(coin) : null;
     setPrice(coin?.current_price ?? 0);
@@ -29,6 +31,35 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
       return undefined;
     }
 
+    const pollMarkPrice = async () => {
+      if (!active) return;
+      pollingAbort = new AbortController();
+      const timeout = window.setTimeout(() => pollingAbort?.abort(), 5_000);
+      try {
+        const response = await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${streamSymbol.toUpperCase()}`, { signal: pollingAbort.signal });
+        if (!response.ok) throw new Error('Mark price request failed');
+        const payload = await response.json() as { markPrice?: string; time?: number };
+        const nextPrice = Number(payload.markPrice);
+        if (active && Number.isFinite(nextPrice) && nextPrice > 0) {
+          setPrice(nextPrice);
+          setLastUpdated(payload.time ?? Date.now());
+          setStatus('polling');
+        }
+      } catch {
+        // Keep the last known market value visible while the public fallback is unavailable.
+      } finally {
+        window.clearTimeout(timeout);
+        pollingAbort = null;
+        if (active) pollingTimer = window.setTimeout(pollMarkPrice, 10_000);
+      }
+    };
+
+    const startPolling = () => {
+      if (!active || pollingTimer !== undefined) return;
+      setStatus('fallback');
+      void pollMarkPrice();
+    };
+
     const connect = () => {
       if (!active) return;
       setStatus(attempt === 0 ? 'connecting' : 'reconnecting');
@@ -36,6 +67,7 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
         socket = new WebSocket(`wss://fstream.binance.com/ws/${streamSymbol}@markPrice@1s`);
       } catch {
         setStatus('fallback');
+        startPolling();
         return;
       }
       socket.onopen = () => {
@@ -60,6 +92,7 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
         attempt += 1;
         if (attempt >= 3) {
           setStatus('fallback');
+          startPolling();
           return;
         }
         setStatus('reconnecting');
@@ -72,6 +105,8 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
     return () => {
       active = false;
       if (retryTimer) window.clearTimeout(retryTimer);
+      if (pollingTimer) window.clearTimeout(pollingTimer);
+      pollingAbort?.abort();
       socket?.close();
     };
   }, [coin?.id, coin?.symbol, coin?.current_price, connectionKey]);

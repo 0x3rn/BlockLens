@@ -36,6 +36,8 @@ export interface FuturesActionResult {
   trade?: PaperFuturesTrade;
 }
 
+export type PaperFuturesSyncStatus = 'loading' | 'ready' | 'saving' | 'error';
+
 export const createInitialPaperFuturesAccount = (): PaperFuturesAccount => ({
   balance: STARTING_FUTURES_BALANCE,
   realizedPnl: 0,
@@ -162,9 +164,14 @@ export const usePaperFutures = () => {
   const { user, loading: authLoading } = useAuth();
   const [account, setAccount] = useState<PaperFuturesAccount>(createInitialPaperFuturesAccount);
   const [localReady, setLocalReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<PaperFuturesSyncStatus>('loading');
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncAttempt, setSyncAttempt] = useState(0);
   const accountRef = useRef(account);
   const cloudReady = useRef(false);
   const pendingAccount = useRef<PaperFuturesAccount | null>(null);
+  const persistQueue = useRef(Promise.resolve());
+  const persistVersion = useRef(0);
 
   useEffect(() => {
     accountRef.current = account;
@@ -173,6 +180,8 @@ export const usePaperFutures = () => {
   useEffect(() => {
     if (authLoading) {
       setLocalReady(false);
+      setSyncStatus('loading');
+      setSyncError(null);
       return;
     }
     if (user) {
@@ -186,11 +195,15 @@ export const usePaperFutures = () => {
       accountRef.current = resolved;
       setAccount(resolved);
       setLocalReady(true);
+      setSyncStatus('ready');
+      setSyncError(null);
     } catch {
       const resolved = createInitialPaperFuturesAccount();
       accountRef.current = resolved;
       setAccount(resolved);
       setLocalReady(true);
+      setSyncStatus('ready');
+      setSyncError(null);
     }
   }, [authLoading, user]);
 
@@ -201,18 +214,24 @@ export const usePaperFutures = () => {
 
   useEffect(() => {
     let cancelled = false;
+    const previousAccount = accountRef.current;
     cloudReady.current = false;
     pendingAccount.current = null;
     const client = supabase;
     if (authLoading || !client || !user) return undefined;
 
-    const cleanLocalAccount = () => {
-      try { window.localStorage.removeItem(futuresStorageKey); } catch { /* Storage can be unavailable. */ }
-    };
+    setSyncStatus('loading');
+    setSyncError(null);
+    const isMeaningfulAccount = previousAccount.positions.length > 0
+      || previousAccount.trades.length > 0
+      || previousAccount.balance !== STARTING_FUTURES_BALANCE
+      || previousAccount.realizedPnl !== 0;
+    pendingAccount.current = syncAttempt > 0 && isMeaningfulAccount ? previousAccount : null;
     const emptyAccount = createInitialPaperFuturesAccount();
-    accountRef.current = emptyAccount;
-    setAccount(emptyAccount);
-    cleanLocalAccount();
+    const startingAccount = pendingAccount.current ?? emptyAccount;
+    accountRef.current = startingAccount;
+    setAccount(startingAccount);
+    try { window.localStorage.removeItem(futuresStorageKey); } catch { /* Storage can be unavailable. */ }
 
     const loadCloudAccount = async () => {
       const { data, error } = await client
@@ -220,7 +239,12 @@ export const usePaperFutures = () => {
         .select('balance, realized_pnl, positions, trades, updated_at')
         .eq('user_id', user.id)
         .maybeSingle();
-      if (cancelled || error) return;
+      if (cancelled) return;
+      if (error) {
+        setSyncError('Your simulated account could not be loaded. Nothing will open until it is synced.');
+        setSyncStatus('error');
+        return;
+      }
 
       const remote = data ? fromCloudRow(data) : null;
       const resolved = pendingAccount.current
@@ -228,14 +252,24 @@ export const usePaperFutures = () => {
         ?? emptyAccount;
       accountRef.current = resolved;
       setAccount(resolved);
+      const { error: writeError } = await client
+        .from('paper_futures_accounts')
+        .upsert(toCloudPayload(resolved, user.id), { onConflict: 'user_id' });
+      if (cancelled) return;
+      if (writeError) {
+        setSyncError('Your simulated account could not be saved. Check your account connection and retry.');
+        setSyncStatus('error');
+        return;
+      }
       cloudReady.current = true;
-      await client.from('paper_futures_accounts').upsert(toCloudPayload(resolved, user.id), { onConflict: 'user_id' });
+      setSyncStatus('ready');
+      setSyncError(null);
       pendingAccount.current = null;
     };
 
     void loadCloudAccount();
     return () => { cancelled = true; };
-  }, [authLoading, user]);
+  }, [authLoading, syncAttempt, user]);
 
   const commitAccount = useCallback((next: PaperFuturesAccount) => {
     accountRef.current = next;
@@ -245,11 +279,35 @@ export const usePaperFutures = () => {
       pendingAccount.current = next;
       return;
     }
-    void supabase.from('paper_futures_accounts').upsert(toCloudPayload(next, user.id), { onConflict: 'user_id' });
+    const version = ++persistVersion.current;
+    setSyncStatus('saving');
+    persistQueue.current = persistQueue.current
+      .catch(() => undefined)
+      .then(async () => {
+        const { error } = await supabase!.from('paper_futures_accounts')
+          .upsert(toCloudPayload(next, user.id), { onConflict: 'user_id' });
+        if (error) {
+          if (version === persistVersion.current) {
+            setSyncError('Your simulated account could not be saved. Check your account connection and retry.');
+            setSyncStatus('error');
+          }
+          return;
+        }
+        if (version === persistVersion.current) {
+          setSyncError(null);
+          setSyncStatus('ready');
+        }
+      });
   }, [setAccount, user]);
+
+  const retrySync = useCallback(() => {
+    if (!user || !supabase) return;
+    setSyncAttempt((value) => value + 1);
+  }, [user]);
 
   const openPosition = useCallback((input: OpenFuturesPositionInput): FuturesActionResult => {
     const current = accountRef.current;
+    if (user && syncStatus !== 'ready') return { ok: false, message: 'Your simulated account is still syncing. Try again when it is ready.' };
     if (current.positions.some((position) => position.coinId === input.coinId)) {
       return { ok: false, message: 'Close the existing position for this asset first.' };
     }
@@ -297,10 +355,11 @@ export const usePaperFutures = () => {
       updatedAt: new Date().toISOString(),
     });
     return { ok: true, message: `${input.side === 'long' ? 'Long' : 'Short'} position opened.`, position, trade };
-  }, [commitAccount]);
+  }, [commitAccount, syncStatus, user]);
 
   const closePosition = useCallback((positionId: string, price: number, action: Exclude<PaperFuturesTradeAction, 'open'> = 'close'): FuturesActionResult => {
     const current = accountRef.current;
+    if (user && syncStatus !== 'ready') return { ok: false, message: 'Your simulated account is still syncing. Try again when it is ready.' };
     const position = current.positions.find((item) => item.id === positionId);
     if (!position) return { ok: false, message: 'That position is no longer open.' };
     if (!Number.isFinite(price) || price <= 0) return { ok: false, message: 'A live mark price is required to close.' };
@@ -331,7 +390,7 @@ export const usePaperFutures = () => {
       updatedAt: new Date().toISOString(),
     });
     return { ok: true, message: action === 'liquidated' ? `${position.symbol.toUpperCase()} position liquidated.` : `${position.symbol.toUpperCase()} position closed.`, trade };
-  }, [commitAccount]);
+  }, [commitAccount, syncStatus, user]);
 
   const checkPosition = useCallback((positionId: string, markPrice: number): FuturesActionResult | null => {
     const position = accountRef.current.positions.find((item) => item.id === positionId);
@@ -346,5 +405,14 @@ export const usePaperFutures = () => {
     return null;
   }, [closePosition]);
 
-  return { account, openPosition, closePosition, checkPosition };
+  return {
+    account,
+    openPosition,
+    closePosition,
+    checkPosition,
+    syncStatus,
+    syncError,
+    accountReady: !user ? localReady : syncStatus === 'ready',
+    retrySync,
+  };
 };

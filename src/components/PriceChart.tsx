@@ -20,6 +20,7 @@ import '../styles/Chart.css';
 
 interface PriceChartProps {
   coinId: string;
+  coinSymbol?: string;
   coinName?: string;
   currency?: CurrencyCode;
   defaultRange?: CandleInterval | number;
@@ -41,7 +42,7 @@ const formatChartTick = (timestamp: number, days: number) => new Intl.DateTimeFo
   ? { month: 'short', year: '2-digit' }
   : { month: 'short', day: 'numeric' }).format(timestamp);
 
-const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'usd', defaultRange = 7 }) => {
+const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinSymbol, coinName, currency = 'usd', defaultRange = 7 }) => {
   const [data, setData] = useState<ChartData[]>([]);
   const [candles, setCandles] = useState<CandleData[]>([]);
   const [range, setRange] = useState<number | CandleInterval>(defaultRange);
@@ -63,7 +64,7 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
     setError(null);
     try {
       if (typeof range === 'string') {
-        const history = await fetchCoinCandles(coinId, range, currency);
+        const history = await fetchCoinCandles(coinId, range, currency, coinSymbol);
         if (requestVersion.current !== version) return;
         setCandles(history);
         setLoadedRange(range);
@@ -84,14 +85,14 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
   useEffect(() => {
     void loadChart();
     return () => { requestVersion.current += 1; };
-  }, [coinId, currency, range]);
+  }, [coinId, coinSymbol, currency, range]);
 
   useEffect(() => {
     setLoadedRange(null);
     setData([]);
     setCandles([]);
     setRange(defaultRange);
-  }, [coinId, currency, defaultRange]);
+  }, [coinId, coinSymbol, currency, defaultRange]);
 
   const chartData = useMemo(() => addMovingAverage(data), [data]);
   const priceRange = useMemo(() => {
@@ -150,13 +151,12 @@ const PriceChart: React.FC<PriceChartProps> = ({ coinId, coinName, currency = 'u
         </div>
       ) : (
         <>
-          {error && <DataState message={error} onRetry={loadChart} compact />}
-          {!error && renderedIsIntraday && candles.length === 0 ? (
+          {error ? <DataState message={error} onRetry={loadChart} compact /> : renderedIsIntraday && candles.length === 0 ? (
             <DataState title="No intraday candles" message="Intraday candle data is unavailable for this asset and interval." onRetry={loadChart} compact />
-          ) : !error && !renderedIsIntraday && data.length === 0 ? (
+          ) : !renderedIsIntraday && data.length === 0 ? (
             <DataState title="No chart history" message="Historical pricing is unavailable for this asset and range." onRetry={loadChart} compact />
           ) : renderedIsIntraday ? (
-            <CandlestickChart data={candles} currency={currency} interval={renderedRange as CandleInterval} coinName={coinName ?? coinId} showVolume={showVolume} showAverage={showAverage} logScale={logScale} />
+            <CandlestickChart data={candles} currency={currency} interval={renderedRange as CandleInterval} coinSymbol={coinSymbol} coinName={coinName ?? coinId} showVolume={showVolume} showAverage={showAverage} logScale={logScale} />
           ) : (
         <div
           className="chart-wrapper"

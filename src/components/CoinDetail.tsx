@@ -135,7 +135,7 @@ const CoinDetailPage: React.FC = () => {
       </header>
 
       <section className="coin-detail-chart-section">
-        <PriceChart coinId={coin.id} coinName={coin.name} currency={currency} defaultRange="4h" />
+        <PriceChart coinId={coin.id} coinSymbol={coin.symbol} coinName={coin.name} currency={currency} defaultRange="4h" />
       </section>
 
       <section className="coin-detail-section" aria-labelledby="changes-title">

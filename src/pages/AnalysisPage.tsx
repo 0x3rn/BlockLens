@@ -130,7 +130,7 @@ const AnalysisPage: React.FC = () => {
                 Open full asset profile <ArrowRight size={14} aria-hidden="true" />
               </Link>
             </div>
-            <PriceChart coinId={selectedCoin.id} coinName={selectedCoin.name} currency={currency} />
+            <PriceChart coinId={selectedCoin.id} coinSymbol={selectedCoin.symbol} coinName={selectedCoin.name} currency={currency} />
           </section>
 
           {error && (

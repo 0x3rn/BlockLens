@@ -26,7 +26,20 @@ const stableSymbols = new Set([
 const nonPerpetualAssetName = /fund|treasury|swap|money market|government securities|digital liquidity|gold/i;
 
 const FuturesPage: React.FC = () => {
-  const { coins, currency, loading, error, refresh, paperFutures, openFuturesPosition, closeFuturesPosition, checkFuturesPosition } = useMarket();
+  const {
+    coins,
+    currency,
+    loading,
+    error,
+    refresh,
+    paperFutures,
+    openFuturesPosition,
+    closeFuturesPosition,
+    checkFuturesPosition,
+    paperFuturesSyncStatus,
+    paperFuturesSyncError,
+    retryPaperFuturesSync,
+  } = useMarket();
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [usdCoins, setUsdCoins] = useState<Coin[]>([]);
@@ -72,14 +85,16 @@ const FuturesPage: React.FC = () => {
   const previewNotional = Number.isFinite(parsedMargin) && parsedMargin > 0 && Number.isFinite(parsedLeverage) ? parsedMargin * parsedLeverage : 0;
   const previewQuantity = previewNotional > 0 && markPrice > 0 ? previewNotional / markPrice : 0;
   const previewFee = previewNotional * FUTURES_TAKER_FEE;
+  const accountSyncBusy = paperFuturesSyncStatus !== 'ready';
 
   useEffect(() => {
+    if (paperFuturesSyncStatus !== 'ready') return;
     openPositions.forEach((position) => {
       const positionMark = marks.get(position.coinId) ?? position.entryPrice;
       const result = checkFuturesPosition(position.id, positionMark);
       if (result?.ok) showToast(result.message, result.trade?.action === 'liquidated' ? 'error' : 'info');
     });
-  }, [checkFuturesPosition, marks, openPositions, showToast]);
+  }, [checkFuturesPosition, marks, openPositions, paperFuturesSyncStatus, showToast]);
 
   useEffect(() => {
     if (tradableCoins.length > 0 && (!requestedCoin || !selectedCoin)) {
@@ -166,6 +181,20 @@ const FuturesPage: React.FC = () => {
         <p><strong>No exchange orders.</strong> This terminal uses virtual funds. Positions and results stay inside BlockLens.</p>
       </div>
 
+      {paperFuturesSyncStatus === 'loading' && (
+        <div className="futures-sync-state" role="status">
+          <span className="inline-spinner" aria-hidden="true" />
+          <p>Syncing your simulated account.</p>
+        </div>
+      )}
+      {paperFuturesSyncError && (
+        <div className="futures-sync-state error" role="alert">
+          <ShieldAlert size={15} aria-hidden="true" />
+          <p>{paperFuturesSyncError}</p>
+          <button type="button" className="futures-feed-retry" onClick={retryPaperFuturesSync}>Retry account</button>
+        </div>
+      )}
+
       <section className="futures-account-bar" aria-label="Simulated account summary">
         <div><span>Available balance</span><strong>{formatCurrency(paperFutures.balance, 'usd')}</strong></div>
         <div><span>Equity</span><strong>{formatCurrency(equity, 'usd')}</strong></div>
@@ -181,7 +210,7 @@ const FuturesPage: React.FC = () => {
           </select>
         </label>
         <div className="futures-live-price">
-          <span><span className={`futures-status-dot ${feedStatus}`} aria-hidden="true" /> {feedStatus === 'live' ? 'Live mark price' : feedStatus === 'fallback' ? 'Market snapshot' : 'Connecting to mark price'}</span>
+          <span><span className={`futures-status-dot ${feedStatus}`} aria-hidden="true" /> {feedStatus === 'live' || feedStatus === 'polling' ? 'Live mark price' : feedStatus === 'fallback' ? 'Market snapshot' : 'Connecting to mark price'}</span>
           <strong>{formatCurrency(markPrice, 'usd')}</strong>
           {markUpdatedAt && <small>Updated {formatDateTime(markUpdatedAt)}</small>}
           {feedStatus !== 'live' && <button type="button" className="futures-feed-retry" onClick={retryFeed}>{feedStatus === 'connecting' || feedStatus === 'reconnecting' ? 'Retrying feed' : 'Retry feed'}</button>}
@@ -217,8 +246,8 @@ const FuturesPage: React.FC = () => {
             <div><span>Est. entry fee</span><strong>{formatCurrency(previewFee, 'usd')}</strong></div>
           </div>
           {formError && <p className="futures-form-error" role="alert"><ShieldAlert size={15} aria-hidden="true" /> {formError}</p>}
-          <button type="submit" className={`futures-submit-button ${side}`} disabled={Boolean(selectedPosition) || feedStatus === 'connecting' || markPrice <= 0}>
-            {selectedPosition ? 'Position already open' : `Open ${side}`}
+          <button type="submit" className={`futures-submit-button ${side}`} disabled={Boolean(selectedPosition) || accountSyncBusy || feedStatus === 'connecting' || markPrice <= 0}>
+            {paperFuturesSyncStatus === 'loading' ? 'Syncing account' : paperFuturesSyncStatus === 'saving' ? 'Saving position' : selectedPosition ? 'Position already open' : `Open ${side}`}
           </button>
           <p className="form-help">Margin is reserved from your virtual balance. Closing fees are applied when the position exits.</p>
         </form>
@@ -227,7 +256,7 @@ const FuturesPage: React.FC = () => {
           <section className="futures-market-card">
               <div className="futures-market-card-header">
               <div className="futures-order-asset"><img src={selectedCoin.image} alt="" /><div><strong>{selectedCoin.name}</strong><span>{selectedCoin.symbol.toUpperCase()} / USD</span></div></div>
-              <span className="futures-market-feed"><RadioTower size={14} aria-hidden="true" /> {feedStatus === 'live' ? 'Live' : 'Snapshot'}</span>
+              <span className="futures-market-feed"><RadioTower size={14} aria-hidden="true" /> {feedStatus === 'live' || feedStatus === 'polling' ? 'Live' : 'Snapshot'}</span>
             </div>
             <div className="futures-large-price"><span>Mark price</span><strong>{formatCurrency(markPrice, 'usd')}</strong><span className={(selectedCoin.price_change_percentage_24h ?? 0) >= 0 ? 'text-up' : 'text-down'}>{formatPercent(selectedCoin.price_change_percentage_24h)} 24h</span></div>
             <div className="futures-market-stats"><div><span>24h high</span><strong>{formatCurrency(selectedCoin.high_24h, 'usd')}</strong></div><div><span>24h low</span><strong>{formatCurrency(selectedCoin.low_24h, 'usd')}</strong></div><div><span>Margin mode</span><strong>Isolated</strong></div></div>
@@ -249,7 +278,7 @@ const FuturesPage: React.FC = () => {
                     <article className="futures-position-row" key={position.id}>
                       <div className="futures-position-heading"><div className="futures-order-asset"><img src={positionCoin?.image ?? ''} alt="" /><div><strong>{position.coinName}</strong><span>{position.symbol.toUpperCase()} · {position.leverage}x</span></div></div><span className={`signal-badge ${position.side}`}>{position.side}</span></div>
                       <div className="futures-position-values"><div><span>Entry</span><strong>{formatCurrency(position.entryPrice, 'usd')}</strong></div><div><span>Mark</span><strong>{formatCurrency(positionMark, 'usd')}</strong></div><div><span>Stop loss</span><strong className="text-down">{position.stopLoss != null ? formatCurrency(position.stopLoss, 'usd') : '—'}</strong></div><div><span>Take profit</span><strong className="text-up">{position.takeProfit != null ? formatCurrency(position.takeProfit, 'usd') : '—'}</strong></div><div><span>Liquidation</span><strong>{formatCurrency(liquidationPrice, 'usd')}</strong></div><div><span>P&amp;L</span><strong className={pnl >= 0 ? 'text-up' : 'text-down'}>{formatCurrency(pnl, 'usd')}</strong></div></div>
-                      <div className="futures-position-footer"><span>{position.quantity.toPrecision(6)} {position.symbol.toUpperCase()} · {formatCurrency(position.margin, 'usd')} margin</span><button type="button" className="futures-close-button" onClick={() => closeSelectedPosition(position.id, positionMark)} disabled={!positionMark}><X size={14} aria-hidden="true" /> Close position</button></div>
+                      <div className="futures-position-footer"><span>{position.quantity.toPrecision(6)} {position.symbol.toUpperCase()} · {formatCurrency(position.margin, 'usd')} margin</span><button type="button" className="futures-close-button" onClick={() => closeSelectedPosition(position.id, positionMark)} disabled={!positionMark || paperFuturesSyncStatus !== 'ready'}><X size={14} aria-hidden="true" /> {paperFuturesSyncStatus === 'saving' ? 'Saving position' : paperFuturesSyncStatus === 'loading' ? 'Syncing account' : paperFuturesSyncStatus === 'error' ? 'Retry account first' : 'Close position'}</button></div>
                     </article>
                   );
                 })}

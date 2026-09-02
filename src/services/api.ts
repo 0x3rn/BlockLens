@@ -18,6 +18,11 @@ const marketApi = axios.create({
   headers: { Accept: 'application/json' },
 });
 
+const binanceApi = axios.create({
+  timeout: 8_000,
+  headers: { Accept: 'application/json' },
+});
+
 const pause = (milliseconds: number) => new Promise<void>((resolve) => {
   window.setTimeout(resolve, milliseconds);
 });
@@ -143,6 +148,16 @@ const candleHistoryDays: Record<CandleInterval, number> = {
 };
 
 const MIN_CANDLE_COUNT = 48;
+const BINANCE_KLINE_LIMIT = 240;
+const binanceIntervals: Record<CandleInterval, string> = {
+  '5m': '5m',
+  '15m': '15m',
+  '30m': '30m',
+  '1h': '1h',
+  '4h': '4h',
+  '12h': '12h',
+  '24h': '1d',
+};
 
 const candleRecoveryDays = (interval: CandleInterval) => {
   const requestedDays = candleHistoryDays[interval];
@@ -154,7 +169,8 @@ export const fetchCoinCandles = async (
   coinId: string,
   interval: CandleInterval,
   currency: CurrencyCode = 'usd',
-): Promise<CandleData[]> => cachedRequest(`candles:v2:${coinId}:${interval}:${currency}`, 30_000, async () => {
+  coinSymbol?: string,
+): Promise<CandleData[]> => cachedRequest(`candles:v3:${coinId}:${coinSymbol ?? ''}:${interval}:${currency}`, 30_000, async () => {
   const parseCandles = (payload: { prices: [number, number][]; total_volumes: [number, number][] }) => {
     const bucketSize = candleIntervalMs[interval];
     const buckets = new Map<number, CandleData>();
@@ -189,6 +205,54 @@ export const fetchCoinCandles = async (
     });
     return parseCandles(response.data);
   };
+
+  const fetchBinanceCandles = async (): Promise<CandleData[] | null> => {
+    // Binance klines are USD-quoted USDT candles, so only use them when the
+    // chart is displayed in USD. Other currencies stay on CoinGecko's
+    // converted history rather than silently mixing units.
+    const normalizedSymbol = coinSymbol?.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (currency !== 'usd' || !normalizedSymbol) return null;
+
+    const symbol = `${normalizedSymbol}USDT`;
+    const params = { symbol, interval: binanceIntervals[interval], limit: BINANCE_KLINE_LIMIT };
+    const endpoints = [
+      'https://fapi.binance.com/fapi/v1/klines',
+      'https://api.binance.com/api/v3/klines',
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const response = await binanceApi.get<unknown>(endpoint, { params });
+        if (!Array.isArray(response.data)) continue;
+        const candles = response.data
+          .map((row) => {
+            if (!Array.isArray(row) || row.length < 7) return null;
+            const [openTime, open, high, low, close, volume] = row;
+            const timestamp = Number(openTime);
+            const values = [Number(open), Number(high), Number(low), Number(close), Number(volume)];
+            if (!Number.isFinite(timestamp) || values.some((value) => !Number.isFinite(value))) return null;
+            return {
+              timestamp,
+              open: values[0],
+              high: values[1],
+              low: values[2],
+              close: values[3],
+              volume: Math.max(0, values[4]),
+            } satisfies CandleData;
+          })
+          .filter((candle): candle is CandleData => candle !== null)
+          .sort((a, b) => a.timestamp - b.timestamp);
+        if (candles.length >= 2) return candles;
+      } catch {
+        // A token can exist on CoinGecko without a Binance pair. Move to the
+        // spot endpoint, then let the existing CoinGecko path handle it.
+      }
+    }
+    return null;
+  };
+
+  const exchangeCandles = await fetchBinanceCandles();
+  if (exchangeCandles) return exchangeCandles;
 
   const requestedDays = candleHistoryDays[interval];
   let candles = await requestCandles(requestedDays);
