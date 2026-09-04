@@ -227,7 +227,10 @@ const handleCallback = async (
 const handleMessage = async (message: TelegramMessage, environment: ServerEnvironment) => {
   const text = message.text?.trim().toLowerCase() ?? '';
   const command = text.split(/\s+/)[0]?.split('@')[0];
-  if (command !== '/ai-analysis' && command !== '/start') return;
+  // Telegram command menus only allow letters, numbers, and underscores. Keep
+  // the original hyphenated command working for users who type it manually,
+  // and accept the menu-safe underscore alias as well.
+  if (command !== '/ai-analysis' && command !== '/ai_analysis' && command !== '/start') return;
   await sendCoinPicker(message.chat.id, 0, environment);
 };
 

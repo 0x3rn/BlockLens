@@ -111,7 +111,7 @@ Register the webhook once through the Telegram Bot API, replacing the placeholde
 https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://<your-domain>/api/telegram/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>
 ```
 
-Users can then send `/ai-analysis`. The bot reads the same top-100 CoinGecko snapshot as the website, shows 12 coins per page, and runs the existing server-side Gemini analyzer after a coin is selected. The public list endpoint is available at `/api/telegram/coins` for operational checks. Telegram user IDs are not automatically BlockLens account IDs; account-linked history should only be added after an explicit linking flow.
+Users can then send `/ai-analysis` or the menu-safe `/ai_analysis` alias. The bot reads the same top-100 CoinGecko snapshot as the website, shows 12 coins per page, and runs the existing server-side Gemini analyzer after a coin is selected. The public list endpoint is available at `/api/telegram/coins` for operational checks. Telegram user IDs are not automatically BlockLens account IDs; account-linked history should only be added after an explicit linking flow.
 
 ## Data and privacy behavior
 
