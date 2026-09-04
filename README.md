@@ -87,12 +87,18 @@ Add the server values as encrypted environment variables for both preview and pr
 ```env
 GOOGLE_CLOUD_PROJECT=your-google-cloud-project
 GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
-COINGECKO_API_KEY=optional
+# Optional; leave both unset for the keyless public API
+# COINGECKO_API_KEY=your-coingecko-key
+# COINGECKO_API_PLAN=demo
 TELEGRAM_BOT_TOKEN=your-bot-token
 TELEGRAM_WEBHOOK_SECRET=a-long-random-secret
 ```
 
 The Worker uses the Web Crypto API for Vertex AI service-account authentication, so it does not depend on the Node Google Auth client at runtime. The Worker route handler is kept separate from Vercel’s adapter, while the validation, market-data, Telegram, and AI modules remain shared.
+
+`COINGECKO_API_PLAN` is `demo` for a free Demo key (the default when a key is present) or `pro` for a paid Pro key. Demo keys use `https://api.coingecko.com/api/v3` with the `x-cg-demo-api-key` header; Pro keys use `https://pro-api.coingecko.com/api/v3` with `x-cg-pro-api-key`. Leave both variables unset to use CoinGecko's keyless public API, which is rate-limited and intended for light use. Do not set the key to the literal word `optional`.
+
+Server-side requests retry once through the keyless public endpoint when CoinGecko rejects the configured key with `401` or `403`; rate-limit and upstream-server errors are not duplicated.
 
 When moving `blocklens.somto.xyz` between providers, keep the same paths (`/api/analyze`, `/api/telegram/webhook`, and `/api/telegram/coins`). Update the domain’s DNS/custom-domain attachment to the active deployment. The Telegram webhook URL can remain `https://blocklens.somto.xyz/api/telegram/webhook` as long as that route exists on whichever provider is active.
 

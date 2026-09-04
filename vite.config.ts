@@ -109,6 +109,7 @@ export default defineConfig(({ mode }) => {
   process.env.GOOGLE_CLOUD_PROJECT = environment.GOOGLE_CLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
   process.env.GOOGLE_SERVICE_ACCOUNT_JSON = environment.GOOGLE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   process.env.COINGECKO_API_KEY = environment.COINGECKO_API_KEY || process.env.COINGECKO_API_KEY;
+  process.env.COINGECKO_API_PLAN = environment.COINGECKO_API_PLAN || process.env.COINGECKO_API_PLAN;
   process.env.TELEGRAM_BOT_TOKEN = environment.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
   process.env.TELEGRAM_WEBHOOK_SECRET = environment.TELEGRAM_WEBHOOK_SECRET || process.env.TELEGRAM_WEBHOOK_SECRET;
 

@@ -166,7 +166,20 @@ const handleCoinSelection = async (
   const message = callback.message;
   if (!message) return;
   const chatId = message.chat.id;
-  const coins = await fetchTopCoins(currency, environment);
+  let coins: Coin[];
+  try {
+    coins = await fetchTopCoins(currency, environment);
+  } catch (error) {
+    console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
+    await editMessageText(
+      chatId,
+      message.message_id,
+      'The live coin list is unavailable right now. Please try again shortly.',
+      environment,
+      backToCoinsKeyboard(),
+    );
+    return;
+  }
   const coin = coins.find((item) => item.id === coinId);
   if (!coin) {
     await editMessageText(chatId, message.message_id, 'That coin is no longer in the current list.', environment, backToCoinsKeyboard());
@@ -215,7 +228,18 @@ const handleCallback = async (
   if (data.startsWith('ai:page:')) {
     const page = Number(data.slice('ai:page:'.length));
     if (!Number.isInteger(page) || page < 0 || !callback.message) return;
-    await sendCoinPicker(callback.message.chat.id, page, environment, callback.message);
+    try {
+      await sendCoinPicker(callback.message.chat.id, page, environment, callback.message);
+    } catch (error) {
+      console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
+      await editMessageText(
+        callback.message.chat.id,
+        callback.message.message_id,
+        'The live coin list is unavailable right now. Please try again shortly.',
+        environment,
+        backToCoinsKeyboard(page),
+      );
+    }
     return;
   }
   if (data.startsWith('ai:coin:')) {
@@ -231,7 +255,16 @@ const handleMessage = async (message: TelegramMessage, environment: ServerEnviro
   // the original hyphenated command working for users who type it manually,
   // and accept the menu-safe underscore alias as well.
   if (command !== '/ai-analysis' && command !== '/ai_analysis' && command !== '/start') return;
-  await sendCoinPicker(message.chat.id, 0, environment);
+  try {
+    await sendCoinPicker(message.chat.id, 0, environment);
+  } catch (error) {
+    console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
+    await sendMessage(
+      message.chat.id,
+      'The live coin list is unavailable right now. Please try again shortly.',
+      environment,
+    );
+  }
 };
 
 export const processTelegramUpdate = async (

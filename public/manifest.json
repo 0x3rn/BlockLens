@@ -4,9 +4,9 @@
   "description": "Live crypto market data, local portfolio tracking, alerts, comparisons, and AI market briefs.",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/blocklens-logo.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],

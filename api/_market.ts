@@ -1,7 +1,8 @@
 import type { AIAnalysisRequest, ChartData, Coin, CurrencyCode } from '../src/types/crypto.ts';
 import type { ServerEnvironment } from './_env.ts';
 
-const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
+const COINGECKO_DEMO_BASE_URL = 'https://api.coingecko.com/api/v3';
+const COINGECKO_PRO_BASE_URL = 'https://pro-api.coingecko.com/api/v3';
 const DEFAULT_CURRENCY: CurrencyCode = 'usd';
 const MARKET_CACHE_TTL = 45_000;
 const HISTORY_CACHE_TTL = 120_000;
@@ -13,22 +14,67 @@ const historyCache = new Map<string, CacheEntry<ChartData[]>>();
 const marketPending = new Map<string, Promise<Coin[]>>();
 const historyPending = new Map<string, Promise<ChartData[]>>();
 
-const getCoinGeckoHeaders = (environment: ServerEnvironment = {}): Record<string, string> => {
+type CoinGeckoRequestConfig = {
+  baseUrl: string;
+  headers: Record<string, string>;
+  plan: 'keyless' | 'demo' | 'pro';
+};
+
+const getCoinGeckoConfig = (environment: ServerEnvironment = {}): CoinGeckoRequestConfig => {
   const apiKey = environment.COINGECKO_API_KEY?.trim();
-  return apiKey ? { Accept: 'application/json', 'x-cg-demo-api-key': apiKey } : { Accept: 'application/json' };
+  if (!apiKey) {
+    return {
+      baseUrl: COINGECKO_DEMO_BASE_URL,
+      headers: { Accept: 'application/json' },
+      plan: 'keyless',
+    };
+  }
+
+  const plan = environment.COINGECKO_API_PLAN?.trim().toLowerCase() === 'pro' ? 'pro' : 'demo';
+  return plan === 'pro'
+    ? {
+      baseUrl: COINGECKO_PRO_BASE_URL,
+      headers: { Accept: 'application/json', 'x-cg-pro-api-key': apiKey },
+      plan,
+    }
+    : {
+      baseUrl: COINGECKO_DEMO_BASE_URL,
+      headers: { Accept: 'application/json', 'x-cg-demo-api-key': apiKey },
+      plan,
+    };
 };
 
 const fetchJson = async <T>(path: string, params: Record<string, string>, environment?: ServerEnvironment): Promise<T> => {
   const query = new URLSearchParams(params).toString();
+  const config = getCoinGeckoConfig(environment);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
-    const response = await fetch(`${COINGECKO_BASE_URL}${path}?${query}`, {
-      headers: getCoinGeckoHeaders(environment),
+    let response = await fetch(`${config.baseUrl}${path}?${query}`, {
+      headers: config.headers,
       signal: controller.signal,
     });
+    let usedKeylessFallback = false;
+
+    // A rejected key should not take down the bot or server-side analysis.
+    // Retry auth failures once without credentials; do not fall back on 429s
+    // or upstream 5xx responses, where another request would add load.
+    if (!response.ok && config.plan !== 'keyless' && (response.status === 401 || response.status === 403)) {
+      await response.text().catch(() => undefined);
+      response = await fetch(`${COINGECKO_DEMO_BASE_URL}${path}?${query}`, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      usedKeylessFallback = true;
+    }
+
     if (!response.ok) {
-      throw new Error(`CoinGecko returned ${response.status}.`);
+      // Keep enough of CoinGecko's response to make deployment errors
+      // actionable, while avoiding a full upstream payload in Worker logs.
+      const detail = (await response.text()).replace(/\s+/g, ' ').trim().slice(0, 240);
+      const suffix = detail ? `: ${detail}` : '.';
+      const mode = usedKeylessFallback ? `${config.plan} request and keyless fallback` : `${config.plan} request`;
+      throw new Error(`CoinGecko ${mode} returned ${response.status}${suffix}`);
     }
     return await response.json() as T;
   } finally {
