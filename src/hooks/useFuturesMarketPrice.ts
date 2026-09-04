@@ -12,6 +12,7 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
   const [price, setPrice] = useState(coin?.current_price ?? 0);
   const [status, setStatus] = useState<FuturesPriceStatus>('connecting');
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [fundingRate, setFundingRate] = useState<number | null>(null);
   const [connectionKey, setConnectionKey] = useState(0);
   const retry = useCallback(() => setConnectionKey((value) => value + 1), []);
 
@@ -25,6 +26,7 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
     const streamSymbol = coin ? getStreamSymbol(coin) : null;
     setPrice(coin?.current_price ?? 0);
     setLastUpdated(null);
+    setFundingRate(null);
 
     if (!coin || !streamSymbol || typeof window === 'undefined' || typeof window.WebSocket === 'undefined') {
       setStatus('fallback');
@@ -38,11 +40,13 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
       try {
         const response = await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${streamSymbol.toUpperCase()}`, { signal: pollingAbort.signal });
         if (!response.ok) throw new Error('Mark price request failed');
-        const payload = await response.json() as { markPrice?: string; time?: number };
+        const payload = await response.json() as { markPrice?: string; time?: number; lastFundingRate?: string };
         const nextPrice = Number(payload.markPrice);
         if (active && Number.isFinite(nextPrice) && nextPrice > 0) {
           setPrice(nextPrice);
           setLastUpdated(payload.time ?? Date.now());
+          const nextFundingRate = Number(payload.lastFundingRate);
+          if (Number.isFinite(nextFundingRate)) setFundingRate(nextFundingRate);
           setStatus('polling');
         }
       } catch {
@@ -77,11 +81,13 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
       };
       socket.onmessage = (event) => {
         try {
-          const message = JSON.parse(String(event.data)) as { p?: string; E?: number };
+          const message = JSON.parse(String(event.data)) as { p?: string; E?: number; r?: string };
           const nextPrice = Number(message.p);
           if (!Number.isFinite(nextPrice) || nextPrice <= 0 || !active) return;
           setPrice(nextPrice);
           setLastUpdated(message.E ?? Date.now());
+          const nextFundingRate = Number(message.r);
+          if (Number.isFinite(nextFundingRate)) setFundingRate(nextFundingRate);
         } catch {
           // Ignore malformed stream messages and keep the socket alive.
         }
@@ -111,5 +117,5 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
     };
   }, [coin?.id, coin?.symbol, coin?.current_price, connectionKey]);
 
-  return { price, status, lastUpdated, retry };
+  return { price, status, lastUpdated, fundingRate, retry };
 };

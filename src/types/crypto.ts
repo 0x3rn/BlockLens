@@ -183,7 +183,10 @@ export interface PositionHistoryEntry {
 }
 
 export type FuturesSide = 'long' | 'short';
-export type PaperFuturesTradeAction = 'open' | 'close' | 'liquidated' | 'stop-loss' | 'take-profit';
+export type FuturesMarginMode = 'isolated' | 'cross';
+export type PaperFuturesOrderType = 'market' | 'limit' | 'stop-market' | 'take-profit' | 'stop-loss';
+export type PaperFuturesOrderStatus = 'open' | 'filled' | 'cancelled' | 'rejected';
+export type PaperFuturesTradeAction = 'open' | 'close' | 'liquidated' | 'stop-loss' | 'take-profit' | 'funding';
 
 export interface PaperFuturesPosition {
   id: string;
@@ -195,9 +198,35 @@ export interface PaperFuturesPosition {
   entryPrice: number;
   margin: number;
   leverage: number;
+  marginMode?: FuturesMarginMode;
   stopLoss: number | null;
   takeProfit: number | null;
   openedAt: string;
+  lastFundingAt?: string;
+  orderId?: string;
+}
+
+export interface PaperFuturesOrder {
+  id: string;
+  coinId: string;
+  coinName: string;
+  symbol: string;
+  side: FuturesSide;
+  type: PaperFuturesOrderType;
+  status: PaperFuturesOrderStatus;
+  margin: number;
+  leverage: number;
+  marginMode: FuturesMarginMode;
+  limitPrice: number | null;
+  triggerPrice: number | null;
+  reduceOnly: boolean;
+  quantity: number | null;
+  positionId: string | null;
+  stopLoss: number | null;
+  takeProfit: number | null;
+  createdAt: string;
+  filledAt: string | null;
+  cancelledAt: string | null;
 }
 
 export interface PaperFuturesTrade {
@@ -214,12 +243,15 @@ export interface PaperFuturesTrade {
   fee: number;
   realizedPnl: number;
   createdAt: string;
+  orderId?: string;
+  fundingRate?: number;
 }
 
 export interface PaperFuturesAccount {
   balance: number;
   realizedPnl: number;
   positions: PaperFuturesPosition[];
+  orders: PaperFuturesOrder[];
   trades: PaperFuturesTrade[];
   updatedAt: string;
 }

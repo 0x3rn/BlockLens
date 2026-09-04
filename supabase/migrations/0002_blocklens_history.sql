@@ -30,6 +30,7 @@ create table if not exists public.paper_futures_accounts (
   balance numeric(40, 18) not null check (balance >= 0),
   realized_pnl numeric(40, 18) not null default 0,
   positions jsonb not null default '[]'::jsonb,
+  orders jsonb not null default '[]'::jsonb,
   trades jsonb not null default '[]'::jsonb,
   updated_at timestamptz not null default timezone('utc', now())
 );

@@ -48,9 +48,9 @@ export type Database = {
         Relationships: [];
       };
       paper_futures_accounts: {
-        Row: { id: string; user_id: string; balance: number; realized_pnl: number; positions: Json; trades: Json; updated_at: string };
-        Insert: { id?: string; user_id: string; balance: number; realized_pnl: number; positions: Json; trades: Json; updated_at?: string };
-        Update: { id?: string; user_id?: string; balance?: number; realized_pnl?: number; positions?: Json; trades?: Json; updated_at?: string };
+        Row: { id: string; user_id: string; balance: number; realized_pnl: number; positions: Json; orders: Json; trades: Json; updated_at: string };
+        Insert: { id?: string; user_id: string; balance: number; realized_pnl?: number; positions: Json; orders?: Json; trades: Json; updated_at?: string };
+        Update: { id?: string; user_id?: string; balance?: number; realized_pnl?: number; positions?: Json; orders?: Json; trades?: Json; updated_at?: string };
         Relationships: [];
       };
     };

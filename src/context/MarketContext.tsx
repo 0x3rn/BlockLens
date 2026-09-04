@@ -7,7 +7,7 @@ import { usePortfolio } from '../hooks/usePortfolio';
 import { useWatchlist } from '../hooks/useWatchlist';
 import { useAIHistory } from '../hooks/useAIHistory';
 import { usePositionHistory } from '../hooks/usePositionHistory';
-import { FuturesActionResult, OpenFuturesPositionInput, PaperFuturesSyncStatus, usePaperFutures } from '../hooks/usePaperFutures';
+import { FuturesActionResult, OpenFuturesPositionInput, PaperFuturesSyncStatus, PlaceFuturesOrderInput, usePaperFutures } from '../hooks/usePaperFutures';
 
 interface MarketContextValue {
   coins: Coin[];
@@ -29,7 +29,10 @@ interface MarketContextValue {
   positionHistory: PositionHistoryEntry[];
   paperFutures: PaperFuturesAccount;
   openFuturesPosition: (input: OpenFuturesPositionInput) => FuturesActionResult;
-  closeFuturesPosition: (positionId: string, price: number, action?: 'close' | 'liquidated' | 'stop-loss' | 'take-profit') => FuturesActionResult;
+  closeFuturesPosition: (positionId: string, price: number, action?: 'close' | 'liquidated' | 'stop-loss' | 'take-profit', quantity?: number) => FuturesActionResult;
+  placeFuturesOrder: (input: PlaceFuturesOrderInput) => FuturesActionResult;
+  cancelFuturesOrder: (orderId: string) => FuturesActionResult;
+  checkFuturesOrders: (coinId: string, markPrice: number) => FuturesActionResult[];
   checkFuturesPosition: (positionId: string, markPrice: number) => FuturesActionResult | null;
   paperFuturesSyncStatus: PaperFuturesSyncStatus;
   paperFuturesSyncError: string | null;
@@ -60,6 +63,9 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     openPosition: openFuturesPosition,
     closePosition: closeFuturesPosition,
     checkPosition: checkFuturesPosition,
+    placeOrder: placeFuturesOrder,
+    cancelOrder: cancelFuturesOrder,
+    checkOrders: checkFuturesOrders,
     syncStatus: paperFuturesSyncStatus,
     syncError: paperFuturesSyncError,
     retrySync: retryPaperFuturesSync,
@@ -161,6 +167,9 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     openFuturesPosition,
     closeFuturesPosition,
     checkFuturesPosition,
+    placeFuturesOrder,
+    cancelFuturesOrder,
+    checkFuturesOrders,
     paperFuturesSyncStatus,
     paperFuturesSyncError,
     retryPaperFuturesSync,
