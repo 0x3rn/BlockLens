@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, ArrowRight, Bot, Crosshair, Gauge, LoaderCircle, RefreshCw, ShieldAlert, Target } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Bot, Crosshair, ExternalLink, Gauge, LoaderCircle, RefreshCw, SearchCheck, ShieldAlert, Target } from 'lucide-react';
 import PriceChart from '../components/PriceChart';
 import { DataState } from '../components/DataState';
 import { useMarket } from '../context/MarketContext';
@@ -22,6 +22,10 @@ const AnalysisPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const briefRef = useRef<HTMLElement>(null);
+  const researchGroups = analysis ? [
+    { label: 'Coin-specific', catalysts: analysis.research.coinCatalysts },
+    { label: 'Macro', catalysts: analysis.research.macroCatalysts },
+  ] : [];
   usePageMeta('AI Trading Analysis', 'Generate conditional LONG, SHORT, or NO TRADE setups with transparent risk controls from live price and volume history.');
 
   useEffect(() => {
@@ -171,6 +175,36 @@ const AnalysisPage: React.FC = () => {
                 <div><span>Data as of</span><strong>{formatDateTime(analysis.dataAsOf)}</strong></div>
                 <div><span>Generated</span><strong>{formatDateTime(analysis.generatedAt)}</strong></div>
               </div>
+
+              <section className={`research-card ${analysis.research.status}`} aria-labelledby="research-title">
+                <div className="research-heading">
+                  <span className="research-icon"><SearchCheck size={18} aria-hidden="true" /></span>
+                  <div>
+                    <span className="eyebrow">Market research</span>
+                    <h3 id="research-title">{analysis.research.status === 'grounded' ? 'Google Search-grounded catalysts' : 'Technical-only brief'}</h3>
+                  </div>
+                </div>
+                <p>{analysis.research.note}</p>
+                {analysis.research.status === 'grounded' && (
+                  <>
+                    {researchGroups.map(({ label, catalysts }) => (
+                      <div className="catalyst-group" key={label}>
+                        <h4>{label}</h4>
+                        {catalysts.length > 0 ? catalysts.map((catalyst) => (
+                          <article className="catalyst-item" key={`${catalyst.title}-${catalyst.eventDate}`}>
+                            <div><strong>{catalyst.title}</strong><span>{catalyst.status} · {catalyst.eventDate} · {catalyst.conditionalEffect}</span></div>
+                            <p>{catalyst.mechanism}</p>
+                          </article>
+                        )) : <p className="research-empty">No verified events met the inclusion criteria.</p>}
+                      </div>
+                    ))}
+                    <div className="research-sources">
+                      <h4>Verified sources</h4>
+                      {analysis.research.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>{source.title}<ExternalLink size={12} aria-hidden="true" /></a>)}
+                    </div>
+                  </>
+                )}
+              </section>
 
               <section className={`trade-setup-card ${analysis.tradeSetup.signal}`} aria-labelledby="trade-setup-title">
                 <div className="trade-setup-heading">

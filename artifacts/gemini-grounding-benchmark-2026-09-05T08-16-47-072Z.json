@@ -1,0 +1,453 @@
+{
+  "promptVersion": 1,
+  "runStartedAt": "2026-09-05T08:08:10.834Z",
+  "summary": {
+    "gemini-3.7-flash": {
+      "completed": 5,
+      "failed": 0,
+      "averageScore": 10,
+      "flagged": 5
+    },
+    "gemini-3.1-pro-preview": {
+      "completed": 5,
+      "failed": 0,
+      "averageScore": 70,
+      "flagged": 5
+    }
+  },
+  "results": [
+    {
+      "model": "gemini-3.7-flash",
+      "case": "bitcoin-catalysts",
+      "text": "",
+      "parsed": null,
+      "evaluation": {
+        "score": 10,
+        "flags": [
+          "missing groundingMetadata",
+          "missing search query evidence",
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 505,
+        "candidatesTokenCount": 28,
+        "totalTokenCount": 3072,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 505
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 28
+          }
+        ],
+        "thoughtsTokenCount": 2539
+      }
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "case": "bitcoin-catalysts",
+      "text": "{\n  \"researchAsOfUtc\": \"2026-09-05T08:08:10.834Z\",\n  \"asset\": \"Bitcoin (BTC)\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"US Senate Cloture Vote on CLARITY Act\",\n      \"status\": \"reported\",\n      \"eventDate\": \"2026-09-15\",\n      \"publishedDate\": \"2026-08-29\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The U.S. Senate is scheduled to hold a procedural cloture vote on the Digital Asset Market Clarity Act (H.R. 3633). This legislation aims to establish clearer federal rules and boundaries between the SEC and CFTC for cryptocurrency regulation.\",\n      \"sourceUrls\": [\n        \"",
+      "parsed": null,
+      "grounding": {
+        "webSearchQueries": [
+          "\"FOMC meeting\" schedule September 2026",
+          "\"US CPI\" release date September 2026",
+          "Bitcoin events September 2026",
+          "upcoming crypto catalysts September 2026",
+          "\"The Bitcoin Treasuries Conference\" 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFa7Og58K3Q4Ty22aKAIzocwRCeA-1rH06CVBKprEtDL4-VPkZib0LdIhlemxO6mBxlJEW9tYwmsy0NzpoGL7qN2_TI9FB-wK_A0EFaVqajx4wQXwcpnAt9x1_AprJ05UV6mNndz8XBaLSoh1l5BgxXfVnEYBjXmgYlrlU9Skdi5-eHxsU0wvUnYpnOQNC_MQaIMMtDYiKT6B_7Yk-A5GJZz-Q5X9c1khfSnZodnBf3\">&quot;The Bitcoin Treasuries Conference&quot; 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "evaluation": {
+        "score": 70,
+        "flags": [
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 482,
+        "candidatesTokenCount": 206,
+        "totalTokenCount": 4928,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 482
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 206
+          }
+        ],
+        "thoughtsTokenCount": 4240
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "ethereum-events",
+      "text": "",
+      "parsed": null,
+      "evaluation": {
+        "score": 10,
+        "flags": [
+          "missing groundingMetadata",
+          "missing search query evidence",
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 501,
+        "candidatesTokenCount": 19,
+        "totalTokenCount": 1548,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 501
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 19
+          }
+        ],
+        "thoughtsTokenCount": 1028
+      }
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "case": "ethereum-events",
+      "text": "{\n  \"researchAsOfUtc\": \"2026-09-05T08:08:10Z\",\n  \"asset\": \"Ethereum (ETH)\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Client Teams' Deadline for Hegotá Upgrade Proposals\",\n      \"status\": \"confirmed\",",
+      "parsed": null,
+      "grounding": {
+        "webSearchQueries": [
+          "\"Ethereum\" upcoming events September 2026 OR October 2026",
+          "\"Ethereum\" ETF SEC September 2026",
+          "\"Ethereum\" upgrade \"Pectra\" OR \"Osaka\" schedule 2026",
+          "Ethereum staking regulatory news September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFo1mM41_gM9QuvhjRi6iirI2NKHBlPE7C4zYZdcmHLK8DWrQokUMO852OgOPQ2sRRPevuqxrT8zvcXYTxsKBymTVmT_VbdyopAwHpaV1H9E9kA_u7p5NAmZZVMhISi7bdmIRpkxiLD_cJ3toQ3ZCjyMVgZ5zyzT5vXoYUfw_iX-SQ6l14S4Rc-u4k57MtAI-2zfd8-4d-5GLC_arPbP3A9HfZDCSNOiB1Pw_RAQRLa9KUJ\">Ethereum staking regulatory news September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH45xeBhVNS0aTVPjvOiRUWKd4iCohY6Wa79MQoVivnNlWn7o1-eW9eVQ7llYbJ3_gnoROKG0_1QlJAUK5CEQ0cNqw-oXyOe9_OO23TFyhVeLGJwvU8ezcNUowHvvgC6Lr3XGZW_adtALVMfkQH2XBPse_eoJvjhzf1B7rijcvt0Lq2SAtgt5VmiWGgXHbkUqyX03J4p3bBgYEbJ2hIl4coSbJRk6b3KIw=\">&quot;Ethereum&quot; ETF SEC September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGypC8NG8zqBDxQVypW663NLCMOHdzIisdnCySM76tMj4dOisV8WviTjO-aKiD6hnDUMy27c0pMlMAepqUe8NnUUsZueEscEpeZKOJteRp-E2vDIbS4TWigbQUrppwsPmaUwcLA67kX-9y7ORdK-1d1-jrwcjkFShGpF9L2pntJufONkNZmmMVJSqERgaUq1yGZ3W1zV2rMYdzp-pXtSUVDQJ5PLov2z74TzQ2-CAt1lppvIdwEkDoErBvzx_LIa_Qd\">&quot;Ethereum&quot; upcoming events September 2026 OR October 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHwCQoO2kA2VZhxiicU5yapbPv7aUMXvwcch-whJA9RUhR1NPQ97gWyZnN6_exUzsLiT3TyzAS01eG_aoxQzPIfdy_Zthj7R0MKSNpwzbrlmrRxSA_YaRDZtnzQngg3Fd1ZN2Q0tbtU1CDLr7k2OlOlC-UrOyX-Rw6eJ7o2eVcLnbI3w8E7qCE3NPkNlKHZb9KbIcSSNRgAgr1af-MTtJqAkZvnBBycxYOBV4L_hE6-EbscI0LKE0l7UCYY2hn7F1_3DURt\">&quot;Ethereum&quot; upgrade &quot;Pectra&quot; OR &quot;Osaka&quot; schedule 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "evaluation": {
+        "score": 70,
+        "flags": [
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 478,
+        "candidatesTokenCount": 76,
+        "totalTokenCount": 2888,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 478
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 76
+          }
+        ],
+        "thoughtsTokenCount": 2334
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "solana-events",
+      "text": "",
+      "parsed": null,
+      "evaluation": {
+        "score": 10,
+        "flags": [
+          "missing groundingMetadata",
+          "missing search query evidence",
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 501,
+        "candidatesTokenCount": 23,
+        "totalTokenCount": 5765,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 501
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 23
+          }
+        ],
+        "thoughtsTokenCount": 5241
+      }
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "case": "solana-events",
+      "text": "{\n  \"researchAsOfUtc\": \"2026-09-05T08:08:10.834Z\",\n  \"asset\": \"Solana (SOL)\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Solana Transaction V1 Mainnet Activation\",\n      \"status\":",
+      "parsed": null,
+      "grounding": {
+        "webSearchQueries": [
+          "\"Solana\" events OR updates September 2026",
+          "\"Solana Breakpoint\" 2026",
+          "Solana network upgrades September 2026",
+          "Federal Reserve FOMC meeting September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFJjGC4GkO0_IRIZy3NuYMhDQXMKyaSwIcoV_K7mS5E05Y2y9W-KPCQy52D5Q523VlaOQxscB-mt6y_U_J0SJpDv09kSddcxPpZBJb6ffv1eafcLFfsG2TesQQuoQBF3aaCWpIXLLszpnXbRvMNFDBhTinJ3mWWKToVJwJRVxKsTqTv1fj5Al9MIkvlaED-RqLAwG2RvwotjJnEU5OKjnuC8Y114i0DnKDpZZGo5bY=\">Federal Reserve FOMC meeting September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHkm5gdvokL-sb6zaT2xwts_Y-5c-BFG78j7w4qX6viP3r9RTPbgWlnlx2XMYmmqNRSDrKyZJUZCEh2j1qrZK8mCSrPeYnjsQoaqv6MXST9D3rcKPo-HGYgngQrnCm29nYdC6foapxfmrTsasunR6VULlX-Bh9xxFH610mW0AgHZ4aVc83JUc4QUlH5zx6jKsAkUc4K0ERZWy7r0MyUEzdQg0rrjrySGfJw\">Solana network upgrades September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGa8WMKEcF8x4i2LsU9rXHN-KHoPsvWm1D60hqp3TjdOc-kkidg4PqcIqr-CqusS4oALqOoOCyUc2yM131rtcnJAQhkCjYrI97jlhDnNslIGBOOUzsATE4lYUhk1yp-BPef88ol_Aey0u89NOuMjDo1KiMm8ysaPrWlrhbpqvmoya1W5PxYC89MkCoH8n86LBUcV8CxiVKI9jRfya647RLxqSvub_Uao28qMZzusC2a7w==\">&quot;Solana&quot; events OR updates September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGdDa07u42fdive7_xiNOm9PA8OjxyTNKiyvVWwvCE8eCNkyVtgmfJcpTzeaPBF52PUlSQE2YkBlBMggy2ZPP-4wUjWWp_fDuN3L-LCcOCZPqCanh7_wMRYcNOShZqnmw_Ps-UgeDXTnLSjlWne8B_4Kcc8xSi4VEU2viI8cJwxUCx_p8ri6ljHu-qqy_76V6Mz6XX1ZksPrK5NL78KUNU=\">&quot;Solana Breakpoint&quot; 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "evaluation": {
+        "score": 70,
+        "flags": [
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 478,
+        "candidatesTokenCount": 77,
+        "totalTokenCount": 2770,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 478
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 77
+          }
+        ],
+        "thoughtsTokenCount": 2215
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "xrp-events",
+      "text": "",
+      "parsed": null,
+      "evaluation": {
+        "score": 10,
+        "flags": [
+          "missing groundingMetadata",
+          "missing search query evidence",
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 512,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 2754,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 512
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 21
+          }
+        ],
+        "thoughtsTokenCount": 2221
+      }
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "case": "xrp-events",
+      "text": "{\n  \"researchAsOfUtc\": \"2026-09-05T08:08:10.834Z\",\n  \"asset\": \"XRP\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Ripple at Stablecon USA\",\n      \"status\": \"confirmed\",\n      \"",
+      "parsed": null,
+      "grounding": {
+        "webSearchQueries": [
+          "\"XRP\" \"September 2026\" event OR sec OR rlusd",
+          "\"Ripple\" events September 2026",
+          "\"Ripple\" \"Swell\" 2026",
+          "\"Ripple SEC\" September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGCcpAps754DPeMG4EJk-JMLYbzdiICqVff3qhxvdOF3th8ioEv-Tr2T8vpoIG4CHx55n91MxCY9WKLwTw6sgtIq0V1DM9BACPrf1s2LSpQNTnnUOkYZsSZepIxxeyHqC9z_NKUMPgjIluybWn3Y8tQNffLE2rzUN8ARpXYqWhDSodFxkpFlqTUzhWYPNvxio7dWEzAH7abxGLk2ZdWxYGol5Y=\">&quot;Ripple SEC&quot; September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEH6j_vuIkBMJg40XVBCt8fDIgEECGOAPPDMxa8aPTpjc2Qbe9lP3yKoYGRORjKTJ_SSafXQZ4Jrrkm01w08lXa14uvq35ZBGptqbxpShTPeVmiNsRbfQUnj1zSykdVXKcCe9ml_8oWLhc093Z9Hr9ocgsbWDHROQEM7AQrGCZScKwz4-s1BCUrZIp1hcW0I5HqkbqxaL_G46WA7TiOx6ME\">&quot;Ripple&quot; &quot;Swell&quot; 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFnf56tec4jLuxGM1twqXFPvq44jhR9Yg1bTme2x5e0yLUDA0m_cojx5lz9_ZXIdcck-zMzBVdeTs6_4e9nk5KskV5N7Ku5Tb-pOgJWfDfzTnGIDqqrLO0JtHLVpyzUwq6qTBouJrP3iBL5Xfoh8-1Br7vubi9YOmwW4n_-0Vm-ev4n8t1lmSyIKMS4ZdrZvQXwUw3_PfAY1aM2JQnuGrA0RISp15Cq7s6j8F-FRqgSE7L22yfvO7d1\">&quot;XRP&quot; &quot;September 2026&quot; event OR sec OR rlusd</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEHjWENW_il7I-Sep6vKS8yLa7SuoDs0IpDMYCtJ-VgaOepBslr_BxUNmqOnPespVl9UJNbr0p3Q80Ft741m5aN07F335uVH0saOJDCsm83Oi-eBTRMJfhuzWmlrqxDmG5xS7DJn24ZvervxyHxWgYYppK7h6edxbwIcTy4ZIjHa_yte0JHwkGQn__3g4bEofpHDWBmm0mKqhGOI9Nt3uCHVHe_4Qk=\">&quot;Ripple&quot; events September 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "evaluation": {
+        "score": 70,
+        "flags": [
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 489,
+        "candidatesTokenCount": 78,
+        "totalTokenCount": 2849,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 489
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 78
+          }
+        ],
+        "thoughtsTokenCount": 2282
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "macro-calendar",
+      "text": "",
+      "parsed": null,
+      "evaluation": {
+        "score": 10,
+        "flags": [
+          "missing groundingMetadata",
+          "missing search query evidence",
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 519,
+        "candidatesTokenCount": 40,
+        "totalTokenCount": 4181,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 519
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 40
+          }
+        ],
+        "thoughtsTokenCount": 3622
+      }
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "case": "macro-calendar",
+      "text": "{\n  \"researchAsOfUtc\": \"2026-09-05T08:16:00Z\",\n  \"asset\": \"Bitcoin\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"European Mining Summit 2026 (Helsinki)\",\n      \"status\": \"",
+      "parsed": null,
+      "grounding": {
+        "webSearchQueries": [
+          "\"FOMC meeting schedule\" 2026",
+          "\"CPI\" release date schedule September 2026 BLS",
+          "\"Employment Situation\" release schedule September 2026 BLS",
+          "Bitcoin crypto events September 2026",
+          "\"Bitcoin Treasuries Conference\" NYC September 2026",
+          "\"European Mining Summit\" Helsinki September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFU2VVlk9FA-GOJ80oDJ0sEyKbcKZHGPQHNX2o2cV-GckmKYId4DZaYvHlDygkyaBpdxKaLnD4boe5McTnpBOC0iRUYaucRp2SGrJsjY02_FL5shhQhSzNTo5Zcw08OwDugkmoZN0RJ3TtYYJTyrGJHodirP7TiE2zRaU-uIvsdc0KKEpR90T5Y6GvD2_v_p_RDH7giSMnnhCxC-frZ4dlxTiqMM3Y61t4iw4d0RUCBgAPGHjHw7oza\">&quot;European Mining Summit&quot; Helsinki September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG_KPiC8q-6dbyISDuftVOg8UTa8swMGqLG4wgPAYwC1tUgAUX1chS_HdG_EGC7FG3GLshEn03T2itWNNuykpbapCyVP83EKYH_wK3jBnh7S2GXF6jmW4zmJFXnHT3kZ5iUeYeY2meNW3xlSELqNJYdN1mpxIUaBnE3W6gukX4TSQpPh2uFhbeB3Oo-28lCIM-xx07j5nwj6McjspIUlJubqSnzgAN2-2eisSb3hBuSoJi4UCHMocn4O6o=\">&quot;Bitcoin Treasuries Conference&quot; NYC September 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "evaluation": {
+        "score": 70,
+        "flags": [
+          "missing grounded sources",
+          "invalid JSON"
+        ],
+        "sources": [],
+        "cited": [],
+        "unmatched": [],
+        "claimCount": 0
+      },
+      "usage": {
+        "promptTokenCount": 496,
+        "candidatesTokenCount": 75,
+        "totalTokenCount": 5040,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 496
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 75
+          }
+        ],
+        "thoughtsTokenCount": 4469
+      }
+    }
+  ]
+}

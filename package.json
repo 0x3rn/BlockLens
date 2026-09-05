@@ -25,6 +25,8 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:gemini-search": "node --env-file=.env.local scripts/gemini-google-search-test.mjs",
+    "test:gemini-grounding": "node --env-file=.env.local scripts/gemini-grounding-benchmark.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {

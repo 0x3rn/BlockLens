@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { getFuturesLiquidationPrice, getFuturesMaintenanceMargin, getFuturesReturnOnEquity, getFuturesUnrealizedPnl, shouldTriggerFuturesOrder } from './usePaperFutures';
-import type { PaperFuturesPosition } from '../types/crypto';
+import { createInitialPaperFuturesAccount, getFuturesLiquidationPrice, getFuturesMaintenanceMargin, getFuturesReturnOnEquity, getFuturesUnrealizedPnl, getMissingOpenOrderCoinIds, getOpenOrderMarketChecks, shouldReusePaperFuturesAccountOnRetry, shouldTriggerFuturesOrder } from './usePaperFutures';
+import type { PaperFuturesOrder, PaperFuturesPosition } from '../types/crypto';
+import { resolveFuturesMarkPrice } from './useFuturesMarketPrice';
 
 const position = (side: 'long' | 'short'): PaperFuturesPosition => ({
   id: 'position-1',
@@ -42,5 +43,54 @@ describe('paper futures calculations', () => {
     expect(shouldTriggerFuturesOrder(limitLong, 97)).toBe(false);
     expect(shouldTriggerFuturesOrder(stopShort, 105)).toBe(true);
     expect(shouldTriggerFuturesOrder(stopShort, 107)).toBe(false);
+  });
+
+  it('collects one market check for every asset with an open order', () => {
+    const order = (id: string, coinId: string, status: PaperFuturesOrder['status']): PaperFuturesOrder => ({
+      id,
+      coinId,
+      coinName: coinId,
+      symbol: coinId,
+      type: 'limit',
+      side: 'long',
+      status,
+      margin: 10,
+      leverage: 2,
+      marginMode: 'isolated',
+      reduceOnly: false,
+      quantity: null,
+      positionId: null,
+      limitPrice: 100,
+      triggerPrice: null,
+      stopLoss: null,
+      takeProfit: null,
+      createdAt: '2026-09-01T00:00:00.000Z',
+      filledAt: null,
+      cancelledAt: null,
+    });
+    const checks = getOpenOrderMarketChecks(
+      [order('1', 'bitcoin', 'open'), order('2', 'ethereum', 'open'), order('3', 'bitcoin', 'open'), order('4', 'solana', 'filled')],
+      new Map([['bitcoin', 101], ['ethereum', 202], ['solana', 303]]),
+    );
+    expect(checks).toEqual([
+      { coinId: 'bitcoin', markPrice: 101 },
+      { coinId: 'ethereum', markPrice: 202 },
+    ]);
+    expect(getMissingOpenOrderCoinIds(
+      [order('1', 'bitcoin', 'open'), order('2', 'outside-top-100', 'open')],
+      new Set(['bitcoin']),
+    )).toEqual(['outside-top-100']);
+  });
+
+  it('reuses retry state only for the same signed-in account', () => {
+    const meaningful = { ...createInitialPaperFuturesAccount(), balance: 9_000 };
+    expect(shouldReusePaperFuturesAccountOnRetry(1, 'user-a', 'user-a', meaningful)).toBe(true);
+    expect(shouldReusePaperFuturesAccountOnRetry(1, null, 'user-b', meaningful)).toBe(false);
+    expect(shouldReusePaperFuturesAccountOnRetry(1, 'user-a', 'user-b', meaningful)).toBe(false);
+  });
+
+  it('does not associate a previous asset feed price with a newly selected coin', () => {
+    expect(resolveFuturesMarkPrice({ id: 'ethereum', current_price: 3_000 }, 'bitcoin', 60_000)).toBe(3_000);
+    expect(resolveFuturesMarkPrice({ id: 'ethereum', current_price: 3_000 }, 'ethereum', 3_050)).toBe(3_050);
   });
 });

@@ -6,6 +6,22 @@ type VertexCompletion = {
   choices?: Array<{ message?: { content?: unknown } }>;
 };
 
+type GroundedVertexResponse = {
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: unknown }> };
+    groundingMetadata?: {
+      webSearchQueries?: unknown;
+      groundingChunks?: Array<{ web?: { uri?: unknown; title?: unknown } }>;
+    };
+  }>;
+};
+
+export type GroundedResearchResponse = {
+  content: string;
+  queries: string[];
+  sources: Array<{ title: string; url: string }>;
+};
+
 type ServiceAccount = {
   client_email?: string;
   private_key?: string;
@@ -114,9 +130,8 @@ export const requestVertexCompletion = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-3.1-pro-preview',
+        model: 'google/gemini-3.7-flash',
         messages,
-        temperature: 0.2,
         response_format: { type: 'json_object' },
         max_completion_tokens: 4_096,
         reasoning_effort: 'low',
@@ -128,4 +143,51 @@ export const requestVertexCompletion = async (
   const content = body.choices?.[0]?.message?.content;
   if (typeof content !== 'string') throw new Error('The Gemini provider returned an incomplete response.');
   return content;
+};
+
+/** Uses the native Gemini endpoint so Google Search grounding metadata remains available. */
+export const requestVertexGroundedResearch = async (
+  prompt: string,
+  environment: ServerEnvironment,
+): Promise<GroundedResearchResponse> => {
+  const { projectId } = readServiceAccount(environment);
+  const accessToken = await getAccessToken(environment);
+  const response = await fetch(
+    `https://aiplatform.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/locations/global/publishers/google/models/gemini-3.7-flash:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }],
+        generationConfig: {
+          maxOutputTokens: 8_192,
+          thinkingConfig: { thinkingLevel: 'LOW' },
+        },
+      }),
+    },
+  );
+  const body = await response.json() as GroundedVertexResponse & { error?: { message?: string } };
+  if (!response.ok) throw new Error(body.error?.message || 'The Gemini research provider returned an error.');
+  const candidate = body.candidates?.[0];
+  const content = candidate?.content?.parts
+    ?.map((part) => typeof part.text === 'string' ? part.text : '')
+    .join('')
+    .trim();
+  if (!content) throw new Error('The Gemini research provider returned no content.');
+  const metadata = candidate?.groundingMetadata;
+  const queries = Array.isArray(metadata?.webSearchQueries)
+    ? metadata.webSearchQueries.filter((query): query is string => typeof query === 'string')
+    : [];
+  const sourceByUrl = new Map<string, string>();
+  for (const chunk of metadata?.groundingChunks ?? []) {
+    const url = chunk.web?.uri;
+    if (typeof url !== 'string' || !url.startsWith('https://')) continue;
+    const title = typeof chunk.web?.title === 'string' && chunk.web.title.trim() ? chunk.web.title : url;
+    sourceByUrl.set(url, title);
+  }
+  return { content, queries, sources: [...sourceByUrl].map(([url, title]) => ({ url, title })) };
 };

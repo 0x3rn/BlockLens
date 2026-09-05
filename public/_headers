@@ -1,0 +1,8 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  Cross-Origin-Opener-Policy: same-origin
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://assets.coingecko.com https://coin-images.coingecko.com; connect-src 'self' https://api.coingecko.com https://api.binance.com https://fapi.binance.com https://*.supabase.co https://vitals.vercel-insights.com https://*.vercel-insights.com wss://stream.binance.com:9443 wss://fstream.binance.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'

@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Coin } from '../types/crypto';
 
+export const resolveFuturesMarkPrice = (
+  coin: Pick<Coin, 'id' | 'current_price'> | null,
+  feedCoinId: string | null,
+  feedPrice: number,
+) => coin && feedCoinId === coin.id && Number.isFinite(feedPrice) && feedPrice > 0
+  ? feedPrice
+  : coin?.current_price ?? 0;
+
 export type FuturesPriceStatus = 'connecting' | 'live' | 'reconnecting' | 'polling' | 'fallback';
 
 const getStreamSymbol = (coin: Coin) => {
@@ -10,6 +18,7 @@ const getStreamSymbol = (coin: Coin) => {
 
 export const useFuturesMarketPrice = (coin: Coin | null) => {
   const [price, setPrice] = useState(coin?.current_price ?? 0);
+  const [priceCoinId, setPriceCoinId] = useState<string | null>(coin?.id ?? null);
   const [status, setStatus] = useState<FuturesPriceStatus>('connecting');
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [fundingRate, setFundingRate] = useState<number | null>(null);
@@ -25,6 +34,7 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
     let attempt = 0;
     const streamSymbol = coin ? getStreamSymbol(coin) : null;
     setPrice(coin?.current_price ?? 0);
+    setPriceCoinId(coin?.id ?? null);
     setLastUpdated(null);
     setFundingRate(null);
 
@@ -117,5 +127,5 @@ export const useFuturesMarketPrice = (coin: Coin | null) => {
     };
   }, [coin?.id, coin?.symbol, coin?.current_price, connectionKey]);
 
-  return { price, status, lastUpdated, fundingRate, retry };
+  return { price, priceCoinId, status, lastUpdated, fundingRate, retry };
 };

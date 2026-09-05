@@ -1,0 +1,8 @@
+Running gemini-3.7-flash / bitcoin-catalysts... 75/100 missing grounded sources; 2 cited URL(s) absent from grounding
+Running gemini-3.7-flash / ethereum-events... 75/100 missing grounded sources; 2 cited URL(s) absent from grounding
+Running gemini-3.7-flash / solana-events... 75/100 missing grounded sources; 3 cited URL(s) absent from grounding
+Running gemini-3.7-flash / xrp-events... 75/100 missing grounded sources; 3 cited URL(s) absent from grounding
+Running gemini-3.7-flash / macro-calendar... 75/100 missing grounded sources; 2 cited URL(s) absent from grounding
+
+Saved all model outputs and raw grounding metadata: C:\Users\divin\Documents\BlockLens\artifacts\gemini-grounding-benchmark-2026-09-05T08-24-28-412Z.json
+{"gemini-3.7-flash":{"completed":5,"failed":0,"averageScore":75,"flagged":5}}

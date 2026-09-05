@@ -1,0 +1,5 @@
+Running gemini-3.7-flash / bitcoin-catalysts... 10/100 missing groundingMetadata; missing search query evidence; missing grounded sources; invalid JSON
+Running gemini-3.1-pro-preview / bitcoin-catalysts... 75/100 missing grounded sources; 4 cited URL(s) absent from grounding
+Running gemini-3.7-flash / ethereum-events... 10/100 missing groundingMetadata; missing search query evidence; missing grounded sources; invalid JSON
+Running gemini-3.1-pro-preview / ethereum-events... 75/100 missing grounded sources; 4 cited URL(s) absent from grounding
+Running gemini-3.7-flash / solana-events...

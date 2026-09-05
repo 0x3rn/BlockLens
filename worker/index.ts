@@ -1,5 +1,6 @@
-import { runAIAnalysis, AnalysisError } from '../api/_analysis.ts';
-import { isRateLimited } from '../api/_rate-limit.ts';
+import { runAIAnalysis, AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest } from '../api/_analysis.ts';
+import { consumeAnalysisQuota, AnalysisAccessError } from '../api/_analysis-access.ts';
+import { acquireAnalysisSlot, isRateLimited } from '../api/_rate-limit.ts';
 import { fetchTopCoins } from '../api/_market.ts';
 import { processTelegramUpdate } from '../api/telegram/webhook.ts';
 import type { ServerEnvironment } from '../api/_env.ts';
@@ -39,15 +40,45 @@ type BodyResult =
   | { ok: true; value: unknown }
   | { ok: false; response: Response };
 
-const readJsonBody = async (request: Request): Promise<BodyResult> => {
+export const readJsonBody = async (request: Request): Promise<BodyResult> => {
   const contentLength = Number(request.headers.get('content-length') ?? 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
     return { ok: false, response: json({ error: 'The request is too large.' }, 413) };
   }
 
-  const rawBody = await request.text();
-  if (rawBody.length > MAX_BODY_BYTES) {
-    return { ok: false, response: json({ error: 'The request is too large.' }, 413) };
+  if (!request.body) {
+    return { ok: false, response: json({ error: 'The request body is not valid JSON.' }, 400) };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let receivedBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      receivedBytes += value.byteLength;
+      if (receivedBytes > MAX_BODY_BYTES) {
+        void reader.cancel().catch(() => undefined);
+        return { ok: false, response: json({ error: 'The request is too large.' }, 413) };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return { ok: false, response: json({ error: 'The request body could not be read.' }, 400) };
+  }
+
+  const bytes = new Uint8Array(receivedBytes);
+  let offset = 0;
+  chunks.forEach((chunk) => {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  });
+  let rawBody: string;
+  try {
+    rawBody = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return { ok: false, response: json({ error: 'The request body is not valid JSON.' }, 400) };
   }
 
   try {
@@ -62,20 +93,33 @@ const handleAnalysis = async (request: Request, env: WorkerEnvironment): Promise
     return json({ error: 'Only POST requests are accepted.' }, 405, { Allow: 'POST' });
   }
 
-  if (isRateLimited(clientKey(request))) {
+  const quotaKey = `web:${clientKey(request)}`;
+  if (isRateLimited(quotaKey)) {
     return json({ error: 'Too many analysis requests. Please wait a minute and retry.' }, 429);
   }
 
   const body = await readJsonBody(request);
   if (!body.ok) return body.response;
 
+  let releaseSlot: (() => void) | null = null;
   try {
-    const analysis = await runAIAnalysis(body.value, env, 'fetch');
+    if (!isAIAnalysisConfigured(env)) {
+      return json({ error: 'Gemini trading analysis is not configured on this deployment yet.' }, 503);
+    }
+    const input = normalizeAIAnalysisRequest(body.value);
+    if (!input) return json({ error: 'The supplied market data is incomplete or invalid.' }, 400);
+    releaseSlot = acquireAnalysisSlot();
+    if (!releaseSlot) return json({ error: 'AI analysis is busy. Please retry shortly.' }, 429);
+    await consumeAnalysisQuota(quotaKey, env);
+    const analysis = await runAIAnalysis(input, env, 'fetch');
     return json(analysis, 200, { 'Cache-Control': 'no-store' });
   } catch (error) {
+    if (error instanceof AnalysisAccessError) return json({ error: error.message }, error.status);
     if (error instanceof AnalysisError) return json({ error: error.message }, error.status);
     console.error('Cloudflare AI analysis request failed:', error instanceof Error ? error.message : 'Unknown provider error');
     return json({ error: 'The AI market brief is temporarily unavailable.' }, 502);
+  } finally {
+    releaseSlot?.();
   }
 };
 

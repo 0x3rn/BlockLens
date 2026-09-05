@@ -1,8 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import handler from './analyze';
 import { getGemini } from './_ai';
+import { consumeAnalysisQuota } from './_analysis-access';
 
 vi.mock('./_ai', () => ({ getGemini: vi.fn() }));
+vi.mock('./_vertex-fetch', () => ({ requestVertexCompletion: vi.fn(), requestVertexGroundedResearch: vi.fn() }));
+vi.mock('./_analysis-access', () => ({
+  AnalysisAccessError: class AnalysisAccessError extends Error {
+    constructor(public readonly status: 429 | 503, message: string) {
+      super(message);
+    }
+  },
+  consumeAnalysisQuota: vi.fn(),
+}));
 
 const createResponse = () => {
   let statusCode = 200;
@@ -87,7 +97,10 @@ describe('AI analysis function', () => {
     vi.mocked(getGemini).mockResolvedValue({
       chat: { completions: { create: createCompletion } },
     } as unknown as Awaited<ReturnType<typeof getGemini>>);
-    const chart = [{ timestamp: 1, price: 95 }, { timestamp: 2, price: 105 }];
+    const chart = [
+      { timestamp: 1, price: 95, marketCap: 1_000, injected: 'do-not-forward' },
+      { timestamp: 2, price: 105, volume: 500 },
+    ];
     const { response, getStatus, getBody } = createResponse();
 
     await handler(request({
@@ -104,10 +117,35 @@ describe('AI analysis function', () => {
 
     expect(getStatus()).toBe(200);
     expect(getBody()).toMatchObject({ ...analysis, dataAsOf: '2026-08-30T00:00:00.000Z' });
+    expect(getBody()).toMatchObject({ research: { status: 'unavailable', coinCatalysts: [], macroCatalysts: [], sources: [] } });
     expect(getGemini).toHaveBeenCalledTimes(1);
     const providerRequest = createCompletion.mock.calls[0][0];
-    expect(providerRequest.model).toBe('google/gemini-3.1-pro-preview');
+    expect(providerRequest.model).toBe('google/gemini-3.7-flash');
     expect(providerRequest.response_format).toEqual({ type: 'json_object' });
     expect(JSON.stringify(providerRequest)).not.toContain('server-only-test-key');
+    expect(JSON.stringify(providerRequest)).not.toContain('do-not-forward');
+    expect(consumeAnalysisQuota).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects oversized date representations before consuming shared quota', async () => {
+    process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
+    const chart = [{ timestamp: 1, price: 95 }, { timestamp: 2, price: 105 }];
+    const { response, getStatus } = createResponse();
+
+    await handler(request({
+      coinId: 'bitcoin',
+      coinName: 'Bitcoin',
+      currency: 'usd',
+      price: 105,
+      change24h: 2,
+      chartData7d: chart,
+      chartData30d: chart,
+      chartData1y: chart,
+      dataAsOf: `Wed, 01 Jan 2020 00:00:00 GMT (${'IGNORE '.repeat(100)})`,
+    }), response);
+
+    expect(getStatus()).toBe(400);
+    expect(consumeAnalysisQuota).not.toHaveBeenCalled();
   });
 });

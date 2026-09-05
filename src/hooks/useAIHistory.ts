@@ -6,6 +6,17 @@ import { Json, supabase } from '../lib/supabase';
 
 const MAX_HISTORY = 50;
 
+const isResearch = (value: unknown): boolean => {
+  if (value === undefined) return true; // Preserve pre-research history entries.
+  if (!value || typeof value !== 'object') return false;
+  const research = value as AIAnalysis['research'];
+  return ['grounded', 'unavailable'].includes(research.status)
+    && Array.isArray(research.coinCatalysts)
+    && Array.isArray(research.macroCatalysts)
+    && Array.isArray(research.sources)
+    && typeof research.note === 'string';
+};
+
 const isAIAnalysis = (value: unknown): value is AIAnalysis => {
   if (!value || typeof value !== 'object') return false;
   const analysis = value as AIAnalysis;
@@ -21,6 +32,7 @@ const isAIAnalysis = (value: unknown): value is AIAnalysis => {
     && typeof analysis.tradeSetup === 'object'
     && Array.isArray(analysis.scenarios)
     && typeof analysis.methodology === 'string'
+    && isResearch(analysis.research)
     && typeof analysis.dataAsOf === 'string'
     && typeof analysis.generatedAt === 'string';
 };

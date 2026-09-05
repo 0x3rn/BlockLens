@@ -1,0 +1,527 @@
+{
+  "promptVersion": 4,
+  "runStartedAt": "2026-09-05T08:22:29.490Z",
+  "summary": {
+    "gemini-3.7-flash": {
+      "completed": 5,
+      "failed": 0,
+      "averageScore": 78,
+      "flagged": 5
+    }
+  },
+  "results": [
+    {
+      "model": "gemini-3.7-flash",
+      "case": "bitcoin-catalysts",
+      "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"BTC\",\n  \"coinCatalysts\": [],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"Federal Reserve FOMC Interest Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The Federal Open Market Committee's interest rate decision and updated Summary of Economic Projections directly impact macroeconomic liquidity and cost of capital for risk assets including Bitcoin.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEbrpQojqN8zrtO81-ihr7fTMiMaKkkSUbpM7xrOYELcM7_dU7zGPLzlb-rbkHn-BBorm9MVmD5suwbuw1-NxR1zNH1G_7jJ_VFAIBKnW68SLBCAlBu80yhhb4z_FHs3poApqAMp3TEX4vTvrokNXOfCT2XjGcqqbqI\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"No confirmed protocol-level hard forks, regulatory rulings, or scheduled supply changes meeting direct-source verification criteria were identified for Bitcoin within the 24-hour to 30-day window.\"\n  ]\n}\n```",
+      "parsed": {
+        "researchAsOfUtc": "2026-09-05T08:22:29.490Z",
+        "asset": "BTC",
+        "coinCatalysts": [],
+        "macroCatalysts": [
+          {
+            "title": "Federal Reserve FOMC Interest Rate Decision and Economic Projections",
+            "status": "confirmed",
+            "eventDate": "2026-09-16",
+            "publishedDate": "2026-08-19",
+            "window": "30d",
+            "conditionalEffect": "uncertain",
+            "mechanism": "The Federal Open Market Committee's interest rate decision and updated Summary of Economic Projections directly impact macroeconomic liquidity and cost of capital for risk assets including Bitcoin.",
+            "sourceUrls": [
+              "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEbrpQojqN8zrtO81-ihr7fTMiMaKkkSUbpM7xrOYELcM7_dU7zGPLzlb-rbkHn-BBorm9MVmD5suwbuw1-NxR1zNH1G_7jJ_VFAIBKnW68SLBCAlBu80yhhb4z_FHs3poApqAMp3TEX4vTvrokNXOfCT2XjGcqqbqI"
+            ]
+          }
+        ],
+        "researchLimits": [
+          "No confirmed protocol-level hard forks, regulatory rulings, or scheduled supply changes meeting direct-source verification criteria were identified for Bitcoin within the 24-hour to 30-day window."
+        ]
+      },
+      "grounding": {
+        "webSearchQueries": [
+          "FOMC meeting dates 2026 Federal Reserve",
+          "Bitcoin news September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFpP559zGv9Q6VxNpRcXiXNQ_qmlGysitJvAADM0o-aTdZzN7PpKibNMzQnuK6DWonPIHtcNRoRxwbtZ8tyZ_gOOdDTHi6ifG3UkFjdNJFLeOEtZY6AucCdwzQ14BfepMo4QszraETTs5CltpaqK2ZOAxaqQ77bxN4GYo8iLQpoXU37j4d4GsNBkvXEnUts1G9VcZ5GhlqCDSZ-8lOQ\">Bitcoin news September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFGd-sxQtDWAPiyPQ7E3HUmOlzS7XRvImz0qfOxNZ2WbLeUJXOZM6VNGK0xRk5C-TLK79BLKjU1Egsl0nfflJXQWKJlfULsY8imNQLJNWp6QCel5nOCvBBnEEhQep5vaCwaZipua72rz4F4-UmdWTc66eB4S02I9MFWzGFFo6w87odyRDTqtU7vaCWXwXIY7u6b8Ry05-SxH71q6UHW97SwW7Qzg63xPPi4\">FOMC meeting dates 2026 Federal Reserve</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "finishReason": "STOP",
+      "parts": [
+        {
+          "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"BTC\",\n  \"coinCatalysts\": [],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"Federal Reserve FOMC Interest Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The Federal Open Market Committee's interest rate decision and updated Summary of Economic Projections directly impact macroeconomic liquidity and cost of capital for risk assets including Bitcoin.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEbrpQojqN8zrtO81-ihr7fTMiMaKkkSUbpM7xrOYELcM7_dU7zGPLzlb-rbkHn-BBorm9MVmD5suwbuw1-NxR1zNH1G_7jJ_VFAIBKnW68SLBCAlBu80yhhb4z_FHs3poApqAMp3TEX4vTvrokNXOfCT2XjGcqqbqI\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"No confirmed protocol-level hard forks, regulatory rulings, or scheduled supply changes meeting direct-source verification criteria were identified for Bitcoin within the 24-hour to 30-day window.\"\n  ]\n}\n```",
+          "thoughtSignature": "AY89a18GPE1Dzj5Kc5t/Xz/4l4E16nLSVmif6DNZvQPdgmK1fAN135Jvp2va8AdphM7FmXzThNPwt6KwDNWtTlnwVj7ptBXO+Koi52DgHDFTpE9+ULCc9RNEVJe/cvTvmVDN4H/d6dc5abA968ytGIwXrMgPoCJqivkZGDd78Im7XJHNxPtk02NXgHILpz2iSAxu7AbVnz16nnHRa427XOxPDLJ5Lci5uFi13y0IvnS445zPEnTPweLPt7ylqjE4KZbJz7XXDEuzIUPcfXccw9USddi4f6kSFLvyi4m655eNhTEWx66uN2D6GMKCvkQZxnghWJHOTCsLHh0ktAWcvoGN2aCXcL3hY0sqr5MROHuM+2+iYoGQbI2z8C3XmtmtEnJCoxbfA09ycuUhHLCGXTxABGsFzdS5FpKk70/7KDVsdHM6qz1E4PUGG1Ri1e41j8KrH+asNmoapLuQU44o8fC+IWvETrGdwV1R+XWYW3B09GWUwMfylvu5z27Z3EnQVNEXVlui2fg6tkMAHC3GuycmvaplvgdER6c1GujQ1P9kp/fOCBYplhlSE7hdxcQzID0IRcnserPJzf3iYKsyOjOcnAozpFDNu3Fio6X1yVsn0lQpNXmu1FrDhWZWm5TDpLeRQoHv9Kb+6jYgKp2zNABW2QwZau/u/sbwBpfaXXC1yQRZtc7be/hBCK075ovE+7VaUYVhSOIZ4qC7vzYMsuAWVB2Wr/GUxk++OTxjB0hxG5q2QS4q7AN7mmYlONDscTYe4idRh+jHoBpij//Dc09OAF44NGsK1TDqQLV/OKJNFw=="
+        }
+      ],
+      "evaluation": {
+        "score": 75,
+        "flags": [
+          "missing grounded sources",
+          "1 cited URL(s) absent from grounding"
+        ],
+        "sources": [],
+        "cited": [
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEbrpQojqN8zrtO81-ihr7fTMiMaKkkSUbpM7xrOYELcM7_dU7zGPLzlb-rbkHn-BBorm9MVmD5suwbuw1-NxR1zNH1G_7jJ_VFAIBKnW68SLBCAlBu80yhhb4z_FHs3poApqAMp3TEX4vTvrokNXOfCT2XjGcqqbqI"
+        ],
+        "unmatched": [
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEbrpQojqN8zrtO81-ihr7fTMiMaKkkSUbpM7xrOYELcM7_dU7zGPLzlb-rbkHn-BBorm9MVmD5suwbuw1-NxR1zNH1G_7jJ_VFAIBKnW68SLBCAlBu80yhhb4z_FHs3poApqAMp3TEX4vTvrokNXOfCT2XjGcqqbqI"
+        ],
+        "homepageUrls": [],
+        "claimCount": 1
+      },
+      "usage": {
+        "promptTokenCount": 616,
+        "candidatesTokenCount": 397,
+        "totalTokenCount": 1253,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 616
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 397
+          }
+        ],
+        "thoughtsTokenCount": 240
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "ethereum-events",
+      "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"Ethereum (ETH)\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Hegotá Upgrade Scope Client Preference Submission Deadline\",\n      \"status\": \"reported\",\n      \"eventDate\": \"2026-09-10\",\n      \"publishedDate\": \"2026-08-17\",\n      \"window\": \"7d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"Client development teams finalize EIP preference submissions to define the feature scope and delivery timeline for Ethereum's Hegotá hard fork.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDt-sU-_782x2WsEi0qbdjDLB_-bRJCDS4zFpzKwsxCUVLHR5gOY3gr37CyfqjK6Tagoet3gJMaQCvtaCBaSG-ob57Ojxf1n9kXl3Lmq7vFyQV2aC8Pa2ZXty-t_23BGkicnjBF6sAVIZdgwdiGVAmmQRktsyKE0J9qef9w0G--mUCXdrwDjWzPb85tQBPpG1psIT7t4WAPRURjoNd-jS6Li_KDv_TrsiJMErwNyLwml5fVlUoI1132P9tOSvovw==\"\n      ]\n    }\n  ],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"Federal Open Market Committee (FOMC) Interest Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2025-06-24\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The Federal Reserve's interest rate decision, Summary of Economic Projections, and dot plot release directly alter macroeconomic liquidity and broader risk-asset demand.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgTxekNebGFAixu54v6j35NVzwAxcAb_vwjSl5YQBD3AkgOzWsxD5d9t_aSf7hbAR9mLcywuCZMiHiYx_59WemJHmm-oWIppuqSyLxc3SDhy_EGqwyMp9VcFhxJbHHPNPUdWcwycuHOAyVPe-iyPlMMfxF31pg\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"Glamsterdam mainnet upgrade scheduling is targeted broadly for Q4 2026 without an exact date finalized within the 30-day window.\"\n  ]\n}\n```",
+      "parsed": {
+        "researchAsOfUtc": "2026-09-05T08:22:29.490Z",
+        "asset": "Ethereum (ETH)",
+        "coinCatalysts": [
+          {
+            "title": "Hegotá Upgrade Scope Client Preference Submission Deadline",
+            "status": "reported",
+            "eventDate": "2026-09-10",
+            "publishedDate": "2026-08-17",
+            "window": "7d",
+            "conditionalEffect": "mixed",
+            "mechanism": "Client development teams finalize EIP preference submissions to define the feature scope and delivery timeline for Ethereum's Hegotá hard fork.",
+            "sourceUrls": [
+              "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDt-sU-_782x2WsEi0qbdjDLB_-bRJCDS4zFpzKwsxCUVLHR5gOY3gr37CyfqjK6Tagoet3gJMaQCvtaCBaSG-ob57Ojxf1n9kXl3Lmq7vFyQV2aC8Pa2ZXty-t_23BGkicnjBF6sAVIZdgwdiGVAmmQRktsyKE0J9qef9w0G--mUCXdrwDjWzPb85tQBPpG1psIT7t4WAPRURjoNd-jS6Li_KDv_TrsiJMErwNyLwml5fVlUoI1132P9tOSvovw=="
+            ]
+          }
+        ],
+        "macroCatalysts": [
+          {
+            "title": "Federal Open Market Committee (FOMC) Interest Rate Decision and Economic Projections",
+            "status": "confirmed",
+            "eventDate": "2026-09-16",
+            "publishedDate": "2025-06-24",
+            "window": "30d",
+            "conditionalEffect": "mixed",
+            "mechanism": "The Federal Reserve's interest rate decision, Summary of Economic Projections, and dot plot release directly alter macroeconomic liquidity and broader risk-asset demand.",
+            "sourceUrls": [
+              "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgTxekNebGFAixu54v6j35NVzwAxcAb_vwjSl5YQBD3AkgOzWsxD5d9t_aSf7hbAR9mLcywuCZMiHiYx_59WemJHmm-oWIppuqSyLxc3SDhy_EGqwyMp9VcFhxJbHHPNPUdWcwycuHOAyVPe-iyPlMMfxF31pg"
+            ]
+          }
+        ],
+        "researchLimits": [
+          "Glamsterdam mainnet upgrade scheduling is targeted broadly for Q4 2026 without an exact date finalized within the 30-day window."
+        ]
+      },
+      "grounding": {
+        "webSearchQueries": [
+          "FOMC meeting schedule September 2026",
+          "Ethereum upgrade timeline September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFNgJB0weTxNNK5Oc00wEtjVVHfO-Q_ATIpqoNZR_0PKQK18uWuvfD5B0f-GL3teCiPRjnAuCkUYQi1Bxcrm6jL5lMOYy62ixd7U_wVm8UfAQBycZX9cSWGCGahB6SL_6SX9MSHp0J1K4fya-MC31FPdVOfdyR3OEuwwAW8k00KtqWMYSMVtcG_xwlvWG6OyuH0Ge1mNDKOtRKtUDaRSVJ_q8sgxCy9\">FOMC meeting schedule September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGxQZBsn5hdFoIox23bTohGOg5YTTanJ_8nLvzwsPhtihgeYfqncZJ5wZnB9wFhO6WR_TwpuI0wPtNXvXlASFJbPgFzl1Mh_o1-fC3-KQqgoeF7-XLBa_96rg_Xzc9dBG_vbvxRwjQO6ym8Z81jpLopQhU_hcN433tRAnmd7FMdlCwmFCdWVnS4rfgbN1sEPKxc5Zsl922OkrmbhEqVMDMUSveFgC0CffCEZQ==\">Ethereum upgrade timeline September 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "finishReason": "STOP",
+      "parts": [
+        {
+          "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"Ethereum (ETH)\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Hegotá Upgrade Scope Client Preference Submission Deadline\",\n      \"status\": \"reported\",\n      \"eventDate\": \"2026-09-10\",\n      \"publishedDate\": \"2026-08-17\",\n      \"window\": \"7d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"Client development teams finalize EIP preference submissions to define the feature scope and delivery timeline for Ethereum's Hegotá hard fork.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDt-sU-_782x2WsEi0qbdjDLB_-bRJCDS4zFpzKwsxCUVLHR5gOY3gr37CyfqjK6Tagoet3gJMaQCvtaCBaSG-ob57Ojxf1n9kXl3Lmq7vFyQV2aC8Pa2ZXty-t_23BGkicnjBF6sAVIZdgwdiGVAmmQRktsyKE0J9qef9w0G--mUCXdrwDjWzPb85tQBPpG1psIT7t4WAPRURjoNd-jS6Li_KDv_TrsiJMErwNyLwml5fVlUoI1132P9tOSvovw==\"\n      ]\n    }\n  ],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"Federal Open Market Committee (FOMC) Interest Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2025-06-24\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The Federal Reserve's interest rate decision, Summary of Economic Projections, and dot plot release directly alter macroeconomic liquidity and broader risk-asset demand.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgTxekNebGFAixu54v6j35NVzwAxcAb_vwjSl5YQBD3AkgOzWsxD5d9t_aSf7hbAR9mLcywuCZMiHiYx_59WemJHmm-oWIppuqSyLxc3SDhy_EGqwyMp9VcFhxJbHHPNPUdWcwycuHOAyVPe-iyPlMMfxF31pg\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"Glamsterdam mainnet upgrade scheduling is targeted broadly for Q4 2026 without an exact date finalized within the 30-day window.\"\n  ]\n}\n```",
+          "thoughtSignature": "AY89a186JFvi0f2bv1JQtFVEV5EyabsrHPTmRVYpQGHGkhsj7YcybZXWao45rkX0APqbCOyHMRDh1RB4Xamwmc4dAedatn+Umiba/zRa"
+        }
+      ],
+      "evaluation": {
+        "score": 75,
+        "flags": [
+          "missing grounded sources",
+          "2 cited URL(s) absent from grounding"
+        ],
+        "sources": [],
+        "cited": [
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDt-sU-_782x2WsEi0qbdjDLB_-bRJCDS4zFpzKwsxCUVLHR5gOY3gr37CyfqjK6Tagoet3gJMaQCvtaCBaSG-ob57Ojxf1n9kXl3Lmq7vFyQV2aC8Pa2ZXty-t_23BGkicnjBF6sAVIZdgwdiGVAmmQRktsyKE0J9qef9w0G--mUCXdrwDjWzPb85tQBPpG1psIT7t4WAPRURjoNd-jS6Li_KDv_TrsiJMErwNyLwml5fVlUoI1132P9tOSvovw==",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgTxekNebGFAixu54v6j35NVzwAxcAb_vwjSl5YQBD3AkgOzWsxD5d9t_aSf7hbAR9mLcywuCZMiHiYx_59WemJHmm-oWIppuqSyLxc3SDhy_EGqwyMp9VcFhxJbHHPNPUdWcwycuHOAyVPe-iyPlMMfxF31pg"
+        ],
+        "unmatched": [
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDt-sU-_782x2WsEi0qbdjDLB_-bRJCDS4zFpzKwsxCUVLHR5gOY3gr37CyfqjK6Tagoet3gJMaQCvtaCBaSG-ob57Ojxf1n9kXl3Lmq7vFyQV2aC8Pa2ZXty-t_23BGkicnjBF6sAVIZdgwdiGVAmmQRktsyKE0J9qef9w0G--mUCXdrwDjWzPb85tQBPpG1psIT7t4WAPRURjoNd-jS6Li_KDv_TrsiJMErwNyLwml5fVlUoI1132P9tOSvovw==",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgTxekNebGFAixu54v6j35NVzwAxcAb_vwjSl5YQBD3AkgOzWsxD5d9t_aSf7hbAR9mLcywuCZMiHiYx_59WemJHmm-oWIppuqSyLxc3SDhy_EGqwyMp9VcFhxJbHHPNPUdWcwycuHOAyVPe-iyPlMMfxF31pg"
+        ],
+        "homepageUrls": [],
+        "claimCount": 2
+      },
+      "usage": {
+        "promptTokenCount": 612,
+        "candidatesTokenCount": 718,
+        "totalTokenCount": 1330,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 612
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 718
+          }
+        ]
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "solana-events",
+      "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"SOL\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Solana SIMD-0437 Account Rent Reduction Rollout\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-03\",\n      \"publishedDate\": \"2026-09-05\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The multi-stage activation lowers on-chain rent-exemption thresholds, allowing account owners to reclaim an estimated 3.08 million excess SOL into liquid circulation.\",\n      \"sourceUrls\": [\n        \"https://ambcrypto.com/solana-rent-reduction-unveiled-how-it-could-unlock-millions-in-sol/\"\n      ]\n    }\n  ],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"Federal Reserve FOMC Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The Federal Reserve's policy interest rate decision and updated Summary of Economic Projections will influence broader macroeconomic liquidity and risk-asset valuations.\",\n      \"sourceUrls\": [\n        \"https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"Specific mainnet hard-fork or feature gate activation dates within the 7-day window remain subject to validator adoption schedules rather than fixed calendar appointments.\"\n  ]\n}\n```",
+      "parsed": {
+        "researchAsOfUtc": "2026-09-05T08:22:29.490Z",
+        "asset": "SOL",
+        "coinCatalysts": [
+          {
+            "title": "Solana SIMD-0437 Account Rent Reduction Rollout",
+            "status": "confirmed",
+            "eventDate": "2026-09-03",
+            "publishedDate": "2026-09-05",
+            "window": "30d",
+            "conditionalEffect": "mixed",
+            "mechanism": "The multi-stage activation lowers on-chain rent-exemption thresholds, allowing account owners to reclaim an estimated 3.08 million excess SOL into liquid circulation.",
+            "sourceUrls": [
+              "https://ambcrypto.com/solana-rent-reduction-unveiled-how-it-could-unlock-millions-in-sol/"
+            ]
+          }
+        ],
+        "macroCatalysts": [
+          {
+            "title": "Federal Reserve FOMC Rate Decision and Economic Projections",
+            "status": "confirmed",
+            "eventDate": "2026-09-16",
+            "publishedDate": "2026-08-19",
+            "window": "30d",
+            "conditionalEffect": "uncertain",
+            "mechanism": "The Federal Reserve's policy interest rate decision and updated Summary of Economic Projections will influence broader macroeconomic liquidity and risk-asset valuations.",
+            "sourceUrls": [
+              "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+            ]
+          }
+        ],
+        "researchLimits": [
+          "Specific mainnet hard-fork or feature gate activation dates within the 7-day window remain subject to validator adoption schedules rather than fixed calendar appointments."
+        ]
+      },
+      "grounding": {
+        "webSearchQueries": [
+          "Solana token unlock September 2026",
+          "FOMC meeting calendar September 2026",
+          "Federal Reserve FOMC meeting September 2026 schedule",
+          "Solana mainnet upgrade Firedancer September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGZcapKvrPThe9vZgAPbtHVRIQle7UtHneNe3U6ltZFXhuHmIIJbsWC6718TxaNkcSbcuOJnpABoUBxTpz0s-MLgkwrC9xe7VBeEn00zDhwrvuGzQOj7zVr6ViPiH7JMlTptyJnbRZRYtY2qkOc_5DnN5HROowaTxdAoika2wxGMyb3FbXBislorGtrkbBbBwBOy_dY6H0TkAD3Van2K199GnTTDdCyUgyw-qu2jrbI4PEXLA==\">Solana mainnet upgrade Firedancer September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE0aNUDli6p833BriypRXaW1w7zx8kexlIdN6HXkFIog_4j4nYM-43w8k3YHuXmbcj5cgkPtkpXcf021WmzAOC9s5xI3RElH5YCmxgV-OrpMo9lEhDtt64aI6bl8NdKSSUgoyegPFm_VB8hUn5cSmuHt6hqZNmaHT2UNFm_9rPcLaD_RzDPIyM7xFLiSh82TL0jIZ2y8-Wri11KXujCiKvFdqlJFZer7yJoZ2T4ErpXOHcV82U94bdp\">Federal Reserve FOMC meeting September 2026 schedule</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGIDdYYo1VfPxVVBARKWLD948ne5STgb-zIazMVDBlum2aKtsAIDrzDflUOsZ-hDCdd3WZei49rmOooxwvuXMA32adxRSNZdZvNm_sVMZDizbJbWcpQVhJCcIePAVonS2F4k13iSwn6dixGEFvyd6kFgOufyCTOgwU7jSFJRdlMZ5qgNP-cAV721hwCZ9F2M59mxZOiw4Cpib_o50xGL_SNrT-H62E=\">Solana token unlock September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEsBWHD86Hgm-bUMAxjdhtJG01r45oOhjn33sIN-ld3Mw3-fuMAlYswFJs6VlKvAluixL7XE7bP73LI7xYyg8uaH2YBzbQZtAlapWuJUAiuOip6go9PIs-oGPJKEkCQ3QiySJzo58v7snNJethUGh8x34GYoXL8KlPpmaIpwjNbC5wF-OVYFXBCNYqPo3B5Rr2wJiVCVRXU8NPPFSebADJ636yycAy9Ow==\">FOMC meeting calendar September 2026</a>\n  </div>\n</div>\n"
+        },
+        "groundingChunks": [
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFjA9K4PVCH4bpzn4LcxGxJxFzUtdel5TU5_akutN6r661sW5yERACSX0D6Cbkd-eGQgEPIYBSXciciV7E1iM3GDTSuF-ZzzhV7jelRWlN0b4t-za6NxWBM7vanZH1RZJKHIHl_v5gyC3G9ExxiW1EZ4wdeGj4IVkyf0pgPBzPG87N6sWKN7BrFF2oXEqCkN_K3jflTkK0=",
+              "title": "ambcrypto.com"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE6SJc3SdtzIl389snCvsavnBkSpLc3bydMV5wB2J9QjCBDwbq6jS1xExHJuJpRZ6NKxbQdgIGy9uRcsnjrBxeWK0SHtjfW1j4p-e9TeJZ5oUuGMz5yF4RXtT9jYatf-hA35aYv_waXFnZgxiFkBt22P98FDXc7xr0=",
+              "title": "fedratecalc.com"
+            }
+          },
+          {
+            "web": {
+              "uri": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGihxtDTcZ2FLobi2YnMP_lyOl6Bg7Pdwd7zwM3v-jY_2l-_nlaPXVW_TcXCBpzJPRn_uxQAbhJXqHB0ugLhzkwaHWoGwCdXBphA8YFEhBHseXTXKQF3WatTqnecmjZbujk9PbWoqdBBeXR5krjz4u72S7iXiVNepjVZg==",
+              "title": "federalreserve.gov"
+            }
+          }
+        ],
+        "groundingSupports": [
+          {
+            "segment": {
+              "endIndex": 513,
+              "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"SOL\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Solana SIMD-0437 Account Rent Reduction Rollout\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-03\",\n      \"publishedDate\": \"2026-09-05\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The multi-stage activation lowers on-chain rent-exemption thresholds, allowing account owners to reclaim an estimated 3.08 million excess SOL into liquid circulation"
+            },
+            "groundingChunkIndices": [
+              0
+            ]
+          },
+          {
+            "segment": {
+              "endIndex": 1114,
+              "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"SOL\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Solana SIMD-0437 Account Rent Reduction Rollout\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-03\",\n      \"publishedDate\": \"2026-09-05\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The multi-stage activation lowers on-chain rent-exemption thresholds, allowing account owners to reclaim an estimated 3.08 million excess SOL into liquid circulation.\",\n      \"sourceUrls\": [\n        \"https://ambcrypto.com/solana-rent-reduction-unveiled-how-it-could-unlock-millions-in-sol/\"\n      ]\n    }\n  ],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"Federal Reserve FOMC Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The Federal Reserve's policy interest rate decision and updated Summary of Economic Projections will influence broader macroeconomic liquidity and risk-asset valuations"
+            },
+            "groundingChunkIndices": [
+              1,
+              2
+            ]
+          }
+        ]
+      },
+      "finishReason": "STOP",
+      "parts": [
+        {
+          "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"SOL\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"Solana SIMD-0437 Account Rent Reduction Rollout\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-03\",\n      \"publishedDate\": \"2026-09-05\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The multi-stage activation lowers on-chain rent-exemption thresholds, allowing account owners to reclaim an estimated 3.08 million excess SOL into liquid circulation.\",\n      \"sourceUrls\": [\n        \"https://ambcrypto.com/solana-rent-reduction-unveiled-how-it-could-unlock-millions-in-sol/\"\n      ]\n    }\n  ],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"Federal Reserve FOMC Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The Federal Reserve's policy interest rate decision and updated Summary of Economic Projections will influence broader macroeconomic liquidity and risk-asset valuations.\",\n      \"sourceUrls\": [\n        \"https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"Specific mainnet hard-fork or feature gate activation dates within the 7-day window remain subject to validator adoption schedules rather than fixed calendar appointments.\"\n  ]\n}\n```",
+          "thoughtSignature": "AY89a18k8ICiVTCwYNMPXczBWPSSOW5pR1cOAjEnfegwlqmkMLUy2jF+JguYMdPnmwpW9Q6LLGEVgTG8Mby2XurNhC4AKrpMg5X33g7k"
+        }
+      ],
+      "evaluation": {
+        "score": 90,
+        "flags": [
+          "2 cited URL(s) absent from grounding"
+        ],
+        "sources": [
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFjA9K4PVCH4bpzn4LcxGxJxFzUtdel5TU5_akutN6r661sW5yERACSX0D6Cbkd-eGQgEPIYBSXciciV7E1iM3GDTSuF-ZzzhV7jelRWlN0b4t-za6NxWBM7vanZH1RZJKHIHl_v5gyC3G9ExxiW1EZ4wdeGj4IVkyf0pgPBzPG87N6sWKN7BrFF2oXEqCkN_K3jflTkK0=",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE6SJc3SdtzIl389snCvsavnBkSpLc3bydMV5wB2J9QjCBDwbq6jS1xExHJuJpRZ6NKxbQdgIGy9uRcsnjrBxeWK0SHtjfW1j4p-e9TeJZ5oUuGMz5yF4RXtT9jYatf-hA35aYv_waXFnZgxiFkBt22P98FDXc7xr0=",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGihxtDTcZ2FLobi2YnMP_lyOl6Bg7Pdwd7zwM3v-jY_2l-_nlaPXVW_TcXCBpzJPRn_uxQAbhJXqHB0ugLhzkwaHWoGwCdXBphA8YFEhBHseXTXKQF3WatTqnecmjZbujk9PbWoqdBBeXR5krjz4u72S7iXiVNepjVZg=="
+        ],
+        "cited": [
+          "https://ambcrypto.com/solana-rent-reduction-unveiled-how-it-could-unlock-millions-in-sol/",
+          "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        ],
+        "unmatched": [
+          "https://ambcrypto.com/solana-rent-reduction-unveiled-how-it-could-unlock-millions-in-sol/",
+          "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        ],
+        "homepageUrls": [],
+        "claimCount": 2
+      },
+      "usage": {
+        "promptTokenCount": 612,
+        "candidatesTokenCount": 466,
+        "totalTokenCount": 1078,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 612
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 466
+          }
+        ]
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "xrp-events",
+      "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"XRP\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"XRPL 3.3.0 Protocol Upgrade Activation Window\",\n      \"status\": \"reported\",\n      \"eventDate\": \"2026-09-11\",\n      \"publishedDate\": \"2026-09-02\",\n      \"window\": \"7d\",\n      \"conditionalEffect\": \"bullish\",\n      \"mechanism\": \"Activation of the XRPL 3.3.0 upgrade introduces support for multi-purpose tokens (MPTs) and patches DeFi vulnerabilities, potentially improving network utility and institutional usage.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7cTQdv8Bag_C8348Irj_JYTikkNzbvk8SmM1A3K8xerDDVjCVPW1a84j2Zw5i-xeJs7QjCWJoJYPNVwd2FnyOXzgcJE5MBlMhoczMnqId5WyswRJVEVcyWjrBsZP-CL1Et1UB0V9xo9T5S9sZDjUttapg8RhrG8y0kO1B7PRUt2k=\"\n      ]\n    },\n    {\n      \"title\": \"U.S. Senate Vote on the CLARITY Act\",\n      \"status\": \"reported\",\n      \"eventDate\": \"2026-09-15\",\n      \"publishedDate\": \"2026-09-04\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"bullish\",\n      \"mechanism\": \"Advancement of the CLARITY Act would expand CFTC oversight over crypto trading while reducing SEC secondary-market authority, potentially solidifying digital commodity regulatory clarity for XRP.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDo2E-bPDhk7LxkR4hG8F5hJnAwldZHjzrBNN1NwLtwsEK4jumuF6CLxxPKOu6X6cPRf8dIIFJjqxPQYvnCDWjxDr9-sNLeaZdFffdVuYiDHnGldui3fwy-FsIhKoULOOq5OtWNQQWy3mHB1KuONUTpoUc0aL7nMtewDz1RLs9vNsZoMPm1Qdz_sibBKiErdYlnfghH0JKNTo=\"\n      ]\n    }\n  ],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"FOMC Interest Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The Federal Reserve's rate policy decision and Summary of Economic Projections will affect broad liquidity conditions and risk appetite across digital asset markets.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvQwXfydTtqXtJYg4RHjfPQLBU3H6MdBiW57gXyRLyd6m4vVTW8RUx_FJzGKzs-UywmdqCKj-SKR2jIq_KGwYUpyTcVOukiqHtv7XpjzXVCvLSuXTNPjTmvAKrZKwYTe6azTKWHVprc_WGLkAAgpTcNBfG0hAjOTJhwg==\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"Promotional appearances and general industry conferences without material tokenomic or regulatory catalysts were excluded.\"\n  ]\n}\n```",
+      "parsed": {
+        "researchAsOfUtc": "2026-09-05T08:22:29.490Z",
+        "asset": "XRP",
+        "coinCatalysts": [
+          {
+            "title": "XRPL 3.3.0 Protocol Upgrade Activation Window",
+            "status": "reported",
+            "eventDate": "2026-09-11",
+            "publishedDate": "2026-09-02",
+            "window": "7d",
+            "conditionalEffect": "bullish",
+            "mechanism": "Activation of the XRPL 3.3.0 upgrade introduces support for multi-purpose tokens (MPTs) and patches DeFi vulnerabilities, potentially improving network utility and institutional usage.",
+            "sourceUrls": [
+              "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7cTQdv8Bag_C8348Irj_JYTikkNzbvk8SmM1A3K8xerDDVjCVPW1a84j2Zw5i-xeJs7QjCWJoJYPNVwd2FnyOXzgcJE5MBlMhoczMnqId5WyswRJVEVcyWjrBsZP-CL1Et1UB0V9xo9T5S9sZDjUttapg8RhrG8y0kO1B7PRUt2k="
+            ]
+          },
+          {
+            "title": "U.S. Senate Vote on the CLARITY Act",
+            "status": "reported",
+            "eventDate": "2026-09-15",
+            "publishedDate": "2026-09-04",
+            "window": "30d",
+            "conditionalEffect": "bullish",
+            "mechanism": "Advancement of the CLARITY Act would expand CFTC oversight over crypto trading while reducing SEC secondary-market authority, potentially solidifying digital commodity regulatory clarity for XRP.",
+            "sourceUrls": [
+              "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDo2E-bPDhk7LxkR4hG8F5hJnAwldZHjzrBNN1NwLtwsEK4jumuF6CLxxPKOu6X6cPRf8dIIFJjqxPQYvnCDWjxDr9-sNLeaZdFffdVuYiDHnGldui3fwy-FsIhKoULOOq5OtWNQQWy3mHB1KuONUTpoUc0aL7nMtewDz1RLs9vNsZoMPm1Qdz_sibBKiErdYlnfghH0JKNTo="
+            ]
+          }
+        ],
+        "macroCatalysts": [
+          {
+            "title": "FOMC Interest Rate Decision and Economic Projections",
+            "status": "confirmed",
+            "eventDate": "2026-09-16",
+            "publishedDate": "2026-08-19",
+            "window": "30d",
+            "conditionalEffect": "mixed",
+            "mechanism": "The Federal Reserve's rate policy decision and Summary of Economic Projections will affect broad liquidity conditions and risk appetite across digital asset markets.",
+            "sourceUrls": [
+              "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvQwXfydTtqXtJYg4RHjfPQLBU3H6MdBiW57gXyRLyd6m4vVTW8RUx_FJzGKzs-UywmdqCKj-SKR2jIq_KGwYUpyTcVOukiqHtv7XpjzXVCvLSuXTNPjTmvAKrZKwYTe6azTKWHVprc_WGLkAAgpTcNBfG0hAjOTJhwg=="
+            ]
+          }
+        ],
+        "researchLimits": [
+          "Promotional appearances and general industry conferences without material tokenomic or regulatory catalysts were excluded."
+        ]
+      },
+      "grounding": {
+        "webSearchQueries": [
+          "FOMC meeting schedule September 2026",
+          "Federal Reserve FOMC meeting dates 2026",
+          "Ripple XRP events September 2026",
+          "Ripple lawsuit schedule September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFGQjkduI_SqIDgn7IPE21QkExpmxLwJNKMSPTt0u7Y31L4eqcydevRS6CTGZdfqAU-H0OshdKbOQ3h5tvjJ4w8x85TXHxVeZt6vy8YtyeE1yEtLxiL8muBrEi05h4YcF9ZN0Rn79QvOR4l5ijKdEMsDxEnLJH_WATByF2G_Gck7rL_VGkLhpU9LWh4m-fi8lJvFlnKjOoyG6PZkKvQuhWt0L1oUYyRQ-mQ\">Ripple lawsuit schedule September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGJs9363EwwG_ZtyJrpBS7jEasboZw-L5kblT0WWOJaElDtl0CFZQYWaTyVBg-bEJ7Mc_bcwR3UgQjzFdT8ZNcL1TAfBxM1j_iLkKI2Ik5TW-0ZwjjHD0XlXkKyYMC31XHCFiOY6yqzJKhiHFjjZUuHiWMWy42N4z4jG38NWUKoGQk7xB9V-jhFMkSR78fPHywx5kcpWgcO1NE96MrdGmmnpiet\">Ripple XRP events September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGSxr0YYoMZIJ4535YTvhuMPrj7aCDbpZkdsp4RPkMTuK4uV5AckLiQt1SmENUT-wx3xvQSMeu7sxeIjr8C1mT-Mgcs_ONepjMi_eA0oRjd1-8jJQCd5rQYxt17xkr3OQ9yqyr2cfQSwUoipMdGW4HwPKhqm9XHeudQzTN6jV4yvz0Hzn3gEIwCzecdo2AQwCv7dL96C0c-BWhXoUgd0HTl_8roDCiTFA==\">FOMC meeting schedule September 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF6K0IwiySrWW1pkOGEWcRM8OkJZX-8TYAlsX3QWTE37MFGk8wNMBnfGcuf_tu9fFp4dykme9IhS256rOrk2rhOB4GEzwvCNJ_5TlKOHMowkxYZeGZTEmlMZqQIENHV1Jbq-v9GhQWmCGmSeBxqS0MJgGW-oD_3fVElscFMrohBr79oEiIa3dey012OTiLgPHF9OPaYwvVEpYnXcjdwStq6hbpJ0QimLYUosg==\">Federal Reserve FOMC meeting dates 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "finishReason": "STOP",
+      "parts": [
+        {
+          "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"XRP\",\n  \"coinCatalysts\": [\n    {\n      \"title\": \"XRPL 3.3.0 Protocol Upgrade Activation Window\",\n      \"status\": \"reported\",\n      \"eventDate\": \"2026-09-11\",\n      \"publishedDate\": \"2026-09-02\",\n      \"window\": \"7d\",\n      \"conditionalEffect\": \"bullish\",\n      \"mechanism\": \"Activation of the XRPL 3.3.0 upgrade introduces support for multi-purpose tokens (MPTs) and patches DeFi vulnerabilities, potentially improving network utility and institutional usage.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7cTQdv8Bag_C8348Irj_JYTikkNzbvk8SmM1A3K8xerDDVjCVPW1a84j2Zw5i-xeJs7QjCWJoJYPNVwd2FnyOXzgcJE5MBlMhoczMnqId5WyswRJVEVcyWjrBsZP-CL1Et1UB0V9xo9T5S9sZDjUttapg8RhrG8y0kO1B7PRUt2k=\"\n      ]\n    },\n    {\n      \"title\": \"U.S. Senate Vote on the CLARITY Act\",\n      \"status\": \"reported\",\n      \"eventDate\": \"2026-09-15\",\n      \"publishedDate\": \"2026-09-04\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"bullish\",\n      \"mechanism\": \"Advancement of the CLARITY Act would expand CFTC oversight over crypto trading while reducing SEC secondary-market authority, potentially solidifying digital commodity regulatory clarity for XRP.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDo2E-bPDhk7LxkR4hG8F5hJnAwldZHjzrBNN1NwLtwsEK4jumuF6CLxxPKOu6X6cPRf8dIIFJjqxPQYvnCDWjxDr9-sNLeaZdFffdVuYiDHnGldui3fwy-FsIhKoULOOq5OtWNQQWy3mHB1KuONUTpoUc0aL7nMtewDz1RLs9vNsZoMPm1Qdz_sibBKiErdYlnfghH0JKNTo=\"\n      ]\n    }\n  ],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"FOMC Interest Rate Decision and Economic Projections\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"mixed\",\n      \"mechanism\": \"The Federal Reserve's rate policy decision and Summary of Economic Projections will affect broad liquidity conditions and risk appetite across digital asset markets.\",\n      \"sourceUrls\": [\n        \"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvQwXfydTtqXtJYg4RHjfPQLBU3H6MdBiW57gXyRLyd6m4vVTW8RUx_FJzGKzs-UywmdqCKj-SKR2jIq_KGwYUpyTcVOukiqHtv7XpjzXVCvLSuXTNPjTmvAKrZKwYTe6azTKWHVprc_WGLkAAgpTcNBfG0hAjOTJhwg==\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"Promotional appearances and general industry conferences without material tokenomic or regulatory catalysts were excluded.\"\n  ]\n}\n```",
+          "thoughtSignature": "AY89a19Pq7FGzY1Js0Uv4AlOw6f1DIFsG1YsVQSpJmMt9h9I1sxyw+GkPdM7gCikFEPk3La4WjV7NmGJFQn0s6VrBOFI37aOtCjUlGgX"
+        }
+      ],
+      "evaluation": {
+        "score": 75,
+        "flags": [
+          "missing grounded sources",
+          "3 cited URL(s) absent from grounding"
+        ],
+        "sources": [],
+        "cited": [
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7cTQdv8Bag_C8348Irj_JYTikkNzbvk8SmM1A3K8xerDDVjCVPW1a84j2Zw5i-xeJs7QjCWJoJYPNVwd2FnyOXzgcJE5MBlMhoczMnqId5WyswRJVEVcyWjrBsZP-CL1Et1UB0V9xo9T5S9sZDjUttapg8RhrG8y0kO1B7PRUt2k=",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDo2E-bPDhk7LxkR4hG8F5hJnAwldZHjzrBNN1NwLtwsEK4jumuF6CLxxPKOu6X6cPRf8dIIFJjqxPQYvnCDWjxDr9-sNLeaZdFffdVuYiDHnGldui3fwy-FsIhKoULOOq5OtWNQQWy3mHB1KuONUTpoUc0aL7nMtewDz1RLs9vNsZoMPm1Qdz_sibBKiErdYlnfghH0JKNTo=",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvQwXfydTtqXtJYg4RHjfPQLBU3H6MdBiW57gXyRLyd6m4vVTW8RUx_FJzGKzs-UywmdqCKj-SKR2jIq_KGwYUpyTcVOukiqHtv7XpjzXVCvLSuXTNPjTmvAKrZKwYTe6azTKWHVprc_WGLkAAgpTcNBfG0hAjOTJhwg=="
+        ],
+        "unmatched": [
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7cTQdv8Bag_C8348Irj_JYTikkNzbvk8SmM1A3K8xerDDVjCVPW1a84j2Zw5i-xeJs7QjCWJoJYPNVwd2FnyOXzgcJE5MBlMhoczMnqId5WyswRJVEVcyWjrBsZP-CL1Et1UB0V9xo9T5S9sZDjUttapg8RhrG8y0kO1B7PRUt2k=",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDo2E-bPDhk7LxkR4hG8F5hJnAwldZHjzrBNN1NwLtwsEK4jumuF6CLxxPKOu6X6cPRf8dIIFJjqxPQYvnCDWjxDr9-sNLeaZdFffdVuYiDHnGldui3fwy-FsIhKoULOOq5OtWNQQWy3mHB1KuONUTpoUc0aL7nMtewDz1RLs9vNsZoMPm1Qdz_sibBKiErdYlnfghH0JKNTo=",
+          "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEvQwXfydTtqXtJYg4RHjfPQLBU3H6MdBiW57gXyRLyd6m4vVTW8RUx_FJzGKzs-UywmdqCKj-SKR2jIq_KGwYUpyTcVOukiqHtv7XpjzXVCvLSuXTNPjTmvAKrZKwYTe6azTKWHVprc_WGLkAAgpTcNBfG0hAjOTJhwg=="
+        ],
+        "homepageUrls": [],
+        "claimCount": 3
+      },
+      "usage": {
+        "promptTokenCount": 623,
+        "candidatesTokenCount": 957,
+        "totalTokenCount": 1580,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 623
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 957
+          }
+        ]
+      }
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "case": "macro-calendar",
+      "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"BTC\",\n  \"coinCatalysts\": [],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"US August 2026 Consumer Price Index (CPI) Release\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-11\",\n      \"publishedDate\": \"2026-08-12\",\n      \"window\": \"7d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"A softer inflation print could increase market expectations for monetary easing and bolster liquidity for risk assets like Bitcoin, whereas higher inflation may reinforce restrictive policy.\",\n      \"sourceUrls\": [\n        \"https://www.bls.gov/schedule/news_release/cpi.htm\"\n      ]\n    },\n    {\n      \"title\": \"Federal Open Market Committee (FOMC) Interest Rate Decision and SEP\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The Federal Reserve's policy rate decision and updated Summary of Economic Projections will shape dollar liquidity conditions and risk-asset valuation multiples.\",\n      \"sourceUrls\": [\n        \"https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"No confirmed protocol upgrades, major token supply unlocks, or verified network-specific crypto catalysts with direct official sources were identified within the 7-day to 30-day research horizon.\"\n  ]\n}\n```",
+      "parsed": {
+        "researchAsOfUtc": "2026-09-05T08:22:29.490Z",
+        "asset": "BTC",
+        "coinCatalysts": [],
+        "macroCatalysts": [
+          {
+            "title": "US August 2026 Consumer Price Index (CPI) Release",
+            "status": "confirmed",
+            "eventDate": "2026-09-11",
+            "publishedDate": "2026-08-12",
+            "window": "7d",
+            "conditionalEffect": "uncertain",
+            "mechanism": "A softer inflation print could increase market expectations for monetary easing and bolster liquidity for risk assets like Bitcoin, whereas higher inflation may reinforce restrictive policy.",
+            "sourceUrls": [
+              "https://www.bls.gov/schedule/news_release/cpi.htm"
+            ]
+          },
+          {
+            "title": "Federal Open Market Committee (FOMC) Interest Rate Decision and SEP",
+            "status": "confirmed",
+            "eventDate": "2026-09-16",
+            "publishedDate": "2026-08-19",
+            "window": "30d",
+            "conditionalEffect": "uncertain",
+            "mechanism": "The Federal Reserve's policy rate decision and updated Summary of Economic Projections will shape dollar liquidity conditions and risk-asset valuation multiples.",
+            "sourceUrls": [
+              "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+            ]
+          }
+        ],
+        "researchLimits": [
+          "No confirmed protocol upgrades, major token supply unlocks, or verified network-specific crypto catalysts with direct official sources were identified within the 7-day to 30-day research horizon."
+        ]
+      },
+      "grounding": {
+        "webSearchQueries": [
+          "FOMC meeting schedule September 2026 Federal Reserve",
+          "US CPI release schedule September 2026 BLS",
+          "Federal Reserve calendar 2026",
+          "BLS release calendar September 2026"
+        ],
+        "searchEntryPoint": {
+          "renderedContent": "<style>\n.container {\n  align-items: center;\n  border-radius: 8px;\n  display: flex;\n  font-family: Google Sans, Roboto, sans-serif;\n  font-size: 14px;\n  line-height: 20px;\n  padding: 8px 12px;\n}\n.chip {\n  display: inline-block;\n  border: solid 1px;\n  border-radius: 16px;\n  min-width: 14px;\n  padding: 5px 16px;\n  text-align: center;\n  user-select: none;\n  margin: 0 8px;\n  -webkit-tap-highlight-color: transparent;\n}\n.carousel {\n  overflow: auto;\n  scrollbar-width: none;\n  white-space: nowrap;\n  margin-right: -12px;\n}\n.headline {\n  display: flex;\n  margin-right: 4px;\n}\n.gradient-container {\n  position: relative;\n}\n.gradient {\n  position: absolute;\n  transform: translate(3px, -9px);\n  height: 36px;\n  width: 9px;\n}\n@media (prefers-color-scheme: light) {\n  .container {\n    background-color: #fafafa;\n    box-shadow: 0 0 0 1px #0000000f;\n  }\n  .headline-label {\n    color: #1f1f1f;\n  }\n  .chip {\n    background-color: #ffffff;\n    border-color: #d2d2d2;\n    color: #5e5e5e;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #f2f2f2;\n  }\n  .chip:focus {\n    background-color: #f2f2f2;\n  }\n  .chip:active {\n    background-color: #d8d8d8;\n    border-color: #b6b6b6;\n  }\n  .logo-dark {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #fafafa 15%, #fafafa00 100%);\n  }\n}\n@media (prefers-color-scheme: dark) {\n  .container {\n    background-color: #1f1f1f;\n    box-shadow: 0 0 0 1px #ffffff26;\n  }\n  .headline-label {\n    color: #fff;\n  }\n  .chip {\n    background-color: #2c2c2c;\n    border-color: #3c4043;\n    color: #fff;\n    text-decoration: none;\n  }\n  .chip:hover {\n    background-color: #353536;\n  }\n  .chip:focus {\n    background-color: #353536;\n  }\n  .chip:active {\n    background-color: #464849;\n    border-color: #53575b;\n  }\n  .logo-light {\n    display: none;\n  }\n  .gradient {\n    background: linear-gradient(90deg, #1f1f1f 15%, #1f1f1f00 100%);\n  }\n}\n</style>\n<div class=\"container\">\n  <div class=\"headline\">\n    <svg class=\"logo-light\" width=\"18\" height=\"18\" viewBox=\"9 9 35 35\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M42.8622 27.0064C42.8622 25.7839 42.7525 24.6084 42.5487 23.4799H26.3109V30.1568H35.5897C35.1821 32.3041 33.9596 34.1222 32.1258 35.3448V39.6864H37.7213C40.9814 36.677 42.8622 32.2571 42.8622 27.0064V27.0064Z\" fill=\"#4285F4\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 43.8555C30.9659 43.8555 34.8687 42.3195 37.7213 39.6863L32.1258 35.3447C30.5898 36.3792 28.6306 37.0061 26.3109 37.0061C21.8282 37.0061 18.0195 33.9811 16.6559 29.906H10.9194V34.3573C13.7563 39.9841 19.5712 43.8555 26.3109 43.8555V43.8555Z\" fill=\"#34A853\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M16.6559 29.8904C16.3111 28.8559 16.1074 27.7588 16.1074 26.6146C16.1074 25.4704 16.3111 24.3733 16.6559 23.3388V18.8875H10.9194C9.74388 21.2072 9.06992 23.8247 9.06992 26.6146C9.06992 29.4045 9.74388 32.022 10.9194 34.3417L15.3864 30.8621L16.6559 29.8904V29.8904Z\" fill=\"#FBBC05\"/>\n      <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M26.3109 16.2386C28.85 16.2386 31.107 17.1164 32.9095 18.8091L37.8466 13.8719C34.853 11.082 30.9659 9.3736 26.3109 9.3736C19.5712 9.3736 13.7563 13.245 10.9194 18.8875L16.6559 23.3388C18.0195 19.2636 21.8282 16.2386 26.3109 16.2386V16.2386Z\" fill=\"#EA4335\"/>\n    </svg>\n    <svg class=\"logo-dark\" width=\"18\" height=\"18\" viewBox=\"0 0 48 48\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"24\" cy=\"23\" fill=\"#FFF\" r=\"22\"/>\n      <path d=\"M33.76 34.26c2.75-2.56 4.49-6.37 4.49-11.26 0-.89-.08-1.84-.29-3H24.01v5.99h8.03c-.4 2.02-1.5 3.56-3.07 4.56v.75l3.91 2.97h.88z\" fill=\"#4285F4\"/>\n      <path d=\"M15.58 25.77A8.845 8.845 0 0 0 24 31.86c1.92 0 3.62-.46 4.97-1.31l4.79 3.71C31.14 36.7 27.65 38 24 38c-5.93 0-11.01-3.4-13.45-8.36l.17-1.01 4.06-2.85h.8z\" fill=\"#34A853\"/>\n      <path d=\"M15.59 20.21a8.864 8.864 0 0 0 0 5.58l-5.03 3.86c-.98-2-1.53-4.25-1.53-6.64 0-2.39.55-4.64 1.53-6.64l1-.22 3.81 2.98.22 1.08z\" fill=\"#FBBC05\"/>\n      <path d=\"M24 14.14c2.11 0 4.02.75 5.52 1.98l4.36-4.36C31.22 9.43 27.81 8 24 8c-5.93 0-11.01 3.4-13.45 8.36l5.03 3.85A8.86 8.86 0 0 1 24 14.14z\" fill=\"#EA4335\"/>\n    </svg>\n    <div class=\"gradient-container\"><div class=\"gradient\"></div></div>\n  </div>\n  <div class=\"carousel\">\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHat3JjIdefe_PA-BSyrS6du-oIfdEgbXlMWFnqjL7hLTtPkEirkr-boPQYC9460EGRYC6XP00Wutk7NQgN_0RwzV7Lv7NQv7J2UE_3EhkFtJ8QHYEQoKdsB-gVDdvt7cAFXMAXzzJEfe-fGNTOFWdRadwT-0Ec-FbbWSH6zueQ0AQACZgzx_SKEOCIc43h-B5oc-i4XIj97gFFshBrF9A=\">Federal Reserve calendar 2026</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG2plGtzh2Ed6_5q37y0sP5GJzpnvs_5ForTAlPpSKOb12VOeYM7SsQvFJE5D7UHZ_4qb_M12DxFIt_Egd7xn6ybjQ74h2o9ecMmKp0KQO4JMBG6wDlnOhOI6bqtTkG8fd9RmbxCflaxzTMIA5m13JSoHrKGOHVHs5cc2ldTSusnovG6teAjTt1-AcBr8l8xNPMQFsLlCs66yaFgCv547sUXynDhJT6uBXYpqZ1YGmhtghhp1OoaHg=\">FOMC meeting schedule September 2026 Federal Reserve</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHj2Qt3SbehvqDijmXV2KwwFsGZS9n2ue046fda2lYz3Iiti_1GOUz8zBS70tG53Vt0D92Yx_pQ-alwAJtYH7lQARPoQCoBJXuXDzMqX87rUc4XJjcJYUT_e8_gjPCR0XNrMUGK0CBpu-yfBwKczclDpeSy48UJT3XyYEu1jstkr4NmT3Sb5_EIqdzngllm9qKJNsVNDF4E_GIcCPPzrj1DO8J1SnhjY72qD8ab\">US CPI release schedule September 2026 BLS</a>\n    <a class=\"chip\" href=\"https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFecJ0nalPyxUgKkF6UMMpMVC69PQK2325f1FzW8hQ08dlhURnssQR_PomiBA_yDwRmD-SqoM7xiMZIZDYLM3VJ4dEo30UmZW4IuRqwpUD8AAhkE9MDRm1XBzJ6oaTO21-47uLxfzy3xcvyegYeft5KLG4jfz27n3vJEFiciKNGS0f-KSBZ7KoXeiVg3qyq_qcNEujiSqNRLneWzeKWKz3SyHXKc00=\">BLS release calendar September 2026</a>\n  </div>\n</div>\n"
+        },
+        "retrievalMetadata": {}
+      },
+      "finishReason": "STOP",
+      "parts": [
+        {
+          "text": "```json\n{\n  \"researchAsOfUtc\": \"2026-09-05T08:22:29.490Z\",\n  \"asset\": \"BTC\",\n  \"coinCatalysts\": [],\n  \"macroCatalysts\": [\n    {\n      \"title\": \"US August 2026 Consumer Price Index (CPI) Release\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-11\",\n      \"publishedDate\": \"2026-08-12\",\n      \"window\": \"7d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"A softer inflation print could increase market expectations for monetary easing and bolster liquidity for risk assets like Bitcoin, whereas higher inflation may reinforce restrictive policy.\",\n      \"sourceUrls\": [\n        \"https://www.bls.gov/schedule/news_release/cpi.htm\"\n      ]\n    },\n    {\n      \"title\": \"Federal Open Market Committee (FOMC) Interest Rate Decision and SEP\",\n      \"status\": \"confirmed\",\n      \"eventDate\": \"2026-09-16\",\n      \"publishedDate\": \"2026-08-19\",\n      \"window\": \"30d\",\n      \"conditionalEffect\": \"uncertain\",\n      \"mechanism\": \"The Federal Reserve's policy rate decision and updated Summary of Economic Projections will shape dollar liquidity conditions and risk-asset valuation multiples.\",\n      \"sourceUrls\": [\n        \"https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm\"\n      ]\n    }\n  ],\n  \"researchLimits\": [\n    \"No confirmed protocol upgrades, major token supply unlocks, or verified network-specific crypto catalysts with direct official sources were identified within the 7-day to 30-day research horizon.\"\n  ]\n}\n```",
+          "thoughtSignature": "AY89a1/ejC8aOoKu0SvkcWA62eQl83YUdYlxKWvxpZFRRDLXwqa8Gz1GYz4BosBDkwm2ZzOnN61rDoyFQ1JwGYXRtRkDPiZGIZO2YPnZ"
+        }
+      ],
+      "evaluation": {
+        "score": 75,
+        "flags": [
+          "missing grounded sources",
+          "2 cited URL(s) absent from grounding"
+        ],
+        "sources": [],
+        "cited": [
+          "https://www.bls.gov/schedule/news_release/cpi.htm",
+          "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        ],
+        "unmatched": [
+          "https://www.bls.gov/schedule/news_release/cpi.htm",
+          "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+        ],
+        "homepageUrls": [],
+        "claimCount": 2
+      },
+      "usage": {
+        "promptTokenCount": 630,
+        "candidatesTokenCount": 433,
+        "totalTokenCount": 1063,
+        "trafficType": "ON_DEMAND",
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 630
+          }
+        ],
+        "candidatesTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 433
+          }
+        ]
+      }
+    }
+  ]
+}

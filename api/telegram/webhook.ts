@@ -1,7 +1,8 @@
 import { buildAnalysisRequest, fetchTopCoins } from '../_market.ts';
 import { processEnvironment, type ServerEnvironment } from '../_env.ts';
-import { isRateLimited } from '../_rate-limit.ts';
-import { runAIAnalysis, type ProviderKind } from '../_analysis.ts';
+import { consumeAnalysisQuota } from '../_analysis-access.ts';
+import { acquireAnalysisSlot, isRateLimited } from '../_rate-limit.ts';
+import { isAIAnalysisConfigured, normalizeAIAnalysisRequest, runAIAnalysis, type ProviderKind } from '../_analysis.ts';
 import type { AIAnalysis, AIAnalysisRequest, Coin } from '../../src/types/crypto.ts';
 import {
   answerCallbackQuery,
@@ -121,7 +122,19 @@ const generateAnalysis = async (
   if (isRateLimited(`telegram:${telegramUserId}`)) {
     throw new Error('Too many analysis requests. Please wait a minute and try again.');
   }
-  return runAIAnalysis(payload, environment, provider);
+  if (!isAIAnalysisConfigured(environment)) {
+    throw new Error('Gemini trading analysis is not configured on this deployment yet.');
+  }
+  const input = normalizeAIAnalysisRequest(payload);
+  if (!input) throw new Error('The supplied market data is incomplete or invalid.');
+  const releaseSlot = acquireAnalysisSlot();
+  if (!releaseSlot) throw new Error('AI analysis is busy. Please retry shortly.');
+  try {
+    await consumeAnalysisQuota(`telegram:${telegramUserId}`, environment);
+    return await runAIAnalysis(input, environment, provider);
+  } finally {
+    releaseSlot();
+  }
 };
 
 const formatAnalysis = (coin: Coin, analysis: AIAnalysis) => {

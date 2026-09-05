@@ -4,9 +4,9 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { DataState } from '../components/DataState';
 import { useMarket } from '../context/MarketContext';
 import { useToast } from '../context/ToastContext';
-import { useFuturesMarketPrice } from '../hooks/useFuturesMarketPrice';
-import { FUTURES_TAKER_FEE, getFuturesLiquidationPrice, getFuturesMaintenanceMargin, getFuturesReturnOnEquity, getFuturesUnrealizedPnl, MAX_FUTURES_LEVERAGE } from '../hooks/usePaperFutures';
-import { fetchMarketData } from '../services/api';
+import { resolveFuturesMarkPrice, useFuturesMarketPrice } from '../hooks/useFuturesMarketPrice';
+import { FUTURES_TAKER_FEE, getFuturesLiquidationPrice, getFuturesMaintenanceMargin, getFuturesReturnOnEquity, getFuturesUnrealizedPnl, getMissingOpenOrderCoinIds, getOpenOrderMarketChecks, MAX_FUTURES_LEVERAGE } from '../hooks/usePaperFutures';
+import { fetchCoinPrices, fetchMarketData } from '../services/api';
 import { Coin, FuturesSide } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 import '../styles/Futures.css';
@@ -69,7 +69,8 @@ const FuturesPage: React.FC = () => {
   )), [futuresCoins]);
   const requestedCoin = searchParams.get('coin');
   const selectedCoin = useMemo(() => tradableCoins.find((coin) => coin.id === requestedCoin) ?? tradableCoins[0] ?? null, [requestedCoin, tradableCoins]);
-  const { price: markPrice, status: feedStatus, lastUpdated: markUpdatedAt, fundingRate, retry: retryFeed } = useFuturesMarketPrice(selectedCoin);
+  const { price: feedMarkPrice, priceCoinId, status: feedStatus, lastUpdated: markUpdatedAt, fundingRate, retry: retryFeed } = useFuturesMarketPrice(selectedCoin);
+  const markPrice = resolveFuturesMarkPrice(selectedCoin, priceCoinId, feedMarkPrice);
   const [side, setSide] = useState<FuturesSide>('long');
   const [margin, setMargin] = useState('100');
   const [leverage, setLeverage] = useState('5');
@@ -82,7 +83,36 @@ const FuturesPage: React.FC = () => {
   const [closePercent, setClosePercent] = useState('100');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const marks = useMemo(() => new Map(futuresCoins.map((coin) => [coin.id, coin.id === selectedCoin?.id ? markPrice : coin.current_price])), [futuresCoins, markPrice, selectedCoin?.id]);
+  const missingOrderCoinIds = useMemo(() => {
+    const listedCoins = new Set(futuresCoins.map((coin) => coin.id));
+    return getMissingOpenOrderCoinIds(paperFutures.orders, listedCoins);
+  }, [futuresCoins, paperFutures.orders]);
+  const [missingOrderMarks, setMissingOrderMarks] = useState<Map<string, number>>(new Map());
+  useEffect(() => {
+    let active = true;
+    if (missingOrderCoinIds.length === 0) {
+      setMissingOrderMarks((current) => current.size === 0 ? current : new Map());
+      return () => { active = false; };
+    }
+    const loadMissingMarks = () => {
+      void fetchCoinPrices(missingOrderCoinIds, 'usd').then((prices) => {
+        if (active) setMissingOrderMarks(prices);
+      }).catch(() => {
+        // Preserve the last valid marks; an order must never execute on a guessed price.
+      });
+    };
+    loadMissingMarks();
+    const interval = window.setInterval(loadMissingMarks, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [missingOrderCoinIds]);
+  const marks = useMemo(() => {
+    const next = new Map(missingOrderMarks);
+    futuresCoins.forEach((coin) => next.set(coin.id, coin.id === selectedCoin?.id ? markPrice : coin.current_price));
+    return next;
+  }, [futuresCoins, markPrice, missingOrderMarks, selectedCoin?.id]);
   const openPositions = paperFutures.positions;
   const marginUsed = openPositions.reduce((sum, position) => sum + position.margin, 0);
   const unrealizedPnl = openPositions.reduce((sum, position) => sum + getFuturesUnrealizedPnl(position, marks.get(position.coinId) ?? position.entryPrice), 0);
@@ -106,11 +136,13 @@ const FuturesPage: React.FC = () => {
       const result = checkFuturesPosition(position.id, positionMark);
       if (result?.ok) showToast(result.message, result.trade?.action === 'liquidated' ? 'error' : 'info');
     });
-    checkFuturesOrders(selectedCoin?.id ?? '', markPrice).forEach((result) => {
-      if (result.ok) showToast(result.message, 'success');
-      else showToast(result.message, 'error');
+    getOpenOrderMarketChecks(paperFutures.orders, marks).forEach(({ coinId, markPrice: orderMark }) => {
+      checkFuturesOrders(coinId, orderMark).forEach((result) => {
+        if (result.ok) showToast(result.message, 'success');
+        else showToast(result.message, 'error');
+      });
     });
-  }, [checkFuturesOrders, checkFuturesPosition, marks, markPrice, openPositions, paperFuturesSyncStatus, selectedCoin?.id, showToast]);
+  }, [checkFuturesOrders, checkFuturesPosition, marks, openPositions, paperFutures.orders, paperFuturesSyncStatus, showToast]);
 
   useEffect(() => {
     if (tradableCoins.length > 0 && (!requestedCoin || !selectedCoin)) {

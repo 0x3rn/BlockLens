@@ -61,6 +61,8 @@ Copy `.env.example` to `.env.local` for a local serverless environment, or confi
 ```env
 GOOGLE_CLOUD_PROJECT=your-google-cloud-project
 GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
 ```
 
 For account sync, also add the client-safe Supabase values:
@@ -70,9 +72,9 @@ VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-Run `supabase/migrations/0001_blocklens_accounts.sql` and then `supabase/migrations/0002_blocklens_history.sql` in the Supabase SQL editor. Keep **Automatically expose new tables** disabled and enable automatic RLS. The migrations enable RLS, create per-user policies, and grant access only to the `authenticated` role. Never expose a Supabase service-role key to the browser.
+Run the files in `supabase/migrations/` in numeric order through `0004_security_hardening.sql`. Keep **Automatically expose new tables** disabled and enable automatic RLS. The migrations enable RLS, cap persisted history, and provide the atomic AI quota used by both hosting adapters. Never expose `SUPABASE_SERVICE_ROLE_KEY` through a `VITE_*` variable or client bundle.
 
-These variables intentionally have no `VITE_` prefix. The service-account JSON remains server-only. BlockLens obtains a short-lived Google Cloud access token and calls `google/gemini-3.1-pro-preview` through Vertex AI's OpenAI-compatible endpoint. The prior DeepSeek client is retained only as commented code, matching the Vera integration.
+The Google and server-side Supabase variables intentionally have no `VITE_` prefix. Both credentials remain server-only. BlockLens obtains a short-lived Google Cloud access token and calls `google/gemini-3.7-flash` through Vertex AI. Each brief first attempts Google Search-grounded catalyst research; BlockLens incorporates it only when Vertex returns verifiable source metadata, otherwise it clearly remains technical-only. The prior DeepSeek client is retained only as commented code, matching the Vera integration.
 
 The Vite development server includes local adapters for `/api/analyze` and the Telegram routes. Telegram still needs a public HTTPS tunnel or preview URL before Telegram can deliver webhook updates.
 
@@ -87,6 +89,8 @@ Add the server values as encrypted environment variables for both preview and pr
 ```env
 GOOGLE_CLOUD_PROJECT=your-google-cloud-project
 GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-only-service-role-key
 # Optional; leave both unset for the keyless public API
 # COINGECKO_API_KEY=your-coingecko-key
 # COINGECKO_API_PLAN=demo
@@ -127,7 +131,7 @@ Users can then send `/ai-analysis` or the menu-safe `/ai_analysis` alias. The bo
 - Portfolio CSV export is generated entirely in the browser.
 - Alerts are not push notifications and do not run in the background after the page closes.
 - Only the selected asset snapshot and sampled price/volume history are sent to the AI endpoint when the user explicitly requests a brief.
-- The AI endpoint validates payload size and shape, applies a best-effort per-instance rate limit, and disables response caching.
+- The AI endpoint validates payload size and shape, applies a bounded local concurrency guard plus an atomic per-caller/global Supabase quota, and disables response caching.
 
 ## Routing and deployment
 
@@ -136,8 +140,8 @@ Client routes are defined in `src/App.tsx`. `vercel.json` preserves deep links w
 Before deployment:
 
 1. Run `npm test` and `npm run build`.
-2. Add `GOOGLE_CLOUD_PROJECT` and `GOOGLE_SERVICE_ACCOUNT_JSON` as server-side environment variables if AI trading analysis should be enabled.
-3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the deployment environment after running the migration.
+2. Add `GOOGLE_CLOUD_PROJECT`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` as server-side environment variables if AI trading analysis should be enabled.
+3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the deployment environment after running all migrations through `0004_security_hardening.sql`.
 4. Verify `/`, `/markets`, `/analysis`, `/watchlist`, `/history`, `/futures`, `/compare`, `/account`, an asset route, and `/api/analyze` on a preview deployment.
 
 ## Project layout
@@ -165,7 +169,7 @@ supabase/migrations/        account, portfolio, history, paper-futures, watchlis
 ## Known operational limits
 
 - CoinGecko’s public API can rate-limit frequent requests; BlockLens caches and deduplicates calls and keeps the last successful snapshot visible when refreshes fail.
-- The serverless rate limiter is best-effort and instance-local. A shared rate-limit store is recommended for a high-traffic production deployment.
+- AI generation fails closed if the shared Supabase quota is unavailable. The checked-in quota allows eight requests per caller per minute and 2,000 total requests per UTC day; tune those constants in migration `0004` before applying it if the deployment needs different budgets.
 - Account sync is opt-in and requires the Supabase variables plus the SQL migration. Without them, the local fallback remains active.
 
 ## License

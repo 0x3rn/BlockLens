@@ -143,6 +143,29 @@ export interface TradeSetup {
   positionRisk: string;
 }
 
+export interface AnalysisResearchSource {
+  title: string;
+  url: string;
+}
+
+export interface AnalysisCatalyst {
+  title: string;
+  status: 'confirmed' | 'reported' | 'uncertain';
+  eventDate: string;
+  window: '24h' | '7d' | '30d' | 'ongoing';
+  conditionalEffect: 'bullish' | 'bearish' | 'mixed' | 'uncertain';
+  mechanism: string;
+}
+
+export interface AnalysisResearch {
+  status: 'grounded' | 'unavailable';
+  asOf?: string;
+  coinCatalysts: AnalysisCatalyst[];
+  macroCatalysts: AnalysisCatalyst[];
+  sources: AnalysisResearchSource[];
+  note: string;
+}
+
 export interface AIAnalysis {
   headline: string;
   summary: string;
@@ -155,6 +178,7 @@ export interface AIAnalysis {
   tradeSetup: TradeSetup;
   scenarios: MarketScenario[];
   methodology: string;
+  research: AnalysisResearch;
   dataAsOf: string;
   generatedAt: string;
 }

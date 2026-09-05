@@ -56,6 +56,44 @@ export interface FuturesActionResult {
 
 export type PaperFuturesSyncStatus = 'loading' | 'ready' | 'saving' | 'error';
 
+export const getOpenOrderMarketChecks = (
+  orders: PaperFuturesOrder[],
+  marks: ReadonlyMap<string, number>,
+): Array<{ coinId: string; markPrice: number }> => {
+  const checkedCoins = new Set<string>();
+  const checks: Array<{ coinId: string; markPrice: number }> = [];
+  orders.forEach((order) => {
+    if (order.status !== 'open' || checkedCoins.has(order.coinId)) return;
+    const markPrice = marks.get(order.coinId);
+    if (!Number.isFinite(markPrice) || !markPrice || markPrice <= 0) return;
+    checkedCoins.add(order.coinId);
+    checks.push({ coinId: order.coinId, markPrice });
+  });
+  return checks;
+};
+
+export const getMissingOpenOrderCoinIds = (
+  orders: PaperFuturesOrder[],
+  listedCoinIds: ReadonlySet<string>,
+) => [...new Set(orders
+  .filter((order) => order.status === 'open' && !listedCoinIds.has(order.coinId))
+  .map((order) => order.coinId))];
+
+export const shouldReusePaperFuturesAccountOnRetry = (
+  syncAttempt: number,
+  accountOwnerId: string | null | undefined,
+  userId: string,
+  account: PaperFuturesAccount,
+) => syncAttempt > 0
+  && accountOwnerId === userId
+  && (
+    account.positions.length > 0
+    || account.orders.length > 0
+    || account.trades.length > 0
+    || account.balance !== STARTING_FUTURES_BALANCE
+    || account.realizedPnl !== 0
+  );
+
 export const createInitialPaperFuturesAccount = (): PaperFuturesAccount => ({
   balance: STARTING_FUTURES_BALANCE,
   realizedPnl: 0,
@@ -341,6 +379,7 @@ export const usePaperFutures = () => {
   const pendingAccount = useRef<PaperFuturesAccount | null>(null);
   const persistQueue = useRef(Promise.resolve());
   const persistVersion = useRef(0);
+  const accountOwnerId = useRef<string | null | undefined>(undefined);
 
   useEffect(() => { accountRef.current = account; }, [account]);
 
@@ -360,10 +399,12 @@ export const usePaperFutures = () => {
       const parsed: unknown = saved ? JSON.parse(saved) : null;
       const resolvedCandidate = normalizeAccount(parsed);
       const resolved = isPaperFuturesAccount(resolvedCandidate) ? resolvedCandidate : createInitialPaperFuturesAccount();
+      accountOwnerId.current = null;
       accountRef.current = resolved;
       setAccount(resolved);
     } catch {
       const resolved = createInitialPaperFuturesAccount();
+      accountOwnerId.current = null;
       accountRef.current = resolved;
       setAccount(resolved);
     }
@@ -380,25 +421,23 @@ export const usePaperFutures = () => {
   useEffect(() => {
     let cancelled = false;
     const previousAccount = accountRef.current;
+    const previousOwnerId = accountOwnerId.current;
     cloudReady.current = false;
     pendingAccount.current = null;
+    persistVersion.current += 1;
+    persistQueue.current = Promise.resolve();
     const client = supabase;
     if (authLoading || !client || !user) return undefined;
 
     setSyncStatus('loading');
     setSyncError(null);
-    const isMeaningfulAccount = previousAccount.positions.length > 0
-      || previousAccount.orders.length > 0
-      || previousAccount.trades.length > 0
-      || previousAccount.balance !== STARTING_FUTURES_BALANCE
-      || previousAccount.realizedPnl !== 0;
-    pendingAccount.current = syncAttempt > 0 && isMeaningfulAccount ? previousAccount : null;
+    pendingAccount.current = shouldReusePaperFuturesAccountOnRetry(syncAttempt, previousOwnerId, user.id, previousAccount)
+      ? previousAccount
+      : null;
     const emptyAccount = createInitialPaperFuturesAccount();
     const startingAccount = pendingAccount.current ?? emptyAccount;
     accountRef.current = startingAccount;
     setAccount(startingAccount);
-    try { window.localStorage.removeItem(futuresStorageKey); } catch { /* Signed-in users never use local persistence. */ }
-
     const loadCloudAccount = async () => {
       let orderLedgerAvailable = true;
       let firstResult = await client
@@ -421,6 +460,7 @@ export const usePaperFutures = () => {
           .maybeSingle();
         data = legacyResult.data ? { ...legacyResult.data, orders: undefined } : null;
         error = legacyResult.error;
+        if (cancelled) return;
         if (error) {
           setSyncError('Your simulated account could not be loaded. Nothing will open until it is synced.');
           setSyncStatus('error');
@@ -429,6 +469,7 @@ export const usePaperFutures = () => {
       }
       const remote = data ? fromCloudRow(data) : null;
       const resolved = pendingAccount.current ?? remote ?? emptyAccount;
+      accountOwnerId.current = user.id;
       accountRef.current = resolved;
       setAccount(resolved);
       let { error: writeError } = await client

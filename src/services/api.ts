@@ -107,6 +107,25 @@ export const fetchMarketData = async (
   return response.data;
 }, force);
 
+export const fetchCoinPrices = async (
+  coinIds: string[],
+  currency: CurrencyCode = 'usd',
+): Promise<Map<string, number>> => {
+  const ids = [...new Set(coinIds.filter((coinId) => /^[a-z0-9-]{1,100}$/.test(coinId)))].sort();
+  if (ids.length === 0) return new Map();
+  return cachedRequest(`simple-prices:${currency}:${ids.join(',')}`, 55_000, async () => {
+    const response = await marketApi.get<Record<string, Partial<Record<CurrencyCode, number>>>>('/simple/price', {
+      params: { ids: ids.join(','), vs_currencies: currency, precision: 'full' },
+    });
+    const prices = new Map<string, number>();
+    ids.forEach((coinId) => {
+      const price = response.data[coinId]?.[currency];
+      if (typeof price === 'number' && Number.isFinite(price) && price > 0) prices.set(coinId, price);
+    });
+    return prices;
+  });
+};
+
 export const fetchCoinHistory = async (
   coinId: string,
   days = 7,
@@ -326,10 +345,10 @@ export const requestAIAnalysis = async (payload: AIAnalysisRequest): Promise<AIA
 export const getApiErrorMessage = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<{ error?: string }>;
+    if (axiosError.response?.data?.error) return axiosError.response.data.error;
     if (axiosError.response?.status === 429) {
       return 'The market data provider is rate-limiting requests. Please wait a moment and retry.';
     }
-    if (axiosError.response?.data?.error) return axiosError.response.data.error;
     if (axiosError.code === 'ECONNABORTED') return 'The request timed out. Please retry.';
     if (!axiosError.response) return 'The data service could not be reached. Check your connection and retry.';
   }
