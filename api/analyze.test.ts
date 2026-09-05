@@ -127,6 +127,38 @@ describe('AI analysis function', () => {
     expect(consumeAnalysisQuota).toHaveBeenCalledTimes(1);
   });
 
+  it('retries once when Gemini returns malformed or incomplete JSON', async () => {
+    process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
+    const validAnalysis = {
+      headline: 'Wait for a range break', summary: 'The supplied range is intact.', stance: 'neutral', confidence: 52, risk: 'medium', timeframe: '7 days',
+      supportLevels: ['$95'], resistanceLevels: ['$110'],
+      tradeSetup: { signal: 'no-trade', rationale: 'No confirmed edge.', entryZone: '$95-$100', stopLoss: '$93', takeProfitLevels: ['$110'], riskReward: '1:2', invalidation: 'A close below $93', positionRisk: 'Keep risk small.' },
+      scenarios: [
+        { label: 'Bullish', trigger: 'Breaks $110', target: '$120', invalidatedBy: 'Falls below $105' },
+        { label: 'Base', trigger: 'Holds range', target: '$95-$110', invalidatedBy: 'Leaves range' },
+        { label: 'Bearish', trigger: 'Breaks $95', target: '$85', invalidatedBy: 'Reclaims $100' },
+      ],
+      methodology: 'Supplied price-range analysis.',
+    };
+    const createCompletion = vi.fn()
+      .mockResolvedValueOnce({ choices: [{ message: { content: '{"headline":"missing fields"}' } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify(validAnalysis) } }] });
+    vi.mocked(getGemini).mockResolvedValue({
+      chat: { completions: { create: createCompletion } },
+    } as unknown as Awaited<ReturnType<typeof getGemini>>);
+    const chart = [{ timestamp: 1, price: 95 }, { timestamp: 2, price: 105 }];
+    const { response, getStatus } = createResponse();
+
+    await handler(request({
+      coinId: 'bitcoin', coinName: 'Bitcoin', currency: 'usd', price: 105, change24h: 2,
+      chartData7d: chart, chartData30d: chart, chartData1y: chart, dataAsOf: '2026-08-30T00:00:00.000Z',
+    }), response);
+
+    expect(getStatus()).toBe(200);
+    expect(createCompletion).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects oversized date representations before consuming shared quota', async () => {
     process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';

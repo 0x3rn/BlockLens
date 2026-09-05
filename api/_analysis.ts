@@ -274,6 +274,16 @@ const validateProviderAnalysis = (value: unknown): value is AIAnalysis => {
     && isText(analysis.methodology, 1_500);
 };
 
+const parseValidatedAnalysis = (content: string): AIAnalysis | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFence(content));
+  } catch {
+    return null;
+  }
+  return validateProviderAnalysis(parsed) ? parsed : null;
+};
+
 export type ProviderKind = 'node' | 'fetch';
 
 const requestProviderContent = async (
@@ -323,18 +333,23 @@ export const runAIAnalysis = async (
 
   try {
     const research = await getGroundedResearch(input, environment);
-    const content = await requestProviderContent(buildPrompt(input, research), environment, provider);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(stripJsonFence(content));
-    } catch {
-      throw new AnalysisError(502, 'The AI provider returned invalid market brief data.');
+    const prompt = buildPrompt(input, research);
+    let analysis = parseValidatedAnalysis(await requestProviderContent(prompt, environment, provider));
+    if (!analysis) {
+      // Models can occasionally omit or rename a field despite JSON mode. Retry
+      // once with the same bounded inputs before surfacing a provider failure.
+      console.warn('Gemini returned an invalid market-brief shape; retrying once.');
+      analysis = parseValidatedAnalysis(await requestProviderContent(
+        `${prompt}\n\nFormatting correction: return the exact JSON object specified above. Include every required field, use the exact enum values and scenario labels, and add no Markdown or commentary.`,
+        environment,
+        provider,
+      ));
     }
-    if (!validateProviderAnalysis(parsed)) {
+    if (!analysis) {
       throw new AnalysisError(502, 'The AI provider returned an invalid market brief.');
     }
     return {
-      ...parsed,
+      ...analysis,
       research,
       dataAsOf: input.dataAsOf,
       generatedAt: new Date().toISOString(),
