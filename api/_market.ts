@@ -16,6 +16,7 @@ const BINANCE_MARKET_ENDPOINTS = [
   'https://api.binance.com/api/v3/klines',
 ];
 const COINBASE_MARKET_ENDPOINT = 'https://api.exchange.coinbase.com';
+const KRAKEN_MARKET_ENDPOINT = 'https://api.kraken.com/0/public/OHLC';
 
 type CacheEntry<T> = { value: T; expiresAt: number };
 
@@ -358,6 +359,7 @@ const aggregateCandles = (
   bucketTimestamp: (timestamp: number) => number,
   isClosedBucket: (timestamp: number) => boolean,
   limit: number,
+  minimumCount = 50,
 ): AIAnalysisCandleSeries['candles'] => {
   const buckets = new Map<number, CandleData>();
   for (const candle of candles) {
@@ -376,7 +378,7 @@ const aggregateCandles = (
     .filter((candle) => isClosedBucket(candle.timestamp))
     .sort((a, b) => a.timestamp - b.timestamp)
     .slice(-limit);
-  if (result.length < 50) throw new Error(`Coinbase aggregation returned only ${result.length} closed ${interval} candles.`);
+  if (result.length < minimumCount) throw new Error(`Candle aggregation returned only ${result.length} closed ${interval} candles.`);
   return result;
 };
 
@@ -426,6 +428,99 @@ const fetchCoinbaseCandleSeries = async (
   ];
 };
 
+const fetchKrakenPair = async (coinId: string, environment?: ServerEnvironment): Promise<string> => {
+  const payload = await fetchJson<{
+    tickers?: Array<{ base?: string; target?: string; market?: { identifier?: string }; is_anomaly?: boolean; is_stale?: boolean }>;
+  }>(`/coins/${encodeURIComponent(coinId)}/tickers`, {
+    exchange_ids: 'kraken', include_exchange_logo: 'false', page: '1', order: 'volume_desc', depth: 'false',
+  }, environment);
+  const ticker = payload.tickers?.find((item) => (
+    item.market?.identifier === 'kraken'
+    && item.target?.toUpperCase() === 'USD'
+    && item.is_anomaly !== true && item.is_stale !== true
+    && typeof item.base === 'string' && /^[A-Z0-9]{1,20}$/i.test(item.base)
+  ));
+  if (!ticker?.base) throw new AnalysisMarketDataError(422, 'This asset does not have a verified Kraken USD spot market for candle analysis.');
+  return `${ticker.base.toUpperCase()}USD`;
+};
+
+const fetchKrakenCandles = async (pair: string, intervalMinutes: 15 | 60 | 240 | 1_440 | 10_080, limit: number): Promise<CandleData[]> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const url = new URL(KRAKEN_MARKET_ENDPOINT);
+    url.search = new URLSearchParams({ pair, interval: String(intervalMinutes) }).toString();
+    const response = await fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
+    if (!response.ok) throw new Error(`Kraken returned ${response.status}.`);
+    const payload = await response.json() as { error?: string[]; result?: Record<string, unknown> };
+    if ((payload.error?.length ?? 0) > 0 || !payload.result) throw new Error('Kraken rejected the candle request.');
+    const rows = Object.entries(payload.result).find(([key, value]) => key !== 'last' && Array.isArray(value))?.[1];
+    if (!Array.isArray(rows)) throw new Error('Kraken returned an incomplete candle response.');
+    const intervalMilliseconds = intervalMinutes * 60_000;
+    const now = Date.now();
+    const candles = rows.flatMap((row): CandleData[] => {
+      if (!Array.isArray(row) || row.length < 7) return [];
+      const timestamp = Number(row[0]) * 1_000;
+      const open = Number(row[1]);
+      const high = Number(row[2]);
+      const low = Number(row[3]);
+      const close = Number(row[4]);
+      const volume = Number(row[6]);
+      if (![timestamp, open, high, low, close, volume].every(Number.isFinite)
+        || timestamp + intervalMilliseconds > now
+        || open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
+        || high < Math.max(open, close) || low > Math.min(open, close)) return [];
+      return [{ timestamp, open, high, low, close, volume }];
+    }).sort((a, b) => a.timestamp - b.timestamp).slice(-limit);
+    if (candles.length < Math.min(limit, 50)) throw new Error(`Kraken returned only ${candles.length} closed candles.`);
+    return candles;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
+const fetchKrakenCandleSeries = async (coinId: string, mode: AIAnalysisMode, environment?: ServerEnvironment): Promise<AIAnalysisCandleSeries[]> => {
+  const pair = await fetchKrakenPair(coinId, environment);
+  const source = 'kraken-spot' as const;
+  if (mode === 'short-term') {
+    const [fifteenMinute, hourly, fourHour, daily] = await Promise.all([
+      fetchKrakenCandles(pair, 15, 192), fetchKrakenCandles(pair, 60, 168),
+      fetchKrakenCandles(pair, 240, 180), fetchKrakenCandles(pair, 1_440, 180),
+    ]);
+    return [
+      { interval: '15m', source, symbol: pair, candles: fifteenMinute },
+      { interval: '1h', source, symbol: pair, candles: hourly },
+      { interval: '4h', source, symbol: pair, candles: fourHour },
+      { interval: '1d', source, symbol: pair, candles: daily },
+    ];
+  }
+  if (mode === 'swing') {
+    const [fourHour, daily, weekly] = await Promise.all([
+      fetchKrakenCandles(pair, 240, 180), fetchKrakenCandles(pair, 1_440, 365), fetchKrakenCandles(pair, 10_080, 104),
+    ]);
+    return [
+      { interval: '4h', source, symbol: pair, candles: fourHour },
+      { interval: '1d', source, symbol: pair, candles: daily },
+      { interval: '1w', source, symbol: pair, candles: weekly },
+    ];
+  }
+  const [daily, weekly] = await Promise.all([
+    fetchKrakenCandles(pair, 1_440, 700), fetchKrakenCandles(pair, 10_080, 156),
+  ]);
+  const monthly = aggregateCandles(daily, '1M', (timestamp) => {
+    const date = new Date(timestamp);
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+  }, (timestamp) => {
+    const date = new Date(timestamp);
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) <= Date.now();
+  }, 60, 20);
+  return [
+    { interval: '1d', source, symbol: pair, candles: daily },
+    { interval: '1w', source, symbol: pair, candles: weekly },
+    { interval: '1M', source, symbol: pair, candles: monthly },
+  ];
+};
+
 export const fetchAnalysisCandleSeries = async (
   coinId: string,
   currency: CurrencyCode,
@@ -433,6 +528,13 @@ export const fetchAnalysisCandleSeries = async (
   environment?: ServerEnvironment,
 ): Promise<AIAnalysisCandleSeries[]> => {
   if (currency !== 'usd') throw new AnalysisMarketDataError(400, 'Multi-timeframe exchange analysis currently requires USD. Switch the display currency to USD and retry.');
+  if (environment && 'ASSETS' in environment) {
+    try {
+      return await fetchKrakenCandleSeries(coinId, mode, environment);
+    } catch {
+      throw new AnalysisMarketDataError(502, `Complete ${analysisModeDefinitions[mode].label.toLowerCase()} Kraken candle coverage is temporarily unavailable.`);
+    }
+  }
   const symbol = await fetchBinancePair(coinId, environment);
   const definitions = analysisModeDefinitions[mode].intervals;
   const results = await Promise.allSettled(definitions.map(({ interval, limit }) => fetchBinanceCandleSeries(symbol, interval, limit)));

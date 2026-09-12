@@ -35,8 +35,8 @@ const normalizeChart = (value: unknown): ChartData[] | null => {
   return normalized;
 };
 
-const normalizeCandles = (value: unknown): CandleData[] | null => {
-  if (!Array.isArray(value) || value.length < 50 || value.length > 1_000) return null;
+const normalizeCandles = (value: unknown, minimumCount = 50): CandleData[] | null => {
+  if (!Array.isArray(value) || value.length < minimumCount || value.length > 1_000) return null;
   const normalized: CandleData[] = [];
   let previousTimestamp = -Infinity;
   for (const item of value) {
@@ -66,13 +66,13 @@ const normalizeCandleSeries = (value: unknown, mode: AIAnalysisRequest['mode']):
     if (!item || typeof item !== 'object') return null;
     const series = item as Record<string, unknown>;
     if (!expected.includes(series.interval as AIAnalysisCandleInterval)
-      || (series.source !== 'binance-spot' && series.source !== 'coinbase-spot')
+      || !['binance-spot', 'coinbase-spot', 'kraken-spot'].includes(series.source as string)
       || typeof series.symbol !== 'string'
       || !/^[A-Z0-9]{2,30}$/.test(series.symbol)) return null;
-    const candles = normalizeCandles(series.candles);
+    const candles = normalizeCandles(series.candles, series.interval === '1M' ? 20 : 50);
     return candles ? {
       interval: series.interval as AIAnalysisCandleInterval,
-      source: series.source,
+      source: series.source as AIAnalysisCandleSeries['source'],
       symbol: series.symbol,
       candles,
     } : null;
@@ -93,7 +93,7 @@ export type CandleFeatures = {
   rangeLow: number;
   rangeHigh: number;
   ema20: number;
-  ema50: number;
+  ema50: number | null;
   rsi14: number;
   atr14: number;
   atrPercent: number;
@@ -112,7 +112,7 @@ const ema = (values: number[], period: number) => {
 
 export const computeCandleFeatures = (series: AIAnalysisCandleSeries): CandleFeatures => {
   const candles = series.candles;
-  if (candles.length < 50) throw new Error('At least 50 closed candles are required to compute analysis features.');
+  if (candles.length < (series.interval === '1M' ? 20 : 50)) throw new Error(`Insufficient closed ${series.interval} candles to compute analysis features.`);
   const closes = candles.map(({ close }) => close);
   const recent = candles.slice(-20);
   const changes = closes.slice(1).map((close, index) => close - closes[index]);
@@ -130,10 +130,10 @@ export const computeCandleFeatures = (series: AIAnalysisCandleSeries): CandleFea
   const historicalVolumes = candles.slice(-21, -1).map(({ volume }) => volume);
   const averageVolume = historicalVolumes.reduce((total, value) => total + value, 0) / historicalVolumes.length;
   const ema20 = ema(closes.slice(-Math.min(closes.length, 100)), 20);
-  const ema50 = ema(closes.slice(-Math.min(closes.length, 200)), 50);
+  const ema50 = closes.length >= 50 ? ema(closes.slice(-Math.min(closes.length, 200)), 50) : null;
   const lastClose = closes.at(-1)!;
-  const trend = lastClose > ema20 && ema20 > ema50 ? 'bullish'
-    : lastClose < ema20 && ema20 < ema50 ? 'bearish'
+  const trend = lastClose > ema20 && (ema50 === null || ema20 > ema50) ? 'bullish'
+    : lastClose < ema20 && (ema50 === null || ema20 < ema50) ? 'bearish'
       : 'mixed';
   return {
     interval: series.interval,
@@ -145,7 +145,7 @@ export const computeCandleFeatures = (series: AIAnalysisCandleSeries): CandleFea
     rangeLow: roundMetric(Math.min(...recent.map(({ low }) => low))),
     rangeHigh: roundMetric(Math.max(...recent.map(({ high }) => high))),
     ema20: roundMetric(ema20),
-    ema50: roundMetric(ema50),
+    ema50: ema50 === null ? null : roundMetric(ema50),
     rsi14: roundMetric(rsi),
     atr14: roundMetric(atr),
     atrPercent: roundMetric((atr / lastClose) * 100),
@@ -432,8 +432,10 @@ const buildMethodology = (input: AIAnalysisRequest) => {
     .map((series) => `${series.candles.length} ${series.interval}`)
     .join(', ');
   const symbol = input.candleSeries[0]?.symbol ?? input.coinName;
-  const source = input.candleSeries[0]?.source === 'coinbase-spot' ? 'Coinbase Exchange spot' : 'Binance Spot';
-  return `${analysisModeDefinitions[input.mode].label} analysis used ${seriesSummary} closed ${source} candles for ${symbol}. EMA20, EMA50, RSI14, ATR14, relative volume, recent range, and trend were computed server-side, with sampled CoinGecko price and rolling-volume history used only as broader context. The current open candle was excluded.`;
+  const source = input.candleSeries[0]?.source === 'coinbase-spot' ? 'Coinbase Exchange spot'
+    : input.candleSeries[0]?.source === 'kraken-spot' ? 'Kraken Spot'
+      : 'Binance Spot';
+  return `${analysisModeDefinitions[input.mode].label} analysis used ${seriesSummary} closed ${source} candles for ${symbol}. EMA20, RSI14, ATR14, relative volume, recent range, and trend were computed server-side; EMA50 was included wherever at least 50 candles were available. Sampled CoinGecko price and rolling-volume history was used only as broader context. The current open candle was excluded.`;
 };
 
 const parseValidatedAnalysis = (content: string, input: AIAnalysisRequest): AIAnalysis | null => {

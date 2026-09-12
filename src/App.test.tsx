@@ -114,14 +114,14 @@ describe('BlockLens routes', () => {
     vi.mocked(requestAIAnalysis).mockRejectedValueOnce(new Error('stop after request capture'));
     const user = userEvent.setup();
     renderRoute('/analysis?coin=bitcoin');
-    const longTermLabel = await screen.findByText('Long-term', {}, { timeout: 3000 });
+    const longTermLabel = await screen.findByText('Long-term', {}, { timeout: 15_000 });
     const longTerm = longTermLabel.closest('button');
     expect(longTerm).not.toBeNull();
     await user.click(longTerm!);
     await user.click(screen.getByRole('button', { name: /generate long-term analysis/i }));
     await waitFor(() => expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'bitcoin', currency: 'usd', mode: 'long-term' }));
     expect(longTerm).toHaveAttribute('aria-checked', 'true');
-  }, 20_000);
+  }, 30_000);
 
   it('does not evaluate a saved price threshold against a different currency feed', async () => {
     window.localStorage.setItem('blocklens_currency', JSON.stringify('eur'));

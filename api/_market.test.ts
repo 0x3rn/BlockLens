@@ -107,4 +107,28 @@ describe('exchange candle loading', () => {
     expect(result.every(({ source, symbol, candles }) => source === 'coinbase-spot' && symbol === 'BTC-USD' && candles.length >= 50)).toBe(true);
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes('exchange_ids=gdax'))).toBe(true);
   });
+
+  it('uses validated Kraken spot candles in the Cloudflare runtime', async () => {
+    const now = Date.now();
+    const fetchMock = vi.fn().mockImplementation((input: string | URL) => {
+      const url = new URL(String(input));
+      if (url.hostname.includes('coingecko.com')) {
+        return Promise.resolve(new Response(JSON.stringify({ tickers: [{ base: 'BTC', target: 'USD', market: { identifier: 'kraken' }, is_anomaly: false, is_stale: false }] }), { status: 200 }));
+      }
+      const interval = Number(url.searchParams.get('interval')) * 60_000;
+      const rows = Array.from({ length: 721 }, (_, index) => {
+        const price = 100 + (index / 100);
+        return [Math.floor((now - ((722 - index) * interval)) / 1_000), price, price + 2, price - 1, price + 1, price, 1_000 + index, 10];
+      });
+      return Promise.resolve(new Response(JSON.stringify({ error: [], result: { XXBTZUSD: rows, last: '1' } }), { status: 200 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchAnalysisCandleSeries('bitcoin-worker-test', 'usd', 'swing', { ASSETS: {} } as never);
+
+    expect(result.map(({ interval }) => interval)).toEqual(['4h', '1d', '1w']);
+    expect(result.every(({ source, symbol, candles }) => source === 'kraken-spot' && symbol === 'BTCUSD' && candles.length >= 50)).toBe(true);
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('api.kraken.com'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('api.binance.com'))).toBe(false);
+  });
 });

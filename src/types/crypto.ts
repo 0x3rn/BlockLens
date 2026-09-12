@@ -78,7 +78,7 @@ export interface CandleData {
 
 export interface AIAnalysisCandleSeries {
   interval: AIAnalysisCandleInterval;
-  source: 'binance-spot' | 'coinbase-spot';
+  source: 'binance-spot' | 'coinbase-spot' | 'kraken-spot';
   symbol: string;
   candles: CandleData[];
 }

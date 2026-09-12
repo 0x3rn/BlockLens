@@ -54,6 +54,12 @@ describe('deterministic candle features', () => {
   });
 
   it('fails explicitly when indicator history is insufficient', () => {
-    expect(() => computeCandleFeatures({ ...series('15m'), candles: candles(49) })).toThrow('At least 50 closed candles');
+    expect(() => computeCandleFeatures({ ...series('15m'), candles: candles(49) })).toThrow('Insufficient closed 15m candles');
+  });
+
+  it('uses EMA20 without inventing EMA50 when completed monthly history is shorter', () => {
+    const result = computeCandleFeatures({ ...series('1M'), candles: candles(20) });
+    expect(result.ema20).toBeGreaterThan(0);
+    expect(result.ema50).toBeNull();
   });
 });
