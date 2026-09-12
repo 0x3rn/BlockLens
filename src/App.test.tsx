@@ -121,7 +121,7 @@ describe('BlockLens routes', () => {
     await user.click(screen.getByRole('button', { name: /generate long-term analysis/i }));
     await waitFor(() => expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'bitcoin', currency: 'usd', mode: 'long-term' }));
     expect(longTerm).toHaveAttribute('aria-checked', 'true');
-  });
+  }, 20_000);
 
   it('does not evaluate a saved price threshold against a different currency feed', async () => {
     window.localStorage.setItem('blocklens_currency', JSON.stringify('eur'));

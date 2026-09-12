@@ -66,13 +66,13 @@ const normalizeCandleSeries = (value: unknown, mode: AIAnalysisRequest['mode']):
     if (!item || typeof item !== 'object') return null;
     const series = item as Record<string, unknown>;
     if (!expected.includes(series.interval as AIAnalysisCandleInterval)
-      || series.source !== 'binance-spot'
+      || (series.source !== 'binance-spot' && series.source !== 'coinbase-spot')
       || typeof series.symbol !== 'string'
       || !/^[A-Z0-9]{2,30}$/.test(series.symbol)) return null;
     const candles = normalizeCandles(series.candles);
     return candles ? {
       interval: series.interval as AIAnalysisCandleInterval,
-      source: 'binance-spot',
+      source: series.source,
       symbol: series.symbol,
       candles,
     } : null;
@@ -432,7 +432,8 @@ const buildMethodology = (input: AIAnalysisRequest) => {
     .map((series) => `${series.candles.length} ${series.interval}`)
     .join(', ');
   const symbol = input.candleSeries[0]?.symbol ?? input.coinName;
-  return `${analysisModeDefinitions[input.mode].label} analysis used ${seriesSummary} closed Binance Spot candles for ${symbol}. EMA20, EMA50, RSI14, ATR14, relative volume, recent range, and trend were computed server-side, with sampled CoinGecko price and rolling-volume history used only as broader context. The current open candle was excluded.`;
+  const source = input.candleSeries[0]?.source === 'coinbase-spot' ? 'Coinbase Exchange spot' : 'Binance Spot';
+  return `${analysisModeDefinitions[input.mode].label} analysis used ${seriesSummary} closed ${source} candles for ${symbol}. EMA20, EMA50, RSI14, ATR14, relative volume, recent range, and trend were computed server-side, with sampled CoinGecko price and rolling-volume history used only as broader context. The current open candle was excluded.`;
 };
 
 const parseValidatedAnalysis = (content: string, input: AIAnalysisRequest): AIAnalysis | null => {

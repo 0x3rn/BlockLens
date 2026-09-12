@@ -79,4 +79,32 @@ describe('exchange candle loading', () => {
     await expect(fetchAnalysisCandleSeries('bitcoin-currency-test', 'eur', 'swing')).rejects.toThrow('requires USD');
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('falls back to a verified Coinbase spot pair when Binance is unavailable', async () => {
+    const fetchMock = vi.fn().mockImplementation((input: string | URL) => {
+      const url = new URL(String(input));
+      if (url.hostname.includes('coingecko.com')) {
+        const exchange = url.searchParams.get('exchange_ids');
+        const ticker = exchange === 'gdax'
+          ? { base: 'BTC', target: 'USD', market: { identifier: 'gdax' }, is_anomaly: false, is_stale: false }
+          : { base: 'BTC', target: 'USDT', market: { identifier: 'binance' }, is_anomaly: false, is_stale: false };
+        return Promise.resolve(new Response(JSON.stringify({ tickers: [ticker] }), { status: 200 }));
+      }
+      if (url.hostname.includes('binance')) return Promise.resolve(new Response('restricted', { status: 451 }));
+      const granularity = Number(url.searchParams.get('granularity'));
+      const start = Date.parse(url.searchParams.get('start')!) / 1_000;
+      const rows = Array.from({ length: 300 }, (_, index) => {
+        const price = 100 + (index / 100);
+        return [start + (index * granularity), price - 1, price + 2, price, price + 1, 1_000 + index];
+      });
+      return Promise.resolve(new Response(JSON.stringify(rows), { status: 200 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchAnalysisCandleSeries('bitcoin-fallback-test', 'usd', 'swing');
+
+    expect(result.map(({ interval }) => interval)).toEqual(['4h', '1d', '1w']);
+    expect(result.every(({ source, symbol, candles }) => source === 'coinbase-spot' && symbol === 'BTC-USD' && candles.length >= 50)).toBe(true);
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('exchange_ids=gdax'))).toBe(true);
+  });
 });

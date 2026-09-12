@@ -113,7 +113,7 @@ const AnalysisPage: React.FC = () => {
         <div className="analysis-mode-intro">
           <span className="eyebrow">Analysis horizon</span>
           <h2 id="analysis-horizon-title">Match the evidence to the trade</h2>
-          <p>Each mode loads a different set of closed Binance Spot candles and searches for catalysts relevant to its holding period.</p>
+          <p>Each mode loads a different set of closed, verified exchange candles and searches for catalysts relevant to its holding period.</p>
         </div>
         <div className="analysis-mode-options" role="radiogroup" aria-label="Trading horizon">
           {(Object.entries(analysisModeDefinitions) as Array<[AIAnalysisMode, (typeof analysisModeDefinitions)[AIAnalysisMode]]>).map(([mode, definition]) => (
@@ -150,7 +150,7 @@ const AnalysisPage: React.FC = () => {
                   {formatPercent(selectedCoin.price_change_percentage_24h)} today
                 </span>
               </div>
-              {currency !== 'usd' && <p className="analysis-currency-note">Switch display currency to USD to use verified Binance Spot candle analysis.</p>}
+              {currency !== 'usd' && <p className="analysis-currency-note">Switch display currency to USD to use verified exchange-candle analysis.</p>}
               <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading || currency !== 'usd'} aria-busy={loading}>
                 {loading ? <LoaderCircle size={17} className="is-spinning" aria-hidden="true" /> : <Bot size={17} aria-hidden="true" />}
                 {loading ? `Generating ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis` : `Generate ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis`}

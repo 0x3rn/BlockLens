@@ -15,6 +15,7 @@ const BINANCE_MARKET_ENDPOINTS = [
   'https://data-api.binance.vision/api/v3/klines',
   'https://api.binance.com/api/v3/klines',
 ];
+const COINBASE_MARKET_ENDPOINT = 'https://api.exchange.coinbase.com';
 
 type CacheEntry<T> = { value: T; expiresAt: number };
 
@@ -234,6 +235,28 @@ const fetchBinancePair = async (coinId: string, environment?: ServerEnvironment)
   return `${ticker.base.toUpperCase()}USDT`;
 };
 
+const fetchCoinbaseProduct = async (coinId: string, environment?: ServerEnvironment): Promise<string> => {
+  const payload = await fetchJson<{
+    tickers?: Array<{ base?: string; target?: string; market?: { identifier?: string }; is_anomaly?: boolean; is_stale?: boolean }>;
+  }>(`/coins/${encodeURIComponent(coinId)}/tickers`, {
+    exchange_ids: 'gdax',
+    include_exchange_logo: 'false',
+    page: '1',
+    order: 'volume_desc',
+    depth: 'false',
+  }, environment);
+  const ticker = payload.tickers?.find((item) => (
+    item.market?.identifier === 'gdax'
+    && item.target?.toUpperCase() === 'USD'
+    && item.is_anomaly !== true
+    && item.is_stale !== true
+    && typeof item.base === 'string'
+    && /^[A-Z0-9]{1,20}$/i.test(item.base)
+  ));
+  if (!ticker?.base) throw new AnalysisMarketDataError(422, 'This asset does not have a verified USD spot market for candle analysis.');
+  return `${ticker.base.toUpperCase()}-USD`;
+};
+
 const parseBinanceCandles = (payload: unknown): CandleData[] => {
   if (!Array.isArray(payload)) return [];
   const now = Date.now();
@@ -284,6 +307,125 @@ const fetchBinanceCandleSeries = async (
   },
 );
 
+const parseCoinbaseCandles = (payload: unknown, granularitySeconds: number): CandleData[] => {
+  if (!Array.isArray(payload)) return [];
+  const now = Date.now();
+  return payload.flatMap((row): CandleData[] => {
+    if (!Array.isArray(row) || row.length < 6) return [];
+    const timestamp = Number(row[0]) * 1_000;
+    const [low, high, open, close, volume] = row.slice(1, 6).map(Number);
+    if (![timestamp, open, high, low, close, volume].every(Number.isFinite)
+      || timestamp + (granularitySeconds * 1_000) > now
+      || open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
+      || high < Math.max(open, close) || low > Math.min(open, close)) return [];
+    return [{ timestamp, open, high, low, close, volume }];
+  });
+};
+
+const fetchCoinbaseCandles = async (product: string, granularitySeconds: 900 | 3_600 | 86_400, count: number): Promise<CandleData[]> => {
+  const chunks = Math.ceil((count + 2) / 300);
+  const nowSeconds = Math.floor(Date.now() / 1_000);
+  const requests = Array.from({ length: chunks }, async (_, index) => {
+    const end = nowSeconds - (index * 300 * granularitySeconds);
+    const start = end - (300 * granularitySeconds);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12_000);
+    try {
+      const url = new URL(`${COINBASE_MARKET_ENDPOINT}/products/${encodeURIComponent(product)}/candles`);
+      url.search = new URLSearchParams({
+        granularity: String(granularitySeconds),
+        start: new Date(start * 1_000).toISOString(),
+        end: new Date(end * 1_000).toISOString(),
+      }).toString();
+      const response = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'BlockLens market research' }, signal: controller.signal });
+      if (!response.ok) throw new Error(`Coinbase Exchange returned ${response.status}.`);
+      return parseCoinbaseCandles(await response.json(), granularitySeconds);
+    } finally {
+      clearTimeout(timeout);
+    }
+  });
+  const rows = (await Promise.all(requests)).flat();
+  const unique = [...new Map(rows.map((candle) => [candle.timestamp, candle])).values()]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .slice(-count);
+  if (unique.length < Math.min(50, count)) throw new Error(`Coinbase Exchange returned only ${unique.length} closed candles.`);
+  return unique;
+};
+
+const aggregateCandles = (
+  candles: CandleData[],
+  interval: AIAnalysisCandleInterval,
+  bucketTimestamp: (timestamp: number) => number,
+  isClosedBucket: (timestamp: number) => boolean,
+  limit: number,
+): AIAnalysisCandleSeries['candles'] => {
+  const buckets = new Map<number, CandleData>();
+  for (const candle of candles) {
+    const timestamp = bucketTimestamp(candle.timestamp);
+    const existing = buckets.get(timestamp);
+    if (!existing) {
+      buckets.set(timestamp, { ...candle, timestamp });
+    } else {
+      existing.high = Math.max(existing.high, candle.high);
+      existing.low = Math.min(existing.low, candle.low);
+      existing.close = candle.close;
+      existing.volume += candle.volume;
+    }
+  }
+  const result = [...buckets.values()]
+    .filter((candle) => isClosedBucket(candle.timestamp))
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .slice(-limit);
+  if (result.length < 50) throw new Error(`Coinbase aggregation returned only ${result.length} closed ${interval} candles.`);
+  return result;
+};
+
+const fetchCoinbaseCandleSeries = async (
+  coinId: string,
+  mode: AIAnalysisMode,
+  environment?: ServerEnvironment,
+): Promise<AIAnalysisCandleSeries[]> => {
+  const product = await fetchCoinbaseProduct(coinId, environment);
+  if (mode === 'short-term') {
+    const [fifteenMinute, hourlyForFourHour, daily] = await Promise.all([
+      fetchCoinbaseCandles(product, 900, 192),
+      fetchCoinbaseCandles(product, 3_600, 720),
+      fetchCoinbaseCandles(product, 86_400, 180),
+    ]);
+    return [
+      { interval: '15m', source: 'coinbase-spot', symbol: product, candles: fifteenMinute },
+      { interval: '1h', source: 'coinbase-spot', symbol: product, candles: hourlyForFourHour.slice(-168) },
+      { interval: '4h', source: 'coinbase-spot', symbol: product, candles: aggregateCandles(hourlyForFourHour, '4h', (timestamp) => Math.floor(timestamp / 14_400_000) * 14_400_000, (timestamp) => timestamp + 14_400_000 <= Date.now(), 180) },
+      { interval: '1d', source: 'coinbase-spot', symbol: product, candles: daily },
+    ];
+  }
+  const dailyCount = mode === 'swing' ? 735 : 1_870;
+  const daily = await fetchCoinbaseCandles(product, 86_400, dailyCount);
+  const weekMs = 604_800_000;
+  const weekOffset = 259_200_000;
+  const weekly = aggregateCandles(daily, '1w', (timestamp) => (Math.floor((timestamp + weekOffset) / weekMs) * weekMs) - weekOffset, (timestamp) => timestamp + weekMs <= Date.now(), mode === 'swing' ? 104 : 156);
+  if (mode === 'swing') {
+    const hourly = await fetchCoinbaseCandles(product, 3_600, 720);
+    return [
+      { interval: '4h', source: 'coinbase-spot', symbol: product, candles: aggregateCandles(hourly, '4h', (timestamp) => Math.floor(timestamp / 14_400_000) * 14_400_000, (timestamp) => timestamp + 14_400_000 <= Date.now(), 180) },
+      { interval: '1d', source: 'coinbase-spot', symbol: product, candles: daily.slice(-365) },
+      { interval: '1w', source: 'coinbase-spot', symbol: product, candles: weekly },
+    ];
+  }
+  const monthly = aggregateCandles(daily, '1M', (timestamp) => {
+    const date = new Date(timestamp);
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
+  }, (timestamp) => {
+    const date = new Date(timestamp);
+    return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) <= Date.now();
+  }, 60);
+  return [
+    { interval: '1d', source: 'coinbase-spot', symbol: product, candles: daily.slice(-730) },
+    { interval: '1w', source: 'coinbase-spot', symbol: product, candles: weekly },
+    { interval: '1M', source: 'coinbase-spot', symbol: product, candles: monthly },
+  ];
+};
+
 export const fetchAnalysisCandleSeries = async (
   coinId: string,
   currency: CurrencyCode,
@@ -295,10 +437,13 @@ export const fetchAnalysisCandleSeries = async (
   const definitions = analysisModeDefinitions[mode].intervals;
   const results = await Promise.allSettled(definitions.map(({ interval, limit }) => fetchBinanceCandleSeries(symbol, interval, limit)));
   const series = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
-  if (series.length !== definitions.length) {
+  if (series.length === definitions.length) return series;
+  try {
+    return await fetchCoinbaseCandleSeries(coinId, mode, environment);
+  } catch (error) {
+    if (error instanceof AnalysisMarketDataError && error.status === 422) throw error;
     throw new AnalysisMarketDataError(502, `Complete ${analysisModeDefinitions[mode].label.toLowerCase()} exchange candle coverage is temporarily unavailable.`);
   }
-  return series;
 };
 
 const isSupportedCoinId = (coinId: string) => /^[a-z0-9-]{1,100}$/.test(coinId);
