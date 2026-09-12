@@ -102,6 +102,7 @@ const getAccessToken = async (environment: ServerEnvironment): Promise<string> =
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion,
     }),
+    signal: AbortSignal.timeout(12_000),
   });
   const tokenBody = await tokenResponse.json() as { access_token?: string; expires_in?: number; error_description?: string };
   if (!tokenResponse.ok || !tokenBody.access_token) {
@@ -136,6 +137,7 @@ export const requestVertexCompletion = async (
         max_completion_tokens: 4_096,
         reasoning_effort: 'low',
       }),
+      signal: AbortSignal.timeout(35_000),
     },
   );
   const body = await response.json() as VertexCompletion & { error?: { message?: string } };
@@ -168,6 +170,7 @@ export const requestVertexGroundedResearch = async (
           thinkingConfig: { thinkingLevel: 'LOW' },
         },
       }),
+      signal: AbortSignal.timeout(20_000),
     },
   );
   const body = await response.json() as GroundedVertexResponse & { error?: { message?: string } };

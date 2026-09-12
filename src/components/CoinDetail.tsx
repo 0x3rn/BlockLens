@@ -126,7 +126,7 @@ const CoinDetailPage: React.FC = () => {
           </span>
         </div>
         <div className="detail-actions">
-          <button type="button" className={`secondary-button ${isWatched ? 'is-active' : ''}`} onClick={() => { toggleWatchlist(coin.id); showToast(`${coin.name} ${isWatched ? 'removed from' : 'added to'} your watchlist.`, isWatched ? 'info' : 'success'); }} aria-pressed={isWatched}>
+          <button type="button" className={`secondary-button ${isWatched ? 'is-active' : ''}`} onClick={() => { void toggleWatchlist(coin.id).then((result) => showToast(result.ok ? `${coin.name} ${result.action} ${result.action === 'removed' ? 'from' : 'to'} your watchlist.` : result.error, result.ok ? (result.action === 'removed' ? 'info' : 'success') : 'error')); }} aria-pressed={isWatched}>
             <Star size={16} fill={isWatched ? 'currentColor' : 'none'} /> {isWatched ? 'Watching' : 'Watch asset'}
           </button>
           <Link className="secondary-button" to={`/watchlist?coin=${coin.id}`}><WalletCards size={16} /> Add position</Link>

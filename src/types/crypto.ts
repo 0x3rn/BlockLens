@@ -1,5 +1,10 @@
 export type CurrencyCode = 'usd' | 'eur' | 'gbp' | 'ngn';
 
+export interface AIAnalysisSelectionRequest {
+  coinId: string;
+  currency: CurrencyCode;
+}
+
 export interface Coin {
   id: string;
   symbol: string;

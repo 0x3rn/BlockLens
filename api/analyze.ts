@@ -2,6 +2,7 @@ import { processEnvironment } from './_env.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from './_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from './_rate-limit.ts';
 import { AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest, runAIAnalysis } from './_analysis.ts';
+import { buildAnalysisRequest, normalizeAnalysisSelection } from './_market.ts';
 
 type ResponseLike = {
   status: (code: number) => ResponseLike;
@@ -49,8 +50,18 @@ export default async function handler(request: RequestLike, response: ResponseLi
     if (!isAIAnalysisConfigured(environment)) {
       return response.status(503).json({ error: 'Gemini trading analysis is not configured on this deployment yet.' });
     }
-    const input = normalizeAIAnalysisRequest(readBody(request));
-    if (!input) return response.status(400).json({ error: 'The supplied market data is incomplete or invalid.' });
+    const body = readBody(request);
+    let input = normalizeAIAnalysisRequest(body);
+    if (!input) {
+      const selection = normalizeAnalysisSelection(body);
+      if (!selection) return response.status(400).json({ error: 'The selected asset is incomplete or invalid.' });
+      try {
+        input = await buildAnalysisRequest(selection.coinId, selection.currency, environment);
+      } catch (error) {
+        console.error('Analysis market-data fetch failed:', error instanceof Error ? error.message : 'Unknown provider error');
+        return response.status(502).json({ error: 'The market history required for analysis is temporarily unavailable.' });
+      }
+    }
     releaseSlot = acquireAnalysisSlot();
     if (!releaseSlot) return response.status(429).json({ error: 'AI analysis is busy. Please retry shortly.' });
     await consumeAnalysisQuota(quotaKey, environment);

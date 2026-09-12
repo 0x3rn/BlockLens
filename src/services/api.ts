@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import {
   AIAnalysis,
   AIAnalysisRequest,
+  AIAnalysisSelectionRequest,
   CandleData,
   CandleInterval,
   ChartData,
@@ -51,6 +52,13 @@ interface CacheEntry<T> {
   value: T;
   expiresAt: number;
 }
+
+export type MarketSnapshot = {
+  coins: Coin[];
+  metrics: MarketMetrics | null;
+  warning: string | null;
+  asOf: string;
+};
 
 const cache = new Map<string, CacheEntry<unknown>>();
 const pending = new Map<string, Promise<unknown>>();
@@ -104,6 +112,21 @@ export const fetchMarketData = async (
       precision: 'full',
     },
   });
+  return response.data;
+}, force);
+
+export const fetchMarketSnapshot = async (
+  currency: CurrencyCode = 'usd',
+  force = false,
+): Promise<MarketSnapshot> => cachedRequest(`snapshot:${currency}`, 45_000, async () => {
+  const response = await axios.get<MarketSnapshot>('/api/market/snapshot', {
+    params: { currency },
+    timeout: 20_000,
+    headers: { Accept: 'application/json' },
+  });
+  if (!Array.isArray(response.data.coins) || response.data.coins.length === 0) {
+    throw new Error('The market snapshot did not contain any assets.');
+  }
   return response.data;
 }, force);
 
@@ -334,9 +357,9 @@ export const fetchTrendingCoins = async (): Promise<TrendingCoin[]> => (
   })
 );
 
-export const requestAIAnalysis = async (payload: AIAnalysisRequest): Promise<AIAnalysis> => {
+export const requestAIAnalysis = async (payload: AIAnalysisRequest | AIAnalysisSelectionRequest): Promise<AIAnalysis> => {
   const response = await axios.post<AIAnalysis>('/api/analyze', payload, {
-    timeout: 30_000,
+    timeout: 100_000,
     headers: { 'Content-Type': 'application/json' },
   });
   return response.data;

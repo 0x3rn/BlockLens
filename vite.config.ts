@@ -5,6 +5,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import analyzeHandler from './api/analyze.ts';
 import telegramCoinsHandler from './api/telegram/coins.ts';
 import telegramWebhookHandler from './api/telegram/webhook.ts';
+import marketSnapshotHandler from './api/market/snapshot.ts';
 
 class LocalApiResponse {
   constructor(private readonly response: ServerResponse) {}
@@ -104,6 +105,25 @@ const localTelegramApi = (): Plugin => ({
   },
 });
 
+const localMarketApi = (): Plugin => ({
+  name: 'blocklens-local-market-api',
+  apply: 'serve',
+  configureServer(server) {
+    server.middlewares.use('/api/market/snapshot', (request: IncomingMessage, response: ServerResponse) => {
+      const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+      void marketSnapshotHandler(
+        { method: request.method, query: Object.fromEntries(url.searchParams.entries()) },
+        new LocalApiResponse(response),
+      ).catch(() => {
+        if (!response.writableEnded) {
+          response.statusCode = 500;
+          response.end(JSON.stringify({ error: 'The local market endpoint failed.' }));
+        }
+      });
+    });
+  },
+});
+
 export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, process.cwd(), '');
   process.env.GOOGLE_CLOUD_PROJECT = environment.GOOGLE_CLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
@@ -116,7 +136,7 @@ export default defineConfig(({ mode }) => {
   process.env.TELEGRAM_WEBHOOK_SECRET = environment.TELEGRAM_WEBHOOK_SECRET || process.env.TELEGRAM_WEBHOOK_SECRET;
 
   return {
-    plugins: [react(), localAnalyzeApi(), localTelegramApi()],
+    plugins: [react(), localAnalyzeApi(), localMarketApi(), localTelegramApi()],
     server: {
       host: '127.0.0.1',
     },

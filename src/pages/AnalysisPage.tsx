@@ -6,7 +6,7 @@ import { DataState } from '../components/DataState';
 import { useMarket } from '../context/MarketContext';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { fetchCoinHistory, getApiErrorMessage, requestAIAnalysis } from '../services/api';
+import { getApiErrorMessage, requestAIAnalysis } from '../services/api';
 import { AIAnalysis } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 
@@ -46,21 +46,9 @@ const AnalysisPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [chartData7d, chartData30d, chartData1y] = await Promise.all([
-        fetchCoinHistory(selectedCoin.id, 7, currency),
-        fetchCoinHistory(selectedCoin.id, 30, currency),
-        fetchCoinHistory(selectedCoin.id, 365, currency),
-      ]);
       const result = await requestAIAnalysis({
         coinId: selectedCoin.id,
-        coinName: selectedCoin.name,
         currency,
-        price: selectedCoin.current_price,
-        change24h: selectedCoin.price_change_percentage_24h ?? 0,
-        chartData7d,
-        chartData30d,
-        chartData1y,
-        dataAsOf: selectedCoin.last_updated ?? new Date().toISOString(),
       });
       setAnalysis(result);
       saveAIAnalysis({

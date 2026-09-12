@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import handler from './analyze';
 import { getGemini } from './_ai';
 import { consumeAnalysisQuota } from './_analysis-access';
+import { buildAnalysisRequest } from './_market';
 
 vi.mock('./_ai', () => ({ getGemini: vi.fn() }));
 vi.mock('./_vertex-fetch', () => ({ requestVertexCompletion: vi.fn(), requestVertexGroundedResearch: vi.fn() }));
@@ -12,6 +13,10 @@ vi.mock('./_analysis-access', () => ({
     }
   },
   consumeAnalysisQuota: vi.fn(),
+}));
+vi.mock('./_market', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./_market')>(),
+  buildAnalysisRequest: vi.fn(),
 }));
 
 const createResponse = () => {
@@ -178,6 +183,20 @@ describe('AI analysis function', () => {
     }), response);
 
     expect(getStatus()).toBe(400);
+    expect(consumeAnalysisQuota).not.toHaveBeenCalled();
+  });
+
+  it('fetches analysis history server-side for the compact browser request', async () => {
+    process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
+    vi.mocked(buildAnalysisRequest).mockRejectedValue(new Error('upstream unavailable'));
+    const { response, getStatus, getBody } = createResponse();
+
+    await handler(request({ coinId: 'bitcoin', currency: 'usd' }), response);
+
+    expect(buildAnalysisRequest).toHaveBeenCalledWith('bitcoin', 'usd', expect.objectContaining({ GOOGLE_CLOUD_PROJECT: 'test-project' }));
+    expect(getStatus()).toBe(502);
+    expect(getBody()).toEqual({ error: 'The market history required for analysis is temporarily unavailable.' });
     expect(consumeAnalysisQuota).not.toHaveBeenCalled();
   });
 });

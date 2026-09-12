@@ -1,7 +1,7 @@
 import { runAIAnalysis, AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest } from '../api/_analysis.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from '../api/_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from '../api/_rate-limit.ts';
-import { fetchTopCoins } from '../api/_market.ts';
+import { buildAnalysisRequest, fetchGlobalMarketMetrics, fetchTopCoins, normalizeAnalysisSelection } from '../api/_market.ts';
 import { processTelegramUpdate } from '../api/telegram/webhook.ts';
 import type { ServerEnvironment } from '../api/_env.ts';
 import type { TelegramUpdate } from '../api/telegram/_telegram.ts';
@@ -106,8 +106,17 @@ const handleAnalysis = async (request: Request, env: WorkerEnvironment): Promise
     if (!isAIAnalysisConfigured(env)) {
       return json({ error: 'Gemini trading analysis is not configured on this deployment yet.' }, 503);
     }
-    const input = normalizeAIAnalysisRequest(body.value);
-    if (!input) return json({ error: 'The supplied market data is incomplete or invalid.' }, 400);
+    let input = normalizeAIAnalysisRequest(body.value);
+    if (!input) {
+      const selection = normalizeAnalysisSelection(body.value);
+      if (!selection) return json({ error: 'The selected asset is incomplete or invalid.' }, 400);
+      try {
+        input = await buildAnalysisRequest(selection.coinId, selection.currency, env);
+      } catch (error) {
+        console.error('Cloudflare analysis market-data fetch failed:', error instanceof Error ? error.message : 'Unknown provider error');
+        return json({ error: 'The market history required for analysis is temporarily unavailable.' }, 502);
+      }
+    }
     releaseSlot = acquireAnalysisSlot();
     if (!releaseSlot) return json({ error: 'AI analysis is busy. Please retry shortly.' }, 429);
     await consumeAnalysisQuota(quotaKey, env);
@@ -155,6 +164,31 @@ const handleTelegramCoins = async (request: Request, env: WorkerEnvironment): Pr
   }
 };
 
+const handleMarketSnapshot = async (request: Request, env: WorkerEnvironment): Promise<Response> => {
+  if (request.method !== 'GET') {
+    return json({ error: 'Only GET requests are accepted.' }, 405, { Allow: 'GET' });
+  }
+  const requestedCurrency = new URL(request.url).searchParams.get('currency');
+  const currency = requestedCurrency && supportedCurrencies.has(requestedCurrency as CurrencyCode)
+    ? requestedCurrency as CurrencyCode
+    : 'usd';
+  try {
+    const [coins, metricsResult] = await Promise.all([
+      fetchTopCoins(currency, env),
+      fetchGlobalMarketMetrics(currency, env).then(
+        (metrics) => ({ metrics, error: null }),
+        () => ({ metrics: null, error: 'Global market metrics are temporarily unavailable.' }),
+      ),
+    ]);
+    return json({ coins, metrics: metricsResult.metrics, warning: metricsResult.error, asOf: new Date().toISOString() }, 200, {
+      'Cache-Control': 'public, max-age=30, s-maxage=45, stale-while-revalidate=120',
+    });
+  } catch (error) {
+    console.error('Cloudflare market snapshot failed:', error instanceof Error ? error.message : 'Unknown provider error');
+    return json({ error: 'The live market snapshot is temporarily unavailable.' }, 502);
+  }
+};
+
 const handleTelegramWebhook = async (request: Request, env: WorkerEnvironment): Promise<Response> => {
   if (request.method !== 'POST') {
     return json({ error: 'Only POST requests are accepted.' }, 405, { Allow: 'POST' });
@@ -189,6 +223,7 @@ const worker = {
     const pathname = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
 
     if (pathname === '/api/analyze') return handleAnalysis(request, env);
+    if (pathname === '/api/market/snapshot') return handleMarketSnapshot(request, env);
     if (pathname === '/api/telegram/coins') return handleTelegramCoins(request, env);
     if (pathname === '/api/telegram/webhook') return handleTelegramWebhook(request, env);
     if (pathname === '/api' || pathname.startsWith('/api/')) return notFound();

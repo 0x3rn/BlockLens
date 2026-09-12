@@ -1,10 +1,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchMarketData, fetchMarketMetrics, getApiErrorMessage } from '../services/api';
+import { fetchMarketSnapshot, getApiErrorMessage } from '../services/api';
 import { Coin, CurrencyCode, MarketMetrics, PortfolioPosition, PriceAlert, AlertCondition, AIAnalysisHistoryEntry, PositionHistoryEntry, PaperFuturesAccount } from '../types/crypto';
 import { useAlertsState } from './useAlertsState';
 import { useCurrency } from '../hooks/useCurrency';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { useWatchlist } from '../hooks/useWatchlist';
+import { useWatchlist, WatchlistMutationResult, WatchlistSyncStatus } from '../hooks/useWatchlist';
 import { useAIHistory } from '../hooks/useAIHistory';
 import { usePositionHistory } from '../hooks/usePositionHistory';
 import { FuturesActionResult, OpenFuturesPositionInput, PaperFuturesSyncStatus, PlaceFuturesOrderInput, usePaperFutures } from '../hooks/usePaperFutures';
@@ -20,7 +20,10 @@ interface MarketContextValue {
   currency: CurrencyCode;
   setCurrency: React.Dispatch<React.SetStateAction<CurrencyCode>>;
   watchlist: string[];
-  toggleWatchlist: (id: string) => void;
+  toggleWatchlist: (id: string) => Promise<WatchlistMutationResult>;
+  watchlistSyncStatus: WatchlistSyncStatus;
+  watchlistSyncError: string | null;
+  retryWatchlistSync: () => void;
   positions: PortfolioPosition[];
   upsertPosition: (position: Omit<PortfolioPosition, 'updatedAt'>) => void;
   removePosition: (coinId: string) => void;
@@ -54,7 +57,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
   const [dataCurrency, setDataCurrency] = useState<CurrencyCode | null>(null);
   const requestVersion = useRef(0);
   const { currency, setCurrency } = useCurrency();
-  const { watchlist, toggleWatchlist } = useWatchlist();
+  const { watchlist, toggleWatchlist, syncStatus: watchlistSyncStatus, syncError: watchlistSyncError, retryWatchlistSync } = useWatchlist();
   const { positions, upsertPosition: persistPosition, removePosition: persistRemovePosition } = usePortfolio();
   const { history: aiHistory, saveAnalysis: saveAIAnalysis } = useAIHistory();
   const { history: positionHistory, recordPositionEvent } = usePositionHistory();
@@ -107,17 +110,14 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     }
 
     try {
-      const [nextCoins, nextMetrics] = await Promise.all([
-        fetchMarketData(currency, force),
-        fetchMarketMetrics(currency, force),
-      ]);
+      const snapshot = await fetchMarketSnapshot(currency, force);
       if (requestVersion.current !== version) return;
-      setCoins(nextCoins);
-      setMetrics(nextMetrics);
+      setCoins(snapshot.coins);
+      setMetrics(snapshot.metrics);
       setDataCurrency(currency);
-      setLastUpdated(new Date().toISOString());
-      setError(null);
-      evaluateAlerts(nextCoins);
+      setLastUpdated(snapshot.asOf);
+      setError(snapshot.warning);
+      evaluateAlerts(snapshot.coins);
     } catch (loadError) {
       if (requestVersion.current !== version) return;
       setError(getApiErrorMessage(loadError));
@@ -157,6 +157,9 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     setCurrency,
     watchlist,
     toggleWatchlist,
+    watchlistSyncStatus,
+    watchlistSyncError,
+    retryWatchlistSync,
     positions,
     upsertPosition,
     removePosition,
@@ -201,6 +204,9 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     removePosition,
     setCurrency,
     toggleWatchlist,
+    watchlistSyncStatus,
+    watchlistSyncError,
+    retryWatchlistSync,
     upsertPosition,
     watchlist,
     addAlert,

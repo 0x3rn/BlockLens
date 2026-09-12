@@ -165,8 +165,13 @@ const CoinTable: React.FC<CoinTableProps> = ({
                         type="button"
                         className={`watch-button ${isWatched ? 'star-active' : 'star-inactive'}`}
                         onClick={() => {
-                          toggleWatchlist(coin.id);
-                          showToast(`${coin.name} ${isWatched ? 'removed from' : 'added to'} your watchlist.`, isWatched ? 'info' : 'success');
+                          void toggleWatchlist(coin.id).then((result) => {
+                            if (!result.ok) {
+                              showToast(result.error, 'error');
+                              return;
+                            }
+                            showToast(`${coin.name} ${result.action} ${result.action === 'removed' ? 'from' : 'to'} your watchlist.`, result.action === 'removed' ? 'info' : 'success');
+                          });
                         }}
                         aria-label={`${isWatched ? 'Remove' : 'Add'} ${coin.name} ${isWatched ? 'from' : 'to'} watchlist`}
                         aria-pressed={isWatched}

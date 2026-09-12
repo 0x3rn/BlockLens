@@ -348,6 +348,10 @@ img { max-width: 100%; }
 .mini-empty, .portfolio-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 9px; padding: 35px 18px; color: var(--text-muted); }
 .mini-empty h3, .portfolio-empty h3 { color: var(--text-primary); font-size: .95rem; }
 .mini-empty p, .portfolio-empty p { max-width: 460px; color: var(--text-secondary); font-size: .75rem; line-height: 1.55; }
+.watchlist-sync-state { display: flex; align-items: center; gap: 9px; margin: 10px 0 14px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 10px; color: var(--text-secondary); background: var(--surface); }
+.watchlist-sync-state p { flex: 1; font-size: .76rem; line-height: 1.45; }
+.watchlist-sync-state.error { color: var(--down); border-color: rgba(255,91,116,.25); background: var(--down-dim); }
+.watchlist-sync-state button { color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
 .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
 .portfolio-card { display: flex; flex-direction: column; gap: 12px; padding: 15px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 11px; }

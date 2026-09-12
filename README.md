@@ -28,7 +28,7 @@ BlockLens is educational software, not a brokerage or financial adviser. Market 
 | Client | React 19, TypeScript, React Router 7 |
 | Tooling | Vite 8, Vitest, Testing Library |
 | Charts | Recharts |
-| Market data | CoinGecko public API |
+| Market data | CoinGecko through a cached BlockLens server snapshot, with direct public history/detail requests |
 | AI provider | Google Gemini through Vertex AI's OpenAI-compatible endpoint |
 | Telegram | Telegram Bot API through a Vercel webhook |
 | Persistence | Supabase Auth + Postgres for signed-in data, browser `localStorage` fallback for signed-out data |
@@ -125,8 +125,8 @@ Users can then send `/ai-analysis` or the menu-safe `/ai_analysis` alias. The bo
 
 ## Data and privacy behavior
 
-- CoinGecko supplies public market snapshots and history; no CoinGecko key is stored in the client.
-- Signed-out watchlists, positions, paper-futures trades, history, alert rules, and display currency stay in this browser and synchronize only across tabs on the same origin. Signed-in watchlists, positions, paper-futures trades, history, and alert rules hydrate from Supabase and persist only to the user's account; they are not written to local browser storage. Display currency is session-only for signed-in users.
+- CoinGecko supplies public market snapshots and history; the initial snapshot is cached server-side and no CoinGecko key is stored in the client.
+- Signed-out watchlists, positions, paper-futures trades, history, alert rules, and display currency stay in this browser and synchronize only across tabs on the same origin. Signed-in watchlists, positions, paper-futures trades, history, and alert rules hydrate from Supabase and persist only to the user's account; watchlist changes are shown as saved only after Supabase confirms them. Display currency is session-only for signed-in users.
 - Supabase's own auth session may remain in its client-managed storage so a user can stay signed in after reopening the browser; this stores authentication state, not portfolio or trading records.
 - Portfolio CSV export is generated entirely in the browser.
 - Alerts are not push notifications and do not run in the background after the page closes.
@@ -147,7 +147,8 @@ Before deployment:
 ## Project layout
 
 ```text
-api/analyze.ts              server-only AI proxy and response validation
+api/analyze.ts              server-only AI proxy, authoritative market-history loading, and response validation
+api/market/snapshot.ts      cached initial market snapshot endpoint
 api/telegram/webhook.ts     Telegram commands, inline keyboards, callbacks, and AI responses
 api/telegram/coins.ts       Cached top-100 market list for the bot
 api/_market.ts              Shared server-side CoinGecko snapshot and analysis payload builder
@@ -159,7 +160,7 @@ src/components/             market table, charts, navigation, detail views
 src/context/                shared market refresh and alert state
 src/hooks/                  resilient local persistence and page metadata
 src/pages/                  dashboard, markets, analysis, portfolio, history, futures, compare, 404
-src/services/api.ts         cached CoinGecko client and AI request client
+src/services/api.ts         cached BlockLens/CoinGecko clients and compact AI request client
 src/styles/                 responsive BlockLens visual system
 src/types/crypto.ts         domain types
 src/utils/format.ts         adaptive currency/number/date formatting

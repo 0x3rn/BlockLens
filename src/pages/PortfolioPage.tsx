@@ -24,6 +24,9 @@ const PortfolioPage: React.FC = () => {
     currency,
     watchlist,
     toggleWatchlist,
+    watchlistSyncStatus,
+    watchlistSyncError,
+    retryWatchlistSync,
     positions,
     upsertPosition,
     removePosition,
@@ -109,11 +112,14 @@ const PortfolioPage: React.FC = () => {
     showToast(`${coinName} removed from your portfolio.`, 'info');
   };
 
-  const handleToggleWatchlist = (coinId: string) => {
+  const handleToggleWatchlist = async (coinId: string) => {
     const coin = coins.find((item) => item.id === coinId);
-    const wasWatched = watchlist.includes(coinId);
-    toggleWatchlist(coinId);
-    showToast(`${coin?.name ?? coinId} ${wasWatched ? 'removed from' : 'added to'} your watchlist.`, wasWatched ? 'info' : 'success');
+    const result = await toggleWatchlist(coinId);
+    if (!result.ok) {
+      showToast(result.error, 'error');
+      return;
+    }
+    showToast(`${coin?.name ?? coinId} ${result.action} ${result.action === 'removed' ? 'from' : 'to'} your watchlist.`, result.action === 'removed' ? 'info' : 'success');
   };
 
   const submitAlert = (event: FormEvent) => {
@@ -271,6 +277,8 @@ const PortfolioPage: React.FC = () => {
 
       <section aria-labelledby="watchlist-title">
         <div className="section-heading"><div><span className="eyebrow"><Star size={13} /> Saved assets</span><h2 id="watchlist-title">Watchlist</h2></div><span className="section-count">{watchlist.length} assets</span></div>
+        {user && watchlistSyncStatus === 'loading' && <div className="watchlist-sync-state" role="status"><ShieldCheck size={17} /><p>Loading your saved account watchlist…</p></div>}
+        {user && watchlistSyncError && <div className="watchlist-sync-state error" role="alert"><ShieldCheck size={17} /><p>{watchlistSyncError}</p><button type="button" onClick={retryWatchlistSync}>Retry sync</button></div>}
         {watchlist.length === 0 ? (
           <div className="portfolio-empty"><Star size={38} /><h3>Your watchlist is empty</h3><p>Add assets from Markets using the star button.</p><Link className="primary-button" to="/markets">Browse markets</Link></div>
         ) : (
@@ -281,11 +289,11 @@ const PortfolioPage: React.FC = () => {
                   <div className="portfolio-card-top"><img src={coin.image} alt="" className="portfolio-coin-img" /><div className="portfolio-coin-info"><span className="portfolio-coin-name">{coin.name}</span><span className="portfolio-coin-symbol">{coin.symbol.toUpperCase()}</span></div><span className="portfolio-rank">#{coin.market_cap_rank}</span></div>
                   <div className="portfolio-card-price"><span className="portfolio-price">{formatCurrency(coin.current_price, currency)}</span><span className={`portfolio-change ${(coin.price_change_percentage_24h ?? 0) >= 0 ? 'up' : 'down'}`}>{formatPercent(coin.price_change_percentage_24h)}</span></div>
                 </Link>
-                <button type="button" className="remove-watch-button" onClick={() => handleToggleWatchlist(coin.id)}><Trash2 size={14} /> Remove</button>
+                <button type="button" className="remove-watch-button" onClick={() => void handleToggleWatchlist(coin.id)}><Trash2 size={14} /> Remove</button>
               </article>
             ))}
             {unavailableWatchIds.map((id) => (
-              <article className="portfolio-card unavailable-card" key={id}><div><strong>{id}</strong><p>Outside the current top-100 snapshot. It remains saved.</p></div><button type="button" className="remove-watch-button" onClick={() => handleToggleWatchlist(id)}><Trash2 size={14} /> Remove</button></article>
+              <article className="portfolio-card unavailable-card" key={id}><div><strong>{id}</strong><p>Outside the current top-100 snapshot. It remains saved.</p></div><button type="button" className="remove-watch-button" onClick={() => void handleToggleWatchlist(id)}><Trash2 size={14} /> Remove</button></article>
             ))}
           </div>
         )}

@@ -4,9 +4,37 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { MarketProvider } from './context/MarketContext';
-import { fetchMarketData, fetchMarketMetrics } from './services/api';
+import { fetchMarketSnapshot } from './services/api';
 
 vi.mock('./services/api', () => ({
+  fetchMarketSnapshot: vi.fn().mockResolvedValue({
+    coins: [{
+      id: 'bitcoin',
+      symbol: 'btc',
+      name: 'Bitcoin',
+      image: 'https://example.com/bitcoin.png',
+      current_price: 65000.123,
+      market_cap: 1_280_000_000_000,
+      market_cap_rank: 1,
+      total_volume: 42_000_000_000,
+      high_24h: 66000,
+      low_24h: 63000,
+      price_change_percentage_24h: 2.5,
+      price_change_percentage_7d_in_currency: 4.2,
+      price_change_percentage_30d_in_currency: 8.1,
+    }],
+    metrics: {
+      totalMarketCap: 2_500_000_000_000,
+      totalVolume24h: 95_000_000_000,
+      marketCapChange24h: 1.2,
+      bitcoinDominance: 52,
+      activeCryptocurrencies: 14000,
+      trackedMarkets: 1100,
+      updatedAt: Date.now(),
+    },
+    warning: null,
+    asOf: '2026-09-12T09:00:00.000Z',
+  }),
   fetchMarketData: vi.fn().mockResolvedValue([{
     id: 'bitcoin',
     symbol: 'btc',
@@ -61,8 +89,7 @@ describe('BlockLens routes', () => {
   });
 
   it('keeps independent market tools visible when the global snapshot fails', async () => {
-    vi.mocked(fetchMarketData).mockRejectedValueOnce(new Error('offline'));
-    vi.mocked(fetchMarketMetrics).mockRejectedValueOnce(new Error('offline'));
+    vi.mocked(fetchMarketSnapshot).mockRejectedValueOnce(new Error('offline'));
     renderRoute();
     expect(await screen.findByRole('heading', { name: /market snapshot unavailable/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /the exchange tape can keep listening/i })).toBeInTheDocument();

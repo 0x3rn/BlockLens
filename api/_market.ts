@@ -1,18 +1,23 @@
-import type { AIAnalysisRequest, ChartData, Coin, CurrencyCode } from '../src/types/crypto.ts';
+import type { AIAnalysisRequest, AIAnalysisSelectionRequest, ChartData, Coin, CurrencyCode, MarketMetrics } from '../src/types/crypto.ts';
 import type { ServerEnvironment } from './_env.ts';
 
 const COINGECKO_DEMO_BASE_URL = 'https://api.coingecko.com/api/v3';
 const COINGECKO_PRO_BASE_URL = 'https://pro-api.coingecko.com/api/v3';
 const DEFAULT_CURRENCY: CurrencyCode = 'usd';
+const supportedCurrencies = new Set<CurrencyCode>(['usd', 'eur', 'gbp', 'ngn']);
 const MARKET_CACHE_TTL = 45_000;
 const HISTORY_CACHE_TTL = 120_000;
+const METRICS_CACHE_TTL = 45_000;
+const COINGECKO_RETRY_DELAY_MS = 250;
 
 type CacheEntry<T> = { value: T; expiresAt: number };
 
 const marketCache = new Map<string, CacheEntry<Coin[]>>();
 const historyCache = new Map<string, CacheEntry<ChartData[]>>();
+const metricsCache = new Map<string, CacheEntry<MarketMetrics>>();
 const marketPending = new Map<string, Promise<Coin[]>>();
 const historyPending = new Map<string, Promise<ChartData[]>>();
+const metricsPending = new Map<string, Promise<MarketMetrics>>();
 
 type CoinGeckoRequestConfig = {
   baseUrl: string;
@@ -47,39 +52,50 @@ const getCoinGeckoConfig = (environment: ServerEnvironment = {}): CoinGeckoReque
 const fetchJson = async <T>(path: string, params: Record<string, string>, environment?: ServerEnvironment): Promise<T> => {
   const query = new URLSearchParams(params).toString();
   const config = getCoinGeckoConfig(environment);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
-  try {
-    let response = await fetch(`${config.baseUrl}${path}?${query}`, {
-      headers: config.headers,
-      signal: controller.signal,
-    });
-    let usedKeylessFallback = false;
+  let lastError: unknown;
 
-    // A rejected key should not take down the bot or server-side analysis.
-    // Retry auth failures once without credentials; do not fall back on 429s
-    // or upstream 5xx responses, where another request would add load.
-    if (!response.ok && config.plan !== 'keyless' && (response.status === 401 || response.status === 403)) {
-      await response.text().catch(() => undefined);
-      response = await fetch(`${COINGECKO_DEMO_BASE_URL}${path}?${query}`, {
-        headers: { Accept: 'application/json' },
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    let shouldRetry = true;
+    try {
+      let response = await fetch(`${config.baseUrl}${path}?${query}`, {
+        headers: config.headers,
         signal: controller.signal,
       });
-      usedKeylessFallback = true;
-    }
+      let usedKeylessFallback = false;
 
-    if (!response.ok) {
+      // A rejected key should not take down the bot or server-side analysis.
+      if (!response.ok && config.plan !== 'keyless' && (response.status === 401 || response.status === 403)) {
+        await response.text().catch(() => undefined);
+        response = await fetch(`${COINGECKO_DEMO_BASE_URL}${path}?${query}`, {
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+        usedKeylessFallback = true;
+      }
+
+      if (response.ok) return await response.json() as T;
+
       // Keep enough of CoinGecko's response to make deployment errors
       // actionable, while avoiding a full upstream payload in Worker logs.
       const detail = (await response.text()).replace(/\s+/g, ' ').trim().slice(0, 240);
       const suffix = detail ? `: ${detail}` : '.';
       const mode = usedKeylessFallback ? `${config.plan} request and keyless fallback` : `${config.plan} request`;
-      throw new Error(`CoinGecko ${mode} returned ${response.status}${suffix}`);
+      lastError = new Error(`CoinGecko ${mode} returned ${response.status}${suffix}`);
+      shouldRetry = response.status === 429 || response.status >= 500;
+      if (!shouldRetry) throw lastError;
+    } catch (error) {
+      lastError = error;
+      if (!shouldRetry || attempt === 1) throw error;
+    } finally {
+      clearTimeout(timeout);
     }
-    return await response.json() as T;
-  } finally {
-    clearTimeout(timeout);
+
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, COINGECKO_RETRY_DELAY_MS));
   }
+
+  throw lastError instanceof Error ? lastError : new Error('CoinGecko request failed.');
 };
 
 const withCache = async <T>(
@@ -123,6 +139,40 @@ export const fetchTopCoins = async (
   }, environment))
 );
 
+export const fetchGlobalMarketMetrics = async (
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+  environment?: ServerEnvironment,
+): Promise<MarketMetrics> => withCache(
+  metricsCache,
+  metricsPending,
+  `metrics:${currency}`,
+  METRICS_CACHE_TTL,
+  async () => {
+    const payload = await fetchJson<{
+      data?: {
+        total_market_cap?: Partial<Record<CurrencyCode, number>>;
+        total_volume?: Partial<Record<CurrencyCode, number>>;
+        market_cap_change_percentage_24h_usd?: number;
+        market_cap_percentage?: { btc?: number };
+        active_cryptocurrencies?: number;
+        markets?: number;
+        updated_at?: number;
+      };
+    }>('/global', {}, environment);
+    const data = payload.data;
+    if (!data) throw new Error('CoinGecko returned incomplete global market metrics.');
+    return {
+      totalMarketCap: data.total_market_cap?.[currency] ?? 0,
+      totalVolume24h: data.total_volume?.[currency] ?? 0,
+      marketCapChange24h: data.market_cap_change_percentage_24h_usd ?? 0,
+      bitcoinDominance: data.market_cap_percentage?.btc ?? 0,
+      activeCryptocurrencies: data.active_cryptocurrencies ?? 0,
+      trackedMarkets: data.markets ?? 0,
+      updatedAt: (data.updated_at ?? Math.floor(Date.now() / 1_000)) * 1_000,
+    };
+  },
+);
+
 const fetchCoinHistory = async (
   coinId: string,
   days: number,
@@ -148,6 +198,16 @@ const fetchCoinHistory = async (
 });
 
 const isSupportedCoinId = (coinId: string) => /^[a-z0-9-]{1,100}$/.test(coinId);
+
+export const normalizeAnalysisSelection = (value: unknown): AIAnalysisSelectionRequest | null => {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Record<string, unknown>;
+  const keys = Object.keys(candidate);
+  if (keys.length !== 2 || !keys.every((key) => key === 'coinId' || key === 'currency')) return null;
+  if (typeof candidate.coinId !== 'string' || !isSupportedCoinId(candidate.coinId)) return null;
+  if (!supportedCurrencies.has(candidate.currency as CurrencyCode)) return null;
+  return { coinId: candidate.coinId, currency: candidate.currency as CurrencyCode };
+};
 
 /** Build the exact payload accepted by api/analyze.ts for a selected coin. */
 export const buildAnalysisRequest = async (
