@@ -7,7 +7,8 @@ import { useMarket } from '../context/MarketContext';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { getApiErrorMessage, requestAIAnalysis } from '../services/api';
-import { AIAnalysis } from '../types/crypto';
+import { analysisModeDefinitions, isAIAnalysisMode } from '../config/analysisModes';
+import { AIAnalysis, AIAnalysisMode } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 
 const AnalysisPage: React.FC = () => {
@@ -15,6 +16,8 @@ const AnalysisPage: React.FC = () => {
   const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCoin = searchParams.get('coin');
+  const requestedMode = searchParams.get('mode');
+  const [analysisMode, setAnalysisMode] = useState<AIAnalysisMode>(isAIAnalysisMode(requestedMode) ? requestedMode : 'swing');
   const selectedCoin = useMemo(() => (
     coins.find((coin) => coin.id === requestedCoin) ?? coins[0] ?? null
   ), [coins, requestedCoin]);
@@ -31,7 +34,15 @@ const AnalysisPage: React.FC = () => {
   useEffect(() => {
     setAnalysis(null);
     setError(null);
-  }, [selectedCoin?.id, currency]);
+  }, [selectedCoin?.id, currency, analysisMode]);
+
+  const selectMode = (mode: AIAnalysisMode) => {
+    setAnalysisMode(mode);
+    const next = new URLSearchParams(searchParams);
+    next.set('mode', mode);
+    if (selectedCoin) next.set('coin', selectedCoin.id);
+    setSearchParams(next);
+  };
 
   useEffect(() => {
     if (!analysis) return undefined;
@@ -49,6 +60,7 @@ const AnalysisPage: React.FC = () => {
       const result = await requestAIAnalysis({
         coinId: selectedCoin.id,
         currency,
+        mode: analysisMode,
       });
       setAnalysis(result);
       saveAIAnalysis({
@@ -59,7 +71,7 @@ const AnalysisPage: React.FC = () => {
         price: selectedCoin.current_price,
         analysis: result,
       });
-      showToast(`${selectedCoin.name} trading analysis generated.`);
+      showToast(`${selectedCoin.name} ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis generated.`);
     } catch (analysisError) {
       const message = getApiErrorMessage(analysisError);
       setError(message);
@@ -77,14 +89,14 @@ const AnalysisPage: React.FC = () => {
           <div>
             <span className="eyebrow">Technical trade planning</span>
             <h1>AI Trading Analysis</h1>
-            <p>Conditional LONG, SHORT, or NO TRADE setups built from supplied market history and explicit risk controls.</p>
+            <p>Choose a trading horizon, then combine closed exchange candles, computed indicators, and verified market catalysts.</p>
           </div>
         </div>
         <label className="coin-select-control">
           <span>Analyze asset</span>
           <select
             value={selectedCoin?.id ?? ''}
-            onChange={(event) => setSearchParams({ coin: event.target.value })}
+            onChange={(event) => setSearchParams({ coin: event.target.value, mode: analysisMode })}
             disabled={coins.length === 0}
           >
             {coins.map((coin) => <option value={coin.id} key={coin.id}>{coin.name} ({coin.symbol.toUpperCase()})</option>)}
@@ -96,6 +108,30 @@ const AnalysisPage: React.FC = () => {
         <AlertTriangle size={17} className="warning-icon" aria-hidden="true" />
         <p><strong>Educational research only.</strong> Trade setups can be incomplete or wrong and are not personalized financial advice. Verify the levels independently, size risk conservatively, and never trade solely from generated output.</p>
       </div>
+
+      <section className="analysis-mode-panel" aria-labelledby="analysis-horizon-title">
+        <div className="analysis-mode-intro">
+          <span className="eyebrow">Analysis horizon</span>
+          <h2 id="analysis-horizon-title">Match the evidence to the trade</h2>
+          <p>Each mode loads a different set of closed Binance Spot candles and searches for catalysts relevant to its holding period.</p>
+        </div>
+        <div className="analysis-mode-options" role="radiogroup" aria-label="Trading horizon">
+          {(Object.entries(analysisModeDefinitions) as Array<[AIAnalysisMode, (typeof analysisModeDefinitions)[AIAnalysisMode]]>).map(([mode, definition]) => (
+            <button
+              type="button"
+              role="radio"
+              aria-checked={analysisMode === mode}
+              className={`analysis-mode-option${analysisMode === mode ? ' is-active' : ''}`}
+              onClick={() => selectMode(mode)}
+              key={mode}
+            >
+              <span>{definition.label}</span>
+              <strong>{definition.holdingPeriod}</strong>
+              <small>{definition.description}</small>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {selectedCoin ? (
         <>
@@ -114,9 +150,10 @@ const AnalysisPage: React.FC = () => {
                   {formatPercent(selectedCoin.price_change_percentage_24h)} today
                 </span>
               </div>
-              <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading} aria-busy={loading}>
+              {currency !== 'usd' && <p className="analysis-currency-note">Switch display currency to USD to use verified Binance Spot candle analysis.</p>}
+              <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading || currency !== 'usd'} aria-busy={loading}>
                 {loading ? <LoaderCircle size={17} className="is-spinning" aria-hidden="true" /> : <Bot size={17} aria-hidden="true" />}
-                {loading ? 'Generating trading analysis' : 'Generate trading analysis'}
+                {loading ? `Generating ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis` : `Generate ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis`}
               </button>
               <Link className="text-link" to={`/coin/${selectedCoin.id}`}>
                 Open full asset profile <ArrowRight size={14} aria-hidden="true" />
@@ -145,7 +182,7 @@ const AnalysisPage: React.FC = () => {
             <section ref={briefRef} className="ai-brief" aria-labelledby="brief-headline">
               <div className="brief-heading">
                 <div>
-                  <span className={`stance-badge ${analysis.stance}`}>{analysis.stance} bias</span>
+                  <span className={`stance-badge ${analysis.stance}`}>{analysisModeDefinitions[analysis.mode].label} · {analysis.stance} bias</span>
                   <h2 id="brief-headline">{analysis.headline}</h2>
                   <p>{analysis.summary}</p>
                 </div>
@@ -197,17 +234,17 @@ const AnalysisPage: React.FC = () => {
               <section className={`trade-setup-card ${analysis.tradeSetup.signal}`} aria-labelledby="trade-setup-title">
                 <div className="trade-setup-heading">
                   <span className="trade-setup-icon"><Crosshair size={19} aria-hidden="true" /></span>
-                  <div><span className="eyebrow">Conditional setup</span><h3 id="trade-setup-title">{analysis.tradeSetup.signal === 'no-trade' ? 'NO TRADE' : analysis.tradeSetup.signal.toUpperCase()}</h3></div>
+                  <div><span className="eyebrow">{analysis.mode === 'long-term' ? 'Position thesis' : 'Conditional setup'}</span><h3 id="trade-setup-title">{analysis.tradeSetup.signal === 'no-trade' ? 'NO TRADE' : analysis.tradeSetup.signal.toUpperCase()}</h3></div>
                   <span className={`signal-badge ${analysis.tradeSetup.signal}`}>{analysis.tradeSetup.signal === 'no-trade' ? 'Wait' : analysis.tradeSetup.signal}</span>
                 </div>
                 <p className="trade-rationale">{analysis.tradeSetup.rationale}</p>
                 <dl className="trade-levels">
-                  <div><dt>Entry zone</dt><dd>{analysis.tradeSetup.entryZone}</dd></div>
-                  <div><dt>Stop loss</dt><dd>{analysis.tradeSetup.stopLoss}</dd></div>
+                  <div><dt>{analysis.mode === 'long-term' ? 'Accumulation zone' : 'Entry zone'}</dt><dd>{analysis.tradeSetup.entryZone}</dd></div>
+                  <div><dt>{analysis.mode === 'long-term' ? 'Thesis invalidation' : 'Stop loss'}</dt><dd>{analysis.tradeSetup.stopLoss}</dd></div>
                   <div><dt>Risk / reward</dt><dd>{analysis.tradeSetup.riskReward}</dd></div>
-                  <div><dt>Take profit</dt><dd>{analysis.tradeSetup.takeProfitLevels.join(' · ')}</dd></div>
+                  <div><dt>{analysis.mode === 'long-term' ? 'Review objectives' : 'Take profit'}</dt><dd>{analysis.tradeSetup.takeProfitLevels.join(' · ')}</dd></div>
                 </dl>
-                <div className="trade-risk-notes"><p><strong>Invalidation:</strong> {analysis.tradeSetup.invalidation}</p><p><strong>Position risk:</strong> {analysis.tradeSetup.positionRisk}</p></div>
+                <div className="trade-risk-notes"><p><strong>Invalidation:</strong> {analysis.tradeSetup.invalidation}</p><p><strong>{analysis.mode === 'long-term' ? 'Allocation risk' : 'Position risk'}:</strong> {analysis.tradeSetup.positionRisk}</p></div>
               </section>
 
               <div className="levels-grid">

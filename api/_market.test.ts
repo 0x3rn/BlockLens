@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchTopCoins, normalizeAnalysisSelection } from './_market';
+import { fetchAnalysisCandleSeries, fetchTopCoins, normalizeAnalysisSelection } from './_market';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -8,16 +8,18 @@ afterEach(() => {
 
 describe('analysis selection boundary', () => {
   it('accepts a supported coin and currency without trusting browser market values', () => {
-    expect(normalizeAnalysisSelection({ coinId: 'bitcoin', currency: 'usd' })).toEqual({ coinId: 'bitcoin', currency: 'usd' });
+    expect(normalizeAnalysisSelection({ coinId: 'bitcoin', currency: 'usd', mode: 'short-term' })).toEqual({ coinId: 'bitcoin', currency: 'usd', mode: 'short-term' });
   });
 
   it.each([
     null,
     {},
-    { coinId: '../bitcoin', currency: 'usd' },
-    { coinId: 'bitcoin', currency: 'cad' },
-    { coinId: 'bitcoin', currency: 'usd', price: 1 },
-    { coinId: 'x'.repeat(101), currency: 'usd' },
+    { coinId: 'bitcoin', currency: 'usd' },
+    { coinId: '../bitcoin', currency: 'usd', mode: 'swing' },
+    { coinId: 'bitcoin', currency: 'cad', mode: 'swing' },
+    { coinId: 'bitcoin', currency: 'usd', mode: 'day-trade' },
+    { coinId: 'bitcoin', currency: 'usd', mode: 'swing', price: 1 },
+    { coinId: 'x'.repeat(101), currency: 'usd', mode: 'swing' },
   ])('rejects malformed or unsupported selections: %j', (value) => {
     expect(normalizeAnalysisSelection(value)).toBeNull();
   });
@@ -47,5 +49,34 @@ describe('CoinGecko resilience', () => {
 
     await expect(fetchTopCoins('gbp')).rejects.toThrow('returned 400: bad request');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('exchange candle loading', () => {
+  it('resolves a verified pair, loads every short-term timeframe, and excludes open candles', async () => {
+    const now = Date.now();
+    const klines = Array.from({ length: 51 }, (_, index) => [
+      now - ((52 - index) * 60_000), '100', '102', '99', '101', '1000',
+      index === 50 ? now + 60_000 : now - ((51 - index) * 60_000),
+    ]);
+    const fetchMock = vi.fn().mockImplementation((input: string | URL) => {
+      const url = String(input);
+      if (url.includes('/tickers?')) return Promise.resolve(new Response(JSON.stringify({ tickers: [{ base: 'BTC', target: 'USDT', market: { identifier: 'binance' }, is_anomaly: false, is_stale: false }] }), { status: 200 }));
+      return Promise.resolve(new Response(JSON.stringify(klines), { status: 200 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchAnalysisCandleSeries('bitcoin-candle-test', 'usd', 'short-term');
+
+    expect(result.map(({ interval }) => interval)).toEqual(['15m', '1h', '4h', '1d']);
+    expect(result.every(({ symbol, candles }) => symbol === 'BTCUSDT' && candles.length === 50)).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('rejects unsupported display currencies before calling a provider', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(fetchAnalysisCandleSeries('bitcoin-currency-test', 'eur', 'swing')).rejects.toThrow('requires USD');
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

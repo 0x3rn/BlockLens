@@ -20,7 +20,8 @@ const isResearch = (value: unknown): boolean => {
 const isAIAnalysis = (value: unknown): value is AIAnalysis => {
   if (!value || typeof value !== 'object') return false;
   const analysis = value as AIAnalysis;
-  return typeof analysis.headline === 'string'
+  return (analysis.mode === undefined || ['short-term', 'swing', 'long-term'].includes(analysis.mode))
+    && typeof analysis.headline === 'string'
     && typeof analysis.summary === 'string'
     && ['bullish', 'neutral', 'bearish'].includes(analysis.stance)
     && typeof analysis.confidence === 'number'
@@ -81,7 +82,7 @@ const toHistoryEntry = (row: {
     coinSymbol: row.coin_symbol,
     currency: row.currency as CurrencyCode,
     price: Number(row.price),
-    analysis: row.analysis,
+    analysis: { ...(row.analysis as unknown as AIAnalysis), mode: (row.analysis as unknown as AIAnalysis).mode ?? 'swing' },
     createdAt: row.created_at,
   };
 };

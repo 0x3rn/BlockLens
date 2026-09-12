@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { formatCurrency, formatDateTime } from '../utils/format';
+import { analysisModeDefinitions } from '../config/analysisModes';
 
 type HistoryView = 'analysis' | 'positions';
 
@@ -93,6 +94,7 @@ const HistoryPage: React.FC = () => {
                       <p className="history-summary">{entry.analysis.summary}</p>
                       <div className="history-meta-row">
                         <span className={`signal-badge ${setup.signal}`}>{setup.signal === 'no-trade' ? 'No trade' : setup.signal}</span>
+                        <span>{analysisModeDefinitions[entry.analysis.mode ?? 'swing'].label}</span>
                         <span>{entry.analysis.confidence}% confidence</span>
                         <span>{formatCurrency(entry.price, entry.currency)}</span>
                         <time dateTime={entry.createdAt}>{formatDateTime(entry.createdAt)}</time>

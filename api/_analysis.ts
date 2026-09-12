@@ -1,4 +1,5 @@
-import type { AIAnalysis, AIAnalysisRequest, AnalysisCatalyst, AnalysisResearch, ChartData } from '../src/types/crypto.ts';
+import type { AIAnalysis, AIAnalysisCandleInterval, AIAnalysisCandleSeries, AIAnalysisRequest, AnalysisCatalyst, AnalysisResearch, CandleData, ChartData } from '../src/types/crypto.ts';
+import { analysisModeDefinitions, isAIAnalysisMode } from '../src/config/analysisModes.ts';
 import type { ServerEnvironment } from './_env.ts';
 import { requestVertexCompletion, requestVertexGroundedResearch } from './_vertex-fetch.ts';
 
@@ -34,6 +35,125 @@ const normalizeChart = (value: unknown): ChartData[] | null => {
   return normalized;
 };
 
+const normalizeCandles = (value: unknown): CandleData[] | null => {
+  if (!Array.isArray(value) || value.length < 50 || value.length > 1_000) return null;
+  const normalized: CandleData[] = [];
+  let previousTimestamp = -Infinity;
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null;
+    const candle = item as Record<string, unknown>;
+    const timestamp = Number(candle.timestamp);
+    const open = Number(candle.open);
+    const high = Number(candle.high);
+    const low = Number(candle.low);
+    const close = Number(candle.close);
+    const volume = Number(candle.volume);
+    if (![timestamp, open, high, low, close, volume].every(Number.isFinite)
+      || timestamp <= previousTimestamp
+      || open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0
+      || high < Math.max(open, close) || low > Math.min(open, close)) return null;
+    normalized.push({ timestamp, open, high, low, close, volume });
+    previousTimestamp = timestamp;
+  }
+  return normalized;
+};
+
+const normalizeCandleSeries = (value: unknown, mode: AIAnalysisRequest['mode']): AIAnalysisCandleSeries[] | null => {
+  if (!Array.isArray(value)) return null;
+  const expected = analysisModeDefinitions[mode].intervals.map(({ interval }) => interval);
+  if (value.length !== expected.length) return null;
+  const normalized = value.map((item): AIAnalysisCandleSeries | null => {
+    if (!item || typeof item !== 'object') return null;
+    const series = item as Record<string, unknown>;
+    if (!expected.includes(series.interval as AIAnalysisCandleInterval)
+      || series.source !== 'binance-spot'
+      || typeof series.symbol !== 'string'
+      || !/^[A-Z0-9]{2,30}$/.test(series.symbol)) return null;
+    const candles = normalizeCandles(series.candles);
+    return candles ? {
+      interval: series.interval as AIAnalysisCandleInterval,
+      source: 'binance-spot',
+      symbol: series.symbol,
+      candles,
+    } : null;
+  });
+  if (normalized.some((series) => !series)) return null;
+  const intervals = normalized.map((series) => series!.interval);
+  if (new Set(intervals).size !== expected.length || expected.some((interval) => !intervals.includes(interval))) return null;
+  return normalized as AIAnalysisCandleSeries[];
+};
+
+export type CandleFeatures = {
+  interval: AIAnalysisCandleInterval;
+  candleCount: number;
+  firstClosedAt: string;
+  lastClosedAt: string;
+  lastClose: number;
+  changePercent: number;
+  rangeLow: number;
+  rangeHigh: number;
+  ema20: number;
+  ema50: number;
+  rsi14: number;
+  atr14: number;
+  atrPercent: number;
+  relativeVolume20: number;
+  trend: 'bullish' | 'bearish' | 'mixed';
+};
+
+const roundMetric = (value: number) => Number(value.toPrecision(8));
+
+const ema = (values: number[], period: number) => {
+  if (values.length < period) throw new Error(`At least ${period} values are required to compute EMA${period}.`);
+  const multiplier = 2 / (period + 1);
+  const seed = values.slice(0, period).reduce((total, value) => total + value, 0) / period;
+  return values.slice(period).reduce((current, value) => ((value - current) * multiplier) + current, seed);
+};
+
+export const computeCandleFeatures = (series: AIAnalysisCandleSeries): CandleFeatures => {
+  const candles = series.candles;
+  if (candles.length < 50) throw new Error('At least 50 closed candles are required to compute analysis features.');
+  const closes = candles.map(({ close }) => close);
+  const recent = candles.slice(-20);
+  const changes = closes.slice(1).map((close, index) => close - closes[index]);
+  const gains = changes.slice(-14).map((change) => Math.max(change, 0));
+  const losses = changes.slice(-14).map((change) => Math.max(-change, 0));
+  const averageGain = gains.reduce((total, value) => total + value, 0) / 14;
+  const averageLoss = losses.reduce((total, value) => total + value, 0) / 14;
+  const rsi = averageLoss === 0 ? (averageGain === 0 ? 50 : 100) : 100 - (100 / (1 + (averageGain / averageLoss)));
+  const trueRanges = candles.slice(1).map((candle, index) => Math.max(
+    candle.high - candle.low,
+    Math.abs(candle.high - candles[index].close),
+    Math.abs(candle.low - candles[index].close),
+  ));
+  const atr = trueRanges.slice(-14).reduce((total, value) => total + value, 0) / 14;
+  const historicalVolumes = candles.slice(-21, -1).map(({ volume }) => volume);
+  const averageVolume = historicalVolumes.reduce((total, value) => total + value, 0) / historicalVolumes.length;
+  const ema20 = ema(closes.slice(-Math.min(closes.length, 100)), 20);
+  const ema50 = ema(closes.slice(-Math.min(closes.length, 200)), 50);
+  const lastClose = closes.at(-1)!;
+  const trend = lastClose > ema20 && ema20 > ema50 ? 'bullish'
+    : lastClose < ema20 && ema20 < ema50 ? 'bearish'
+      : 'mixed';
+  return {
+    interval: series.interval,
+    candleCount: candles.length,
+    firstClosedAt: new Date(candles[0].timestamp).toISOString(),
+    lastClosedAt: new Date(candles.at(-1)!.timestamp).toISOString(),
+    lastClose: roundMetric(lastClose),
+    changePercent: roundMetric(((lastClose / closes[0]) - 1) * 100),
+    rangeLow: roundMetric(Math.min(...recent.map(({ low }) => low))),
+    rangeHigh: roundMetric(Math.max(...recent.map(({ high }) => high))),
+    ema20: roundMetric(ema20),
+    ema50: roundMetric(ema50),
+    rsi14: roundMetric(rsi),
+    atr14: roundMetric(atr),
+    atrPercent: roundMetric((atr / lastClose) * 100),
+    relativeVolume20: roundMetric(averageVolume > 0 ? candles.at(-1)!.volume / averageVolume : 0),
+    trend,
+  };
+};
+
 const isText = (value: unknown, maxLength = 1_200): value is string => (
   typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength
 );
@@ -64,6 +184,8 @@ export const normalizeAIAnalysisRequest = (value: unknown): AIAnalysisRequest | 
   const chartData7d = normalizeChart(input.chartData7d);
   const chartData30d = normalizeChart(input.chartData30d);
   const chartData1y = normalizeChart(input.chartData1y);
+  if (!isAIAnalysisMode(input.mode)) return null;
+  const candleSeries = normalizeCandleSeries(input.candleSeries, input.mode);
   const valid = typeof input.coinId === 'string'
     && /^[a-z0-9-]{1,100}$/.test(input.coinId)
     && typeof input.coinName === 'string'
@@ -72,6 +194,7 @@ export const normalizeAIAnalysisRequest = (value: unknown): AIAnalysisRequest | 
     && isCurrency(input.currency)
     && Number.isFinite(input.price)
     && Number.isFinite(input.change24h)
+    && Boolean(candleSeries)
     && Boolean(chartData7d)
     && chartData7d!.length >= 2
     && Boolean(chartData30d)
@@ -88,6 +211,8 @@ export const normalizeAIAnalysisRequest = (value: unknown): AIAnalysisRequest | 
     currency: input.currency as AIAnalysisRequest['currency'],
     price: input.price as number,
     change24h: input.change24h as number,
+    mode: input.mode,
+    candleSeries: candleSeries!,
     chartData7d: chartData7d!,
     chartData30d: chartData30d!,
     chartData1y: chartData1y!,
@@ -117,15 +242,20 @@ const isCatalyst = (value: unknown): value is AnalysisCatalyst => {
   return isText(catalyst.title, 200)
     && ['confirmed', 'reported', 'uncertain'].includes(catalyst.status as string)
     && isText(catalyst.eventDate, 40)
-    && ['24h', '7d', '30d', 'ongoing'].includes(catalyst.window as string)
+    && ['24h', '7d', '30d', '90d', '1y', 'ongoing'].includes(catalyst.window as string)
     && ['bullish', 'bearish', 'mixed', 'uncertain'].includes(catalyst.conditionalEffect as string)
     && isText(catalyst.mechanism, 500);
 };
 
-const buildResearchPrompt = (input: AIAnalysisRequest) => `You are a source-constrained market-research assistant. Google Search grounding is enabled.
+const buildResearchPrompt = (input: AIAnalysisRequest) => {
+  const researchWindows = input.mode === 'short-term' ? 'the next 24 hours and 7 days'
+    : input.mode === 'swing' ? 'the next 7, 30, and 90 days'
+      : 'the next 30 days, 90 days, and 1 year';
+  return `You are a source-constrained market-research assistant. Google Search grounding is enabled.
 
 Research target: ${input.coinName} (CoinGecko ID: ${input.coinId})
-Research objective: find material, dated coin-specific and macro catalysts over the next 24 hours, 7 days, and 30 days.
+Analysis horizon: ${analysisModeDefinitions[input.mode].label} (${analysisModeDefinitions[input.mode].holdingPeriod})
+Research objective: find material, dated coin-specific and macro catalysts over ${researchWindows}.
 Current UTC time: ${new Date().toISOString()}
 
 Rules:
@@ -141,10 +271,11 @@ Rules:
 Return this exact JSON shape:
 {
   "researchAsOfUtc":"ISO-8601 timestamp",
-  "coinCatalysts":[{"title":"string","status":"confirmed|reported|uncertain","eventDate":"ISO-8601 date or unknown","publishedDate":"ISO-8601 date or unknown","window":"24h|7d|30d|ongoing","conditionalEffect":"bullish|bearish|mixed|uncertain","mechanism":"brief factual explanation"}],
-  "macroCatalysts":[{"title":"string","status":"confirmed|reported|uncertain","eventDate":"ISO-8601 date or unknown","publishedDate":"ISO-8601 date or unknown","window":"24h|7d|30d|ongoing","conditionalEffect":"bullish|bearish|mixed|uncertain","mechanism":"brief factual explanation"}],
+  "coinCatalysts":[{"title":"string","status":"confirmed|reported|uncertain","eventDate":"ISO-8601 date or unknown","publishedDate":"ISO-8601 date or unknown","window":"24h|7d|30d|90d|1y|ongoing","conditionalEffect":"bullish|bearish|mixed|uncertain","mechanism":"brief factual explanation"}],
+  "macroCatalysts":[{"title":"string","status":"confirmed|reported|uncertain","eventDate":"ISO-8601 date or unknown","publishedDate":"ISO-8601 date or unknown","window":"24h|7d|30d|90d|1y|ongoing","conditionalEffect":"bullish|bearish|mixed|uncertain","mechanism":"brief factual explanation"}],
   "researchLimits":["string"]
 }`;
+};
 
 const getGroundedResearch = async (input: AIAnalysisRequest, environment: ServerEnvironment): Promise<AnalysisResearch> => {
   try {
@@ -180,33 +311,55 @@ const getGroundedResearch = async (input: AIAnalysisRequest, environment: Server
 };
 
 const buildPrompt = (input: AIAnalysisRequest, research: AnalysisResearch) => {
+  const definition = analysisModeDefinitions[input.mode];
+  const modeRules = input.mode === 'short-term'
+    ? 'Use 15m for execution, 1H for momentum, 4H for structure, and 1D as the regime veto. Prefer NO TRADE when 1H and 4H conflict. The setup must fit a 6-hour to 3-day holding period.'
+    : input.mode === 'swing'
+      ? 'Use 4H for execution, 1D as the primary trend, and 1W as the regime veto. Prefer NO TRADE when daily and weekly structure conflict. The setup must fit a 3-day to 4-week holding period.'
+      : 'Use 1D for timing, 1W for primary structure, and 1M for the cycle regime. This is an investment thesis, not an intraday trade. The signal may be LONG or NO TRADE only; never return SHORT. Frame entry as an accumulation zone and the stop as thesis invalidation. The thesis must fit a 1-to-12-plus-month holding period.';
   const marketSnapshot = {
     coin: input.coinName,
     currency: input.currency,
     currentPrice: input.price,
     change24h: input.change24h,
     dataAsOf: input.dataAsOf,
-    sevenDay: samplePoints(input.chartData7d, 24),
-    thirtyDay: samplePoints(input.chartData30d, 30),
-    oneYear: samplePoints(input.chartData1y, 40),
+    analysisMode: input.mode,
+    intendedHoldingPeriod: definition.holdingPeriod,
+    exchangeCandleSeries: input.candleSeries.map((series) => ({
+      source: series.source,
+      symbol: series.symbol,
+      interval: series.interval,
+      features: computeCandleFeatures(series),
+      recentClosedCandles: series.candles.slice(-48),
+    })),
+    coinGeckoContext: {
+      note: 'Sampled spot-price and rolling-volume context; this is not OHLCV candle data.',
+      sevenDay: samplePoints(input.chartData7d, 24),
+      thirtyDay: samplePoints(input.chartData30d, 30),
+      oneYear: samplePoints(input.chartData1y, 40),
+    },
   };
 
   const verifiedResearch = research.status === 'grounded'
     ? { asOf: research.asOf, coinCatalysts: research.coinCatalysts, macroCatalysts: research.macroCatalysts }
     : null;
 
-  return `Create an educational market brief from the supplied price and volume history.
+  return `Create an educational ${definition.label.toLowerCase()} market brief using the supplied, closed exchange candles and computed features.
 
 Rules:
+- ${modeRules}
+- Respect the timeframe hierarchy above. Higher-timeframe structure can veto a lower-timeframe entry; a lower timeframe cannot override the higher-timeframe regime.
+- Computed features are deterministic inputs. Do not recalculate or invent indicators. RSI14 is simple 14-period RSI, ATR14 is simple 14-period true range, and relativeVolume20 compares the last closed candle with the preceding 20.
 - Provide one conditional technical setup: LONG, SHORT, or NO TRADE. Choose NO TRADE whenever the supplied data does not show a defensible edge.
 - The setup must include a price-based entry zone, stop loss, take-profit levels, risk/reward estimate, invalidation condition, and conservative position-risk note.
 - Never promise profit, imply certainty, recommend leverage, or present the setup as personalized financial advice.
 - Present uncertainty and three conditional scenarios: Bullish, Base, and Bearish.
-- Use only the supplied market data and, when present, the verified research object below. Do not invent news, sentiment, catalysts, indicators, or exact precision unsupported by those inputs.
+- Use only the supplied market data and, when present, the verified research object below. Do not invent news, sentiment, catalysts, indicators, candle values, or exact precision unsupported by those inputs.
 - If verified research is unavailable, do not imply that live news or events were considered.
 - Treat every catalyst as conditional. Do not make it the sole reason for a LONG or SHORT signal.
 - Support and resistance values must be expressed as human-readable price strings in ${input.currency.toUpperCase()}.
-- Confidence must be an integer from 0 to 100 and reflect data limitations.
+- Confidence must be an integer from 0 to 100 and reflect data limitations and cross-timeframe agreement. Cap confidence at 75 when live research is unavailable.
+- The timeframe field must match ${definition.holdingPeriod}; do not substitute another horizon.
 - Return valid JSON only with this exact shape:
 {
   "headline": "string",
@@ -274,14 +427,24 @@ const validateProviderAnalysis = (value: unknown): value is AIAnalysis => {
     && isText(analysis.methodology, 1_500);
 };
 
-const parseValidatedAnalysis = (content: string): AIAnalysis | null => {
+const buildMethodology = (input: AIAnalysisRequest) => {
+  const seriesSummary = input.candleSeries
+    .map((series) => `${series.candles.length} ${series.interval}`)
+    .join(', ');
+  const symbol = input.candleSeries[0]?.symbol ?? input.coinName;
+  return `${analysisModeDefinitions[input.mode].label} analysis used ${seriesSummary} closed Binance Spot candles for ${symbol}. EMA20, EMA50, RSI14, ATR14, relative volume, recent range, and trend were computed server-side, with sampled CoinGecko price and rolling-volume history used only as broader context. The current open candle was excluded.`;
+};
+
+const parseValidatedAnalysis = (content: string, input: AIAnalysisRequest): AIAnalysis | null => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(stripJsonFence(content));
   } catch {
     return null;
   }
-  return validateProviderAnalysis(parsed) ? parsed : null;
+  if (!validateProviderAnalysis(parsed)) return null;
+  if (input.mode === 'long-term' && parsed.tradeSetup.signal === 'short') return null;
+  return parsed;
 };
 
 export type ProviderKind = 'node' | 'fetch';
@@ -334,7 +497,7 @@ export const runAIAnalysis = async (
   try {
     const research = await getGroundedResearch(input, environment);
     const prompt = buildPrompt(input, research);
-    let analysis = parseValidatedAnalysis(await requestProviderContent(prompt, environment, provider));
+    let analysis = parseValidatedAnalysis(await requestProviderContent(prompt, environment, provider), input);
     if (!analysis) {
       // Models can occasionally omit or rename a field despite JSON mode. Retry
       // once with the same bounded inputs before surfacing a provider failure.
@@ -343,13 +506,17 @@ export const runAIAnalysis = async (
         `${prompt}\n\nFormatting correction: return the exact JSON object specified above. Include every required field, use the exact enum values and scenario labels, and add no Markdown or commentary.`,
         environment,
         provider,
-      ));
+      ), input);
     }
     if (!analysis) {
       throw new AnalysisError(502, 'The AI provider returned an invalid market brief.');
     }
     return {
       ...analysis,
+      mode: input.mode,
+      confidence: research.status === 'unavailable' ? Math.min(analysis.confidence, 75) : analysis.confidence,
+      timeframe: analysisModeDefinitions[input.mode].holdingPeriod,
+      methodology: buildMethodology(input),
       research,
       dataAsOf: input.dataAsOf,
       generatedAt: new Date().toISOString(),

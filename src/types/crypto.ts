@@ -3,7 +3,11 @@ export type CurrencyCode = 'usd' | 'eur' | 'gbp' | 'ngn';
 export interface AIAnalysisSelectionRequest {
   coinId: string;
   currency: CurrencyCode;
+  mode: AIAnalysisMode;
 }
+
+export type AIAnalysisMode = 'short-term' | 'swing' | 'long-term';
+export type AIAnalysisCandleInterval = '15m' | '1h' | '4h' | '1d' | '1w' | '1M';
 
 export interface Coin {
   id: string;
@@ -70,6 +74,13 @@ export interface CandleData {
   low: number;
   close: number;
   volume: number;
+}
+
+export interface AIAnalysisCandleSeries {
+  interval: AIAnalysisCandleInterval;
+  source: 'binance-spot';
+  symbol: string;
+  candles: CandleData[];
 }
 
 export interface LiveSpotTrade {
@@ -157,7 +168,7 @@ export interface AnalysisCatalyst {
   title: string;
   status: 'confirmed' | 'reported' | 'uncertain';
   eventDate: string;
-  window: '24h' | '7d' | '30d' | 'ongoing';
+  window: '24h' | '7d' | '30d' | '90d' | '1y' | 'ongoing';
   conditionalEffect: 'bullish' | 'bearish' | 'mixed' | 'uncertain';
   mechanism: string;
 }
@@ -172,6 +183,7 @@ export interface AnalysisResearch {
 }
 
 export interface AIAnalysis {
+  mode: AIAnalysisMode;
   headline: string;
   summary: string;
   stance: 'bullish' | 'neutral' | 'bearish';
@@ -291,6 +303,8 @@ export interface AIAnalysisRequest {
   currency: CurrencyCode;
   price: number;
   change24h: number;
+  mode: AIAnalysisMode;
+  candleSeries: AIAnalysisCandleSeries[];
   chartData7d: ChartData[];
   chartData30d: ChartData[];
   chartData1y: ChartData[];

@@ -39,6 +39,33 @@ const request = (body: unknown, method = 'POST') => ({
   headers: { 'x-forwarded-for': `198.51.100.${Math.floor(Math.random() * 100)}` },
 });
 
+const candles = Array.from({ length: 60 }, (_, index) => ({
+  timestamp: 1_700_000_000_000 + (index * 60_000),
+  open: 100 + index,
+  high: 102 + index,
+  low: 99 + index,
+  close: 101 + index,
+  volume: 1_000 + index,
+}));
+
+const swingSeries = ['4h', '1d', '1w'].map((interval) => ({
+  interval,
+  source: 'binance-spot',
+  symbol: 'BTCUSDT',
+  candles,
+}));
+
+const fullRequest = (overrides: Record<string, unknown> = {}) => {
+  const chart = [{ timestamp: 1, price: 95 }, { timestamp: 2, price: 105 }];
+  return {
+    coinId: 'bitcoin', coinName: 'Bitcoin', currency: 'usd', price: 105, change24h: 2,
+    mode: 'swing', candleSeries: swingSeries,
+    chartData7d: chart, chartData30d: chart, chartData1y: chart,
+    dataAsOf: '2026-08-30T00:00:00.000Z',
+    ...overrides,
+  };
+};
+
 describe('AI analysis function', () => {
   const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
   const originalCredentials = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
@@ -108,25 +135,19 @@ describe('AI analysis function', () => {
     ];
     const { response, getStatus, getBody } = createResponse();
 
-    await handler(request({
-      coinId: 'bitcoin',
-      coinName: 'Bitcoin',
-      currency: 'usd',
-      price: 105,
-      change24h: 2,
-      chartData7d: chart,
-      chartData30d: chart,
-      chartData1y: chart,
-      dataAsOf: '2026-08-30T00:00:00.000Z',
-    }), response);
+    await handler(request(fullRequest({ chartData7d: chart, chartData30d: chart, chartData1y: chart })), response);
 
     expect(getStatus()).toBe(200);
-    expect(getBody()).toMatchObject({ ...analysis, dataAsOf: '2026-08-30T00:00:00.000Z' });
+    const { methodology: _providerMethodology, timeframe: _providerTimeframe, ...expectedAnalysis } = analysis;
+    expect(getBody()).toMatchObject({ ...expectedAnalysis, mode: 'swing', timeframe: '3 days–4 weeks', dataAsOf: '2026-08-30T00:00:00.000Z' });
+    expect((getBody() as { methodology: string }).methodology).toContain('closed Binance Spot candles');
     expect(getBody()).toMatchObject({ research: { status: 'unavailable', coinCatalysts: [], macroCatalysts: [], sources: [] } });
     expect(getGemini).toHaveBeenCalledTimes(1);
     const providerRequest = createCompletion.mock.calls[0][0];
     expect(providerRequest.model).toBe('google/gemini-3.7-flash');
     expect(providerRequest.response_format).toEqual({ type: 'json_object' });
+    expect(providerRequest.messages[1].content).toContain('3-day to 4-week holding period');
+    expect(providerRequest.messages[1].content).toContain('"interval":"4h"');
     expect(JSON.stringify(providerRequest)).not.toContain('server-only-test-key');
     expect(JSON.stringify(providerRequest)).not.toContain('do-not-forward');
     expect(consumeAnalysisQuota).toHaveBeenCalledTimes(1);
@@ -155,13 +176,36 @@ describe('AI analysis function', () => {
     const chart = [{ timestamp: 1, price: 95 }, { timestamp: 2, price: 105 }];
     const { response, getStatus } = createResponse();
 
-    await handler(request({
-      coinId: 'bitcoin', coinName: 'Bitcoin', currency: 'usd', price: 105, change24h: 2,
-      chartData7d: chart, chartData30d: chart, chartData1y: chart, dataAsOf: '2026-08-30T00:00:00.000Z',
-    }), response);
+    await handler(request(fullRequest({ chartData7d: chart, chartData30d: chart, chartData1y: chart })), response);
 
     expect(getStatus()).toBe(200);
     expect(createCompletion).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects a short recommendation for long-term analysis', async () => {
+    process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
+    const invalidLongTerm = {
+      headline: 'Invalid short thesis', summary: 'This direction is disallowed.', stance: 'bearish', confidence: 70, risk: 'high', timeframe: '1 year',
+      supportLevels: ['$90'], resistanceLevels: ['$120'],
+      tradeSetup: { signal: 'short', rationale: 'Downtrend.', entryZone: '$100', stopLoss: '$110', takeProfitLevels: ['$90'], riskReward: '1:2', invalidation: 'Above $110', positionRisk: 'Small.' },
+      scenarios: [
+        { label: 'Bullish', trigger: 'Above $120', target: '$130', invalidatedBy: 'Below $110' },
+        { label: 'Base', trigger: 'Range', target: '$90-$120', invalidatedBy: 'Range break' },
+        { label: 'Bearish', trigger: 'Below $90', target: '$80', invalidatedBy: 'Above $100' },
+      ],
+      methodology: 'Provider text.',
+    };
+    const createCompletion = vi.fn().mockResolvedValue({ choices: [{ message: { content: JSON.stringify(invalidLongTerm) } }] });
+    vi.mocked(getGemini).mockResolvedValue({ chat: { completions: { create: createCompletion } } } as unknown as Awaited<ReturnType<typeof getGemini>>);
+    const longTermSeries = ['1d', '1w', '1M'].map((interval) => ({ interval, source: 'binance-spot', symbol: 'BTCUSDT', candles }));
+    const { response, getStatus } = createResponse();
+
+    await handler(request(fullRequest({ mode: 'long-term', candleSeries: longTermSeries })), response);
+
+    expect(getStatus()).toBe(502);
+    expect(createCompletion).toHaveBeenCalledTimes(2);
+    expect(createCompletion.mock.calls[0][0].messages[1].content).toContain('never return SHORT');
   });
 
   it('rejects oversized date representations before consuming shared quota', async () => {
@@ -170,17 +214,10 @@ describe('AI analysis function', () => {
     const chart = [{ timestamp: 1, price: 95 }, { timestamp: 2, price: 105 }];
     const { response, getStatus } = createResponse();
 
-    await handler(request({
-      coinId: 'bitcoin',
-      coinName: 'Bitcoin',
-      currency: 'usd',
-      price: 105,
-      change24h: 2,
-      chartData7d: chart,
-      chartData30d: chart,
-      chartData1y: chart,
+    await handler(request(fullRequest({
+      chartData7d: chart, chartData30d: chart, chartData1y: chart,
       dataAsOf: `Wed, 01 Jan 2020 00:00:00 GMT (${'IGNORE '.repeat(100)})`,
-    }), response);
+    })), response);
 
     expect(getStatus()).toBe(400);
     expect(consumeAnalysisQuota).not.toHaveBeenCalled();
@@ -192,9 +229,9 @@ describe('AI analysis function', () => {
     vi.mocked(buildAnalysisRequest).mockRejectedValue(new Error('upstream unavailable'));
     const { response, getStatus, getBody } = createResponse();
 
-    await handler(request({ coinId: 'bitcoin', currency: 'usd' }), response);
+    await handler(request({ coinId: 'bitcoin', currency: 'usd', mode: 'long-term' }), response);
 
-    expect(buildAnalysisRequest).toHaveBeenCalledWith('bitcoin', 'usd', expect.objectContaining({ GOOGLE_CLOUD_PROJECT: 'test-project' }));
+    expect(buildAnalysisRequest).toHaveBeenCalledWith('bitcoin', 'usd', expect.objectContaining({ GOOGLE_CLOUD_PROJECT: 'test-project' }), 'long-term');
     expect(getStatus()).toBe(502);
     expect(getBody()).toEqual({ error: 'The market history required for analysis is temporarily unavailable.' });
     expect(consumeAnalysisQuota).not.toHaveBeenCalled();

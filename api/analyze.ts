@@ -2,7 +2,7 @@ import { processEnvironment } from './_env.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from './_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from './_rate-limit.ts';
 import { AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest, runAIAnalysis } from './_analysis.ts';
-import { buildAnalysisRequest, normalizeAnalysisSelection } from './_market.ts';
+import { AnalysisMarketDataError, buildAnalysisRequest, normalizeAnalysisSelection } from './_market.ts';
 
 type ResponseLike = {
   status: (code: number) => ResponseLike;
@@ -56,9 +56,10 @@ export default async function handler(request: RequestLike, response: ResponseLi
       const selection = normalizeAnalysisSelection(body);
       if (!selection) return response.status(400).json({ error: 'The selected asset is incomplete or invalid.' });
       try {
-        input = await buildAnalysisRequest(selection.coinId, selection.currency, environment);
+        input = await buildAnalysisRequest(selection.coinId, selection.currency, environment, selection.mode);
       } catch (error) {
         console.error('Analysis market-data fetch failed:', error instanceof Error ? error.message : 'Unknown provider error');
+        if (error instanceof AnalysisMarketDataError) return response.status(error.status).json({ error: error.message });
         return response.status(502).json({ error: 'The market history required for analysis is temporarily unavailable.' });
       }
     }

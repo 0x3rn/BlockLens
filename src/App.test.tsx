@@ -1,10 +1,11 @@
 import React from 'react';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { MarketProvider } from './context/MarketContext';
-import { fetchMarketSnapshot } from './services/api';
+import { fetchMarketSnapshot, requestAIAnalysis } from './services/api';
 
 vi.mock('./services/api', () => ({
   fetchMarketSnapshot: vi.fn().mockResolvedValue({
@@ -107,6 +108,19 @@ describe('BlockLens routes', () => {
     expect(await screen.findByRole('heading', { name: /futures simulator/i })).toBeInTheDocument();
     expect(screen.getByText(/no exchange orders/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open long/i })).toBeInTheDocument();
+  });
+
+  it('sends the selected analysis horizon in the compact server request', async () => {
+    vi.mocked(requestAIAnalysis).mockRejectedValueOnce(new Error('stop after request capture'));
+    const user = userEvent.setup();
+    renderRoute('/analysis?coin=bitcoin');
+    const longTermLabel = await screen.findByText('Long-term', {}, { timeout: 3000 });
+    const longTerm = longTermLabel.closest('button');
+    expect(longTerm).not.toBeNull();
+    await user.click(longTerm!);
+    await user.click(screen.getByRole('button', { name: /generate long-term analysis/i }));
+    await waitFor(() => expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'bitcoin', currency: 'usd', mode: 'long-term' }));
+    expect(longTerm).toHaveAttribute('aria-checked', 'true');
   });
 
   it('does not evaluate a saved price threshold against a different currency feed', async () => {

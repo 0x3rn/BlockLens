@@ -1,7 +1,7 @@
 import { runAIAnalysis, AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest } from '../api/_analysis.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from '../api/_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from '../api/_rate-limit.ts';
-import { buildAnalysisRequest, fetchGlobalMarketMetrics, fetchTopCoins, normalizeAnalysisSelection } from '../api/_market.ts';
+import { AnalysisMarketDataError, buildAnalysisRequest, fetchGlobalMarketMetrics, fetchTopCoins, normalizeAnalysisSelection } from '../api/_market.ts';
 import { processTelegramUpdate } from '../api/telegram/webhook.ts';
 import type { ServerEnvironment } from '../api/_env.ts';
 import type { TelegramUpdate } from '../api/telegram/_telegram.ts';
@@ -111,9 +111,10 @@ const handleAnalysis = async (request: Request, env: WorkerEnvironment): Promise
       const selection = normalizeAnalysisSelection(body.value);
       if (!selection) return json({ error: 'The selected asset is incomplete or invalid.' }, 400);
       try {
-        input = await buildAnalysisRequest(selection.coinId, selection.currency, env);
+        input = await buildAnalysisRequest(selection.coinId, selection.currency, env, selection.mode);
       } catch (error) {
         console.error('Cloudflare analysis market-data fetch failed:', error instanceof Error ? error.message : 'Unknown provider error');
+        if (error instanceof AnalysisMarketDataError) return json({ error: error.message }, error.status);
         return json({ error: 'The market history required for analysis is temporarily unavailable.' }, 502);
       }
     }

@@ -1,4 +1,5 @@
-import type { AIAnalysisRequest, AIAnalysisSelectionRequest, ChartData, Coin, CurrencyCode, MarketMetrics } from '../src/types/crypto.ts';
+import type { AIAnalysisCandleInterval, AIAnalysisCandleSeries, AIAnalysisMode, AIAnalysisRequest, AIAnalysisSelectionRequest, CandleData, ChartData, Coin, CurrencyCode, MarketMetrics } from '../src/types/crypto.ts';
+import { analysisModeDefinitions, isAIAnalysisMode } from '../src/config/analysisModes.ts';
 import type { ServerEnvironment } from './_env.ts';
 
 const COINGECKO_DEMO_BASE_URL = 'https://api.coingecko.com/api/v3';
@@ -9,6 +10,11 @@ const MARKET_CACHE_TTL = 45_000;
 const HISTORY_CACHE_TTL = 120_000;
 const METRICS_CACHE_TTL = 45_000;
 const COINGECKO_RETRY_DELAY_MS = 250;
+const CANDLE_CACHE_TTL = 60_000;
+const BINANCE_MARKET_ENDPOINTS = [
+  'https://data-api.binance.vision/api/v3/klines',
+  'https://api.binance.com/api/v3/klines',
+];
 
 type CacheEntry<T> = { value: T; expiresAt: number };
 
@@ -18,6 +24,15 @@ const metricsCache = new Map<string, CacheEntry<MarketMetrics>>();
 const marketPending = new Map<string, Promise<Coin[]>>();
 const historyPending = new Map<string, Promise<ChartData[]>>();
 const metricsPending = new Map<string, Promise<MarketMetrics>>();
+const candleCache = new Map<string, CacheEntry<AIAnalysisCandleSeries>>();
+const candlePending = new Map<string, Promise<AIAnalysisCandleSeries>>();
+
+export class AnalysisMarketDataError extends Error {
+  constructor(public readonly status: 400 | 422 | 502, message: string) {
+    super(message);
+    this.name = 'AnalysisMarketDataError';
+  }
+}
 
 type CoinGeckoRequestConfig = {
   baseUrl: string;
@@ -197,16 +212,106 @@ const fetchCoinHistory = async (
     .filter((point) => Number.isFinite(point.timestamp) && Number.isFinite(point.price));
 });
 
+const fetchBinancePair = async (coinId: string, environment?: ServerEnvironment): Promise<string> => {
+  const payload = await fetchJson<{
+    tickers?: Array<{ base?: string; target?: string; market?: { identifier?: string }; is_anomaly?: boolean; is_stale?: boolean }>;
+  }>(`/coins/${encodeURIComponent(coinId)}/tickers`, {
+    exchange_ids: 'binance',
+    include_exchange_logo: 'false',
+    page: '1',
+    order: 'volume_desc',
+    depth: 'false',
+  }, environment);
+  const ticker = payload.tickers?.find((item) => (
+    item.market?.identifier === 'binance'
+    && item.target?.toUpperCase() === 'USDT'
+    && item.is_anomaly !== true
+    && item.is_stale !== true
+    && typeof item.base === 'string'
+    && /^[A-Z0-9]{1,20}$/i.test(item.base)
+  ));
+  if (!ticker?.base) throw new AnalysisMarketDataError(422, 'This asset does not have a verified Binance Spot USDT market for candle analysis.');
+  return `${ticker.base.toUpperCase()}USDT`;
+};
+
+const parseBinanceCandles = (payload: unknown): CandleData[] => {
+  if (!Array.isArray(payload)) return [];
+  const now = Date.now();
+  return payload.flatMap((row): CandleData[] => {
+    if (!Array.isArray(row) || row.length < 7) return [];
+    const timestamp = Number(row[0]);
+    const closeTime = Number(row[6]);
+    const values = row.slice(1, 6).map(Number);
+    if (!Number.isFinite(timestamp) || !Number.isFinite(closeTime) || closeTime > now || values.some((value) => !Number.isFinite(value))) return [];
+    const [open, high, low, close, volume] = values;
+    if (open <= 0 || high <= 0 || low <= 0 || close <= 0 || volume < 0 || high < low) return [];
+    return [{ timestamp, open, high, low, close, volume }];
+  }).sort((a, b) => a.timestamp - b.timestamp);
+};
+
+const fetchBinanceCandleSeries = async (
+  symbol: string,
+  interval: AIAnalysisCandleInterval,
+  limit: number,
+): Promise<AIAnalysisCandleSeries> => withCache(
+  candleCache,
+  candlePending,
+  `${symbol}:${interval}:${limit}`,
+  CANDLE_CACHE_TTL,
+  async () => {
+    let lastError: unknown;
+    for (const endpoint of BINANCE_MARKET_ENDPOINTS) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12_000);
+      try {
+        const url = new URL(endpoint);
+        url.search = new URLSearchParams({ symbol, interval, limit: String(limit) }).toString();
+        const response = await fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
+        if (!response.ok) {
+          const detail = (await response.text()).replace(/\s+/g, ' ').trim().slice(0, 160);
+          throw new Error(`Binance returned ${response.status}${detail ? `: ${detail}` : ''}`);
+        }
+        const candles = parseBinanceCandles(await response.json());
+        if (candles.length < 50) throw new Error(`Binance returned only ${candles.length} closed ${interval} candles.`);
+        return { interval, source: 'binance-spot', symbol, candles };
+      } catch (error) {
+        lastError = error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error('Binance candle data is unavailable.');
+  },
+);
+
+export const fetchAnalysisCandleSeries = async (
+  coinId: string,
+  currency: CurrencyCode,
+  mode: AIAnalysisMode,
+  environment?: ServerEnvironment,
+): Promise<AIAnalysisCandleSeries[]> => {
+  if (currency !== 'usd') throw new AnalysisMarketDataError(400, 'Multi-timeframe exchange analysis currently requires USD. Switch the display currency to USD and retry.');
+  const symbol = await fetchBinancePair(coinId, environment);
+  const definitions = analysisModeDefinitions[mode].intervals;
+  const results = await Promise.allSettled(definitions.map(({ interval, limit }) => fetchBinanceCandleSeries(symbol, interval, limit)));
+  const series = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+  if (series.length !== definitions.length) {
+    throw new AnalysisMarketDataError(502, `Complete ${analysisModeDefinitions[mode].label.toLowerCase()} exchange candle coverage is temporarily unavailable.`);
+  }
+  return series;
+};
+
 const isSupportedCoinId = (coinId: string) => /^[a-z0-9-]{1,100}$/.test(coinId);
 
 export const normalizeAnalysisSelection = (value: unknown): AIAnalysisSelectionRequest | null => {
   if (!value || typeof value !== 'object') return null;
   const candidate = value as Record<string, unknown>;
   const keys = Object.keys(candidate);
-  if (keys.length !== 2 || !keys.every((key) => key === 'coinId' || key === 'currency')) return null;
+  if (keys.length !== 3 || !keys.every((key) => key === 'coinId' || key === 'currency' || key === 'mode')) return null;
   if (typeof candidate.coinId !== 'string' || !isSupportedCoinId(candidate.coinId)) return null;
   if (!supportedCurrencies.has(candidate.currency as CurrencyCode)) return null;
-  return { coinId: candidate.coinId, currency: candidate.currency as CurrencyCode };
+  if (!isAIAnalysisMode(candidate.mode)) return null;
+  return { coinId: candidate.coinId, currency: candidate.currency as CurrencyCode, mode: candidate.mode };
 };
 
 /** Build the exact payload accepted by api/analyze.ts for a selected coin. */
@@ -214,6 +319,7 @@ export const buildAnalysisRequest = async (
   coinId: string,
   currency: CurrencyCode = DEFAULT_CURRENCY,
   environment?: ServerEnvironment,
+  mode: AIAnalysisMode = 'swing',
 ): Promise<AIAnalysisRequest> => {
   if (!isSupportedCoinId(coinId)) throw new Error('That coin identifier is not valid.');
 
@@ -221,10 +327,11 @@ export const buildAnalysisRequest = async (
   const coin = coins.find((item) => item.id === coinId);
   if (!coin) throw new Error('That coin is no longer in the current top-100 market snapshot.');
 
-  const [chartData7d, chartData30d, chartData1y] = await Promise.all([
+  const [chartData7d, chartData30d, chartData1y, candleSeries] = await Promise.all([
     fetchCoinHistory(coin.id, 7, currency, environment),
     fetchCoinHistory(coin.id, 30, currency, environment),
     fetchCoinHistory(coin.id, 365, currency, environment),
+    fetchAnalysisCandleSeries(coin.id, currency, mode, environment),
   ]);
 
   const dataAsOf = coin.last_updated ?? new Date().toISOString();
@@ -234,6 +341,8 @@ export const buildAnalysisRequest = async (
     currency,
     price: coin.current_price,
     change24h: coin.price_change_percentage_24h ?? 0,
+    mode,
+    candleSeries,
     chartData7d,
     chartData30d,
     chartData1y,
