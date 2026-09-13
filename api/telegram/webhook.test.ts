@@ -95,7 +95,7 @@ describe('Telegram AI analysis commands', () => {
       coin({ id: 'a-coin-id-that-is-intentionally-longer-than-telegram-callback-data-should-embed-directly' }),
       coin({ id: 'ethereum', name: 'Ethereum', symbol: 'eth', market_cap_rank: 2 }),
     ]);
-    await processTelegramUpdate(messageUpdate('/ai_short@BlockLensBot'), environment);
+    await processTelegramUpdate(messageUpdate('/short_term_trade@BlockLensBot'), environment);
     const keyboard = vi.mocked(sendMessage).mock.calls[0][3];
     const callbacks = keyboard?.inline_keyboard.flat()
       .map((button) => button.callback_data).filter((value): value is string => Boolean(value)) ?? [];
@@ -157,8 +157,8 @@ describe('Telegram AI analysis commands', () => {
   it('lists direct horizon commands in help', async () => {
     await processTelegramUpdate(messageUpdate('/help'), environment);
     const text = vi.mocked(sendMessage).mock.calls[0][1];
-    expect(text).toContain('/ai_short');
-    expect(text).toContain('/ai_swing');
-    expect(text).toContain('/ai_long');
+    expect(text).toContain('/short_term_trade');
+    expect(text).toContain('/swing_trade');
+    expect(text).toContain('/long_term_trade');
   });
 });

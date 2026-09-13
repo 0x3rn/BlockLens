@@ -331,6 +331,9 @@ const handleMessage = async (message: TelegramMessage, environment: ServerEnviro
   const text = message.text?.trim().toLowerCase() ?? '';
   const command = text.split(/\s+/)[0]?.split('@')[0];
   const directModes: Record<string, AIAnalysisMode> = {
+    '/short_term_trade': 'short-term',
+    '/swing_trade': 'swing',
+    '/long_term_trade': 'long-term',
     '/ai_short': 'short-term',
     '/ai_short_term': 'short-term',
     '/ai_swing': 'swing',
@@ -341,9 +344,9 @@ const handleMessage = async (message: TelegramMessage, environment: ServerEnviro
     await sendMessage(message.chat.id, [
       '<b>BlockLens AI commands</b>',
       '/ai_analysis — choose an analysis horizon',
-      '/ai_short — short-term analysis (6 hours–3 days)',
-      '/ai_swing — swing analysis (3 days–4 weeks)',
-      '/ai_long — long-term analysis (1–12+ months)',
+      '/short_term_trade — short-term analysis (6 hours–3 days)',
+      '/swing_trade — swing analysis (3 days–4 weeks)',
+      '/long_term_trade — long-term analysis (1–12+ months)',
     ].join('\n'), environment);
     return;
   }

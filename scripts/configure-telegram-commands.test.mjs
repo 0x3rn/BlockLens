@@ -3,6 +3,9 @@ import { configureTelegramCommands, telegramCommands } from './configure-telegra
 
 describe('Telegram command-menu configuration', () => {
   it('defines valid, unique Telegram commands', () => {
+    expect(telegramCommands.map(({ command }) => command)).toEqual([
+      'ai_analysis', 'short_term_trade', 'swing_trade', 'long_term_trade', 'help',
+    ]);
     expect(new Set(telegramCommands.map(({ command }) => command)).size).toBe(telegramCommands.length);
     for (const { command, description } of telegramCommands) {
       expect(command).toMatch(/^[a-z0-9_]{1,32}$/);

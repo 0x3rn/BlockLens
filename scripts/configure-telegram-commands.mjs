@@ -2,9 +2,9 @@ import { pathToFileURL } from 'node:url';
 
 export const telegramCommands = [
   { command: 'ai_analysis', description: 'Choose an analysis horizon' },
-  { command: 'ai_short', description: 'Short-term analysis (6 hours to 3 days)' },
-  { command: 'ai_swing', description: 'Swing analysis (3 days to 4 weeks)' },
-  { command: 'ai_long', description: 'Long-term analysis (1 to 12+ months)' },
+  { command: 'short_term_trade', description: 'Short-term trade: 6 hours to 3 days' },
+  { command: 'swing_trade', description: 'Swing trade: 3 days to 4 weeks' },
+  { command: 'long_term_trade', description: 'Long-term trade: 1 to 12+ months' },
   { command: 'help', description: 'Show BlockLens bot commands' },
 ];
 
