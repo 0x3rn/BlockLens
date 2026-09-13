@@ -3,7 +3,8 @@ import { processEnvironment, type ServerEnvironment } from '../_env.ts';
 import { consumeAnalysisQuota } from '../_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from '../_rate-limit.ts';
 import { isAIAnalysisConfigured, normalizeAIAnalysisRequest, runAIAnalysis, type ProviderKind } from '../_analysis.ts';
-import type { AIAnalysis, AIAnalysisRequest, Coin } from '../../src/types/crypto.ts';
+import { analysisModeDefinitions } from '../../src/config/analysisModes.ts';
+import type { AIAnalysis, AIAnalysisMode, AIAnalysisRequest, Coin } from '../../src/types/crypto.ts';
 import {
   answerCallbackQuery,
   chunkTelegramHtml,
@@ -34,6 +35,34 @@ type RequestLike = {
 
 const PAGE_SIZE = 12;
 const currency = 'usd' as const;
+type TelegramModeCode = 'short' | 'swing' | 'long';
+
+const modeCodes: Record<AIAnalysisMode, TelegramModeCode> = {
+  'short-term': 'short',
+  swing: 'swing',
+  'long-term': 'long',
+};
+
+const modesByCode: Record<TelegramModeCode, AIAnalysisMode> = {
+  short: 'short-term',
+  swing: 'swing',
+  long: 'long-term',
+};
+
+const parseModeCode = (value: string): AIAnalysisMode | null => modesByCode[value as TelegramModeCode] ?? null;
+
+const modePickerKeyboard = (): InlineKeyboardMarkup => ({
+  inline_keyboard: [
+    [{ text: '⚡ Short-term · 6h–3d', callback_data: 'ai:mode:short' }],
+    [{ text: '↗ Swing · 3d–4w', callback_data: 'ai:mode:swing' }],
+    [{ text: '◉ Long-term · 1–12m+', callback_data: 'ai:mode:long' }],
+  ],
+});
+
+const modePickerText = [
+  '<b>AI market analysis</b>',
+  'Choose a trading horizon. Each mode uses different closed candles and searches for catalysts relevant to that period.',
+].join('\n');
 
 const coinsForPage = (coins: Coin[], page: number) => {
   const pageCount = Math.max(1, Math.ceil(coins.length / PAGE_SIZE));
@@ -50,36 +79,39 @@ const coinButtonText = (coin: Coin) => {
   return `#${coin.market_cap_rank ?? '?'} ${label}`.slice(0, 62);
 };
 
-const coinListKeyboard = (coins: Coin[], page: number): InlineKeyboardMarkup => {
+const coinListKeyboard = (coins: Coin[], page: number, mode: AIAnalysisMode): InlineKeyboardMarkup => {
   const view = coinsForPage(coins, page);
+  const modeCode = modeCodes[mode];
   const rows = [] as { text: string; callback_data: string }[][];
   for (let index = 0; index < view.items.length; index += 2) {
-    const row = view.items.slice(index, index + 2).map((coin) => ({
+    const row = view.items.slice(index, index + 2).map((coin, rowOffset) => ({
       text: coinButtonText(coin),
-      callback_data: `ai:coin:${coin.id}`,
+      callback_data: `ai:coin:${modeCode}:${view.page}:${index + rowOffset}`,
     }));
     rows.push(row);
   }
 
   const navigation = [] as { text: string; callback_data: string }[];
-  if (view.page > 0) navigation.push({ text: '‹ Previous', callback_data: `ai:page:${view.page - 1}` });
-  if (view.page < view.pageCount - 1) navigation.push({ text: 'Next ›', callback_data: `ai:page:${view.page + 1}` });
+  if (view.page > 0) navigation.push({ text: '‹ Previous', callback_data: `ai:page:${modeCode}:${view.page - 1}` });
+  if (view.page < view.pageCount - 1) navigation.push({ text: 'Next ›', callback_data: `ai:page:${modeCode}:${view.page + 1}` });
   if (navigation.length > 0) rows.push(navigation);
+  rows.push([{ text: 'Change horizon', callback_data: 'ai:modes' }]);
   return { inline_keyboard: rows };
 };
 
-const coinListText = (page: number, total: number) => {
+const coinListText = (page: number, total: number, mode: AIAnalysisMode) => {
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(page, 0), pageCount - 1);
+  const definition = analysisModeDefinitions[mode];
   return [
-    '<b>AI trading analysis</b>',
+    `<b>${escapeHtml(definition.label)} AI analysis · ${escapeHtml(definition.holdingPeriod)}</b>`,
     `Choose a coin · ${safePage + 1} of ${pageCount}`,
-    'The brief uses the latest available market snapshot.',
+    escapeHtml(definition.description),
   ].join('\n');
 };
 
-const backToCoinsKeyboard = (page = 0): InlineKeyboardMarkup => ({
-  inline_keyboard: [[{ text: 'Back to coins', callback_data: `ai:page:${page}` }]],
+const backToCoinsKeyboard = (mode: AIAnalysisMode, page = 0): InlineKeyboardMarkup => ({
+  inline_keyboard: [[{ text: 'Back to coins', callback_data: `ai:page:${modeCodes[mode]}:${page}` }], [{ text: 'Change horizon', callback_data: 'ai:modes' }]],
 });
 
 const readBody = (request: RequestLike): unknown => {
@@ -98,19 +130,25 @@ const getHeader = (request: RequestLike, name: string): string | undefined => {
 
 const sendCoinPicker = async (
   chatId: number,
+  mode: AIAnalysisMode,
   page = 0,
   environment: ServerEnvironment,
   message?: TelegramMessage,
 ) => {
   const coins = await fetchTopCoins(currency, environment);
   const view = coinsForPage(coins, page);
-  const text = coinListText(view.page, coins.length);
-  const keyboard = coinListKeyboard(coins, view.page);
+  const text = coinListText(view.page, coins.length, mode);
+  const keyboard = coinListKeyboard(coins, view.page, mode);
   if (message) {
     await editMessageText(chatId, message.message_id, text, environment, keyboard);
   } else {
     await sendMessage(chatId, text, environment, keyboard);
   }
+};
+
+const sendModePicker = async (chatId: number, environment: ServerEnvironment, message?: TelegramMessage) => {
+  if (message) await editMessageText(chatId, message.message_id, modePickerText, environment, modePickerKeyboard());
+  else await sendMessage(chatId, modePickerText, environment, modePickerKeyboard());
 };
 
 const generateAnalysis = async (
@@ -139,21 +177,26 @@ const generateAnalysis = async (
 
 const formatAnalysis = (coin: Coin, analysis: AIAnalysis) => {
   const setup = analysis.tradeSetup;
+  const definition = analysisModeDefinitions[analysis.mode];
+  const isLongTerm = analysis.mode === 'long-term';
   const signal = setup.signal === 'no-trade' ? 'NO TRADE' : setup.signal.toUpperCase();
+  const catalysts = [...analysis.research.coinCatalysts, ...analysis.research.macroCatalysts];
   const lines = [
-    `<b>${escapeHtml(coin.name)} · AI trading analysis</b>`,
+    `<b>${escapeHtml(coin.name)} · ${escapeHtml(definition.label)} AI analysis</b>`,
+    `<b>Horizon:</b> ${escapeHtml(definition.holdingPeriod)}`,
     `<b>Signal:</b> ${escapeHtml(signal)} · <b>Confidence:</b> ${analysis.confidence}%`,
     `<b>Bias:</b> ${escapeHtml(analysis.stance)} · <b>Risk:</b> ${escapeHtml(analysis.risk)}`,
     '',
-    `<b>Summary</b>\n${escapeHtml(analysis.summary)}`,
+    `<b>${escapeHtml(analysis.headline)}</b>\n${escapeHtml(analysis.summary)}`,
     '',
-    `<b>Conditional setup</b>`,
-    `<b>Entry:</b> ${escapeHtml(setup.entryZone)}`,
-    `<b>Stop loss:</b> ${escapeHtml(setup.stopLoss)}`,
-    `<b>Take profit:</b> ${escapeHtml(setup.takeProfitLevels.join(' · '))}`,
+    `<b>${isLongTerm ? 'Position thesis' : 'Conditional setup'}</b>`,
+    `<b>${isLongTerm ? 'Accumulation zone' : 'Entry'}:</b> ${escapeHtml(setup.entryZone)}`,
+    `<b>${isLongTerm ? 'Thesis invalidation' : 'Stop loss'}:</b> ${escapeHtml(setup.stopLoss)}`,
+    `<b>${isLongTerm ? 'Review objectives' : 'Take profit'}:</b> ${escapeHtml(setup.takeProfitLevels.join(' · '))}`,
     `<b>Risk / reward:</b> ${escapeHtml(setup.riskReward)}`,
     `<b>Why:</b> ${escapeHtml(setup.rationale)}`,
     `<b>Invalidation:</b> ${escapeHtml(setup.invalidation)}`,
+    `<b>${isLongTerm ? 'Allocation risk' : 'Position risk'}:</b> ${escapeHtml(setup.positionRisk)}`,
     '',
     `<b>Support:</b> ${escapeHtml(analysis.supportLevels.join(' · '))}`,
     `<b>Resistance:</b> ${escapeHtml(analysis.resistanceLevels.join(' · '))}`,
@@ -162,6 +205,15 @@ const formatAnalysis = (coin: Coin, analysis: AIAnalysis) => {
     ...analysis.scenarios.map((scenario) => (
       `<b>${escapeHtml(scenario.label)}:</b> ${escapeHtml(scenario.trigger)} · Target ${escapeHtml(scenario.target)} · Invalidated by ${escapeHtml(scenario.invalidatedBy)}`
     )),
+    '',
+    `<b>Market research:</b> ${analysis.research.status === 'grounded' ? 'Google Search-grounded' : 'Technical-only'}`,
+    escapeHtml(analysis.research.note),
+    ...catalysts.map((catalyst) => `<b>${escapeHtml(catalyst.title)}</b> · ${escapeHtml(catalyst.eventDate)} · ${escapeHtml(catalyst.conditionalEffect)}\n${escapeHtml(catalyst.mechanism)}`),
+    ...(analysis.research.sources.length > 0 ? [
+      '',
+      '<b>Verified sources</b>',
+      ...analysis.research.sources.map((source) => `<a href="${escapeHtml(source.url)}">${escapeHtml(source.title)}</a>`),
+    ] : []),
     '',
     `<b>Methodology:</b> ${escapeHtml(analysis.methodology)}`,
     '',
@@ -172,47 +224,29 @@ const formatAnalysis = (coin: Coin, analysis: AIAnalysis) => {
 
 const handleCoinSelection = async (
   callback: TelegramCallbackQuery,
-  coinId: string,
+  coin: Coin,
+  mode: AIAnalysisMode,
+  page: number,
   environment: ServerEnvironment,
   provider: ProviderKind,
 ) => {
   const message = callback.message;
   if (!message) return;
   const chatId = message.chat.id;
-  let coins: Coin[];
-  try {
-    coins = await fetchTopCoins(currency, environment);
-  } catch (error) {
-    console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
-    await editMessageText(
-      chatId,
-      message.message_id,
-      'The live coin list is unavailable right now. Please try again shortly.',
-      environment,
-      backToCoinsKeyboard(),
-    );
-    return;
-  }
-  const coin = coins.find((item) => item.id === coinId);
-  if (!coin) {
-    await editMessageText(chatId, message.message_id, 'That coin is no longer in the current list.', environment, backToCoinsKeyboard());
-    return;
-  }
-
   await editMessageText(
     chatId,
     message.message_id,
-    `<b>${escapeHtml(coin.name)} · AI trading analysis</b>\nGenerating the latest brief…`,
+    `<b>${escapeHtml(coin.name)} · ${escapeHtml(analysisModeDefinitions[mode].label)} AI analysis</b>\nLoading closed candles and checking current market catalysts…`,
     environment,
-    backToCoinsKeyboard(),
+    backToCoinsKeyboard(mode, page),
   );
 
   try {
-    const payload = await buildAnalysisRequest(coin.id, currency, environment);
+    const payload = await buildAnalysisRequest(coin.id, currency, environment, mode);
     const analysis = await generateAnalysis(payload, callback.from.id, environment, provider);
     const chunks = formatAnalysis(coin, analysis);
-    await editMessageText(chatId, message.message_id, chunks[0], environment, backToCoinsKeyboard());
-    for (const chunk of chunks.slice(1)) await sendMessage(chatId, chunk, environment, backToCoinsKeyboard());
+    await editMessageText(chatId, message.message_id, chunks[0], environment, backToCoinsKeyboard(mode, page));
+    for (const chunk of chunks.slice(1)) await sendMessage(chatId, chunk, environment, backToCoinsKeyboard(mode, page));
   } catch (error) {
     console.error('Telegram AI analysis failed:', error instanceof Error ? error.message : 'Unknown error');
     await editMessageText(
@@ -220,7 +254,7 @@ const handleCoinSelection = async (
       message.message_id,
       'The AI brief could not be generated right now. Please try again shortly.',
       environment,
-      backToCoinsKeyboard(),
+      backToCoinsKeyboard(mode, page),
     );
   }
 };
@@ -238,11 +272,28 @@ const handleCallback = async (
   }
 
   const data = callback.data ?? '';
-  if (data.startsWith('ai:page:')) {
-    const page = Number(data.slice('ai:page:'.length));
-    if (!Number.isInteger(page) || page < 0 || !callback.message) return;
+  if (data === 'ai:modes') {
+    if (callback.message) await sendModePicker(callback.message.chat.id, environment, callback.message);
+    return;
+  }
+  if (data.startsWith('ai:mode:')) {
+    const mode = parseModeCode(data.slice('ai:mode:'.length));
+    if (!mode || !callback.message) return;
     try {
-      await sendCoinPicker(callback.message.chat.id, page, environment, callback.message);
+      await sendCoinPicker(callback.message.chat.id, mode, 0, environment, callback.message);
+    } catch (error) {
+      console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
+      await editMessageText(callback.message.chat.id, callback.message.message_id, 'The live coin list is unavailable right now. Please try again shortly.', environment, modePickerKeyboard());
+    }
+    return;
+  }
+  if (data.startsWith('ai:page:')) {
+    const [modeCode, rawPage, ...extra] = data.slice('ai:page:'.length).split(':');
+    const mode = parseModeCode(modeCode);
+    const page = Number(rawPage);
+    if (!mode || extra.length > 0 || !Number.isInteger(page) || page < 0 || !callback.message) return;
+    try {
+      await sendCoinPicker(callback.message.chat.id, mode, page, environment, callback.message);
     } catch (error) {
       console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
       await editMessageText(
@@ -250,28 +301,59 @@ const handleCallback = async (
         callback.message.message_id,
         'The live coin list is unavailable right now. Please try again shortly.',
         environment,
-        backToCoinsKeyboard(page),
+        backToCoinsKeyboard(mode, page),
       );
     }
     return;
   }
   if (data.startsWith('ai:coin:')) {
-    const coinId = data.slice('ai:coin:'.length);
-    if (/^[a-z0-9-]{1,100}$/.test(coinId)) await handleCoinSelection(callback, coinId, environment, provider);
+    const [modeCode, rawPage, rawIndex, ...extra] = data.slice('ai:coin:'.length).split(':');
+    const mode = parseModeCode(modeCode);
+    const page = Number(rawPage);
+    const index = Number(rawIndex);
+    if (!mode || extra.length > 0 || !Number.isInteger(page) || page < 0 || !Number.isInteger(index) || index < 0 || index >= PAGE_SIZE || !callback.message) return;
+    try {
+      const coins = await fetchTopCoins(currency, environment);
+      const coin = coinsForPage(coins, page).items[index];
+      if (!coin) {
+        await editMessageText(callback.message.chat.id, callback.message.message_id, 'That coin is no longer in the current list.', environment, backToCoinsKeyboard(mode, page));
+        return;
+      }
+      await handleCoinSelection(callback, coin, mode, page, environment, provider);
+    } catch (error) {
+      console.error('Telegram coin selection failed:', error instanceof Error ? error.message : 'Unknown market-data error');
+      await editMessageText(callback.message.chat.id, callback.message.message_id, 'The live coin list is unavailable right now. Please try again shortly.', environment, backToCoinsKeyboard(mode, page));
+    }
   }
 };
 
 const handleMessage = async (message: TelegramMessage, environment: ServerEnvironment) => {
   const text = message.text?.trim().toLowerCase() ?? '';
   const command = text.split(/\s+/)[0]?.split('@')[0];
-  // Telegram command menus only allow letters, numbers, and underscores. Keep
-  // the original hyphenated command working for users who type it manually,
-  // and accept the menu-safe underscore alias as well.
-  if (command !== '/ai-analysis' && command !== '/ai_analysis' && command !== '/start') return;
+  const directModes: Record<string, AIAnalysisMode> = {
+    '/ai_short': 'short-term',
+    '/ai_short_term': 'short-term',
+    '/ai_swing': 'swing',
+    '/ai_long': 'long-term',
+    '/ai_long_term': 'long-term',
+  };
+  if (command === '/help') {
+    await sendMessage(message.chat.id, [
+      '<b>BlockLens AI commands</b>',
+      '/ai_analysis — choose an analysis horizon',
+      '/ai_short — short-term analysis (6 hours–3 days)',
+      '/ai_swing — swing analysis (3 days–4 weeks)',
+      '/ai_long — long-term analysis (1–12+ months)',
+    ].join('\n'), environment);
+    return;
+  }
+  const directMode = directModes[command];
+  if (!directMode && command !== '/ai-analysis' && command !== '/ai_analysis' && command !== '/start') return;
   try {
-    await sendCoinPicker(message.chat.id, 0, environment);
+    if (directMode) await sendCoinPicker(message.chat.id, directMode, 0, environment);
+    else await sendModePicker(message.chat.id, environment);
   } catch (error) {
-    console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
+    console.error('Telegram analysis menu failed:', error instanceof Error ? error.message : 'Unknown market-data error');
     await sendMessage(
       message.chat.id,
       'The live coin list is unavailable right now. Please try again shortly.',
