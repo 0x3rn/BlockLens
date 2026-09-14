@@ -182,6 +182,56 @@ describe('AI analysis function', () => {
     expect(createCompletion).toHaveBeenCalledTimes(2);
   });
 
+  it('normalizes harmless Gemini formatting variants before validating the brief', async () => {
+    process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
+    const variant = {
+      headline: 'Momentum is constructive',
+      summary: 'The supplied candles show a measured bullish bias.',
+      stance: 'BULLISH',
+      confidence: '61',
+      risk: 'MEDIUM',
+      timeframe: '3 days–4 weeks',
+      supportLevels: ['$95'],
+      resistanceLevels: ['$110'],
+      tradeSetup: {
+        signal: 'NO_TRADE',
+        rationale: 'The higher timeframe is not fully aligned.',
+        entryZone: '$100–$102',
+        stopLoss: '$94',
+        takeProfitLevels: ['$110'],
+        riskReward: '1:2',
+        invalidation: 'A close below $94',
+        positionRisk: 'Keep risk small.',
+      },
+      scenarios: [
+        { label: 'bullish', trigger: 'Breaks $110', target: '$120', invalidatedBy: 'Falls below $105' },
+        { label: 'base case', trigger: 'Holds range', target: '$95–$110', invalidatedBy: 'Leaves range' },
+        { label: 'bearish', trigger: 'Breaks $95', target: '$85', invalidatedBy: 'Reclaims $100' },
+      ],
+      methodology: 'Compared supplied closed exchange candles.',
+    };
+    const createCompletion = vi.fn().mockResolvedValue({
+      choices: [{ message: { content: 'Here is the JSON:\n' + JSON.stringify(variant) } }],
+    });
+    vi.mocked(getGemini).mockResolvedValue({
+      chat: { completions: { create: createCompletion } },
+    } as unknown as Awaited<ReturnType<typeof getGemini>>);
+    const { response, getStatus, getBody } = createResponse();
+
+    await handler(request(fullRequest()), response);
+
+    expect(getStatus()).toBe(200);
+    expect(getBody()).toMatchObject({
+      stance: 'bullish',
+      confidence: 61,
+      risk: 'medium',
+      tradeSetup: { signal: 'no-trade' },
+      scenarios: [{ label: 'Bullish' }, { label: 'Base' }, { label: 'Bearish' }],
+    });
+    expect(createCompletion).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects a short recommendation for long-term analysis', async () => {
     process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';

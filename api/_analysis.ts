@@ -236,6 +236,67 @@ const unavailableResearch = (note: string): AnalysisResearch => ({
 
 const stripJsonFence = (value: string) => value.replace(/^```json\s*/iu, '').replace(/\s*```$/u, '').trim();
 
+const parseProviderJson = (content: string): unknown => {
+  const stripped = stripJsonFence(content);
+  try {
+    return JSON.parse(stripped);
+  } catch {
+    const start = stripped.indexOf('{');
+    const end = stripped.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    try {
+      return JSON.parse(stripped.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+};
+
+const normalizeEnum = (value: unknown): unknown => (
+  typeof value === 'string'
+    ? value.trim().toLowerCase().replaceAll('_', '-').replace(/\s+/gu, '-')
+    : value
+);
+
+const normalizeScenarioLabel = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim().toLowerCase().replaceAll('_', '-').replace(/\s+/gu, '-');
+  if (normalized === 'bullish') return 'Bullish';
+  if (normalized === 'base' || normalized === 'base-case') return 'Base';
+  if (normalized === 'bearish') return 'Bearish';
+  return value;
+};
+
+const normalizeProviderAnalysis = (value: unknown): unknown => {
+  if (!value || typeof value !== 'object') return value;
+  const source = value as Record<string, unknown>;
+  const tradeSetup = source.tradeSetup && typeof source.tradeSetup === 'object'
+    ? source.tradeSetup as Record<string, unknown>
+    : null;
+  const scenarios = Array.isArray(source.scenarios)
+    ? source.scenarios.map((scenario) => {
+      if (!scenario || typeof scenario !== 'object') return scenario;
+      const item = scenario as Record<string, unknown>;
+      return { ...item, label: normalizeScenarioLabel(item.label) };
+    })
+    : source.scenarios;
+  return {
+    ...source,
+    ...(typeof source.confidence === 'string' && Number.isFinite(Number(source.confidence))
+      ? { confidence: Number(source.confidence) }
+      : {}),
+    ...(source.stance !== undefined ? { stance: normalizeEnum(source.stance) } : {}),
+    ...(source.risk !== undefined ? { risk: normalizeEnum(source.risk) } : {}),
+    ...(tradeSetup ? {
+      tradeSetup: {
+        ...tradeSetup,
+        ...(tradeSetup.signal !== undefined ? { signal: normalizeEnum(tradeSetup.signal) } : {}),
+      },
+    } : {}),
+    ...(scenarios ? { scenarios } : {}),
+  };
+};
+
 const isCatalyst = (value: unknown): value is AnalysisCatalyst => {
   if (!value || typeof value !== 'object') return false;
   const catalyst = value as Record<string, unknown>;
@@ -439,15 +500,27 @@ const buildMethodology = (input: AIAnalysisRequest) => {
 };
 
 const parseValidatedAnalysis = (content: string, input: AIAnalysisRequest): AIAnalysis | null => {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(stripJsonFence(content));
-  } catch {
-    return null;
-  }
+  const parsed = normalizeProviderAnalysis(parseProviderJson(content));
   if (!validateProviderAnalysis(parsed)) return null;
   if (input.mode === 'long-term' && parsed.tradeSetup.signal === 'short') return null;
   return parsed;
+};
+
+const describeProviderShape = (content: string) => {
+  const parsed = parseProviderJson(content);
+  if (!parsed || typeof parsed !== 'object') return { parsed: false };
+  const candidate = parsed as Record<string, unknown>;
+  const setup = candidate.tradeSetup;
+  return {
+    parsed: true,
+    keys: Object.keys(candidate).sort(),
+    scenarioLabels: Array.isArray(candidate.scenarios)
+      ? candidate.scenarios.map((scenario) => (
+        scenario && typeof scenario === 'object' ? (scenario as Record<string, unknown>).label : typeof scenario
+      ))
+      : typeof candidate.scenarios,
+    signal: setup && typeof setup === 'object' ? (setup as Record<string, unknown>).signal : undefined,
+  };
 };
 
 export type ProviderKind = 'node' | 'fetch';
@@ -500,18 +573,21 @@ export const runAIAnalysis = async (
   try {
     const research = await getGroundedResearch(input, environment);
     const prompt = buildPrompt(input, research);
-    let analysis = parseValidatedAnalysis(await requestProviderContent(prompt, environment, provider), input);
+    let providerContent = await requestProviderContent(prompt, environment, provider);
+    let analysis = parseValidatedAnalysis(providerContent, input);
     if (!analysis) {
       // Models can occasionally omit or rename a field despite JSON mode. Retry
       // once with the same bounded inputs before surfacing a provider failure.
-      console.warn('Gemini returned an invalid market-brief shape; retrying once.');
-      analysis = parseValidatedAnalysis(await requestProviderContent(
-        `${prompt}\n\nFormatting correction: return the exact JSON object specified above. Include every required field, use the exact enum values and scenario labels, and add no Markdown or commentary.`,
+      console.warn('Gemini returned an invalid market-brief shape; retrying once.', describeProviderShape(providerContent));
+      providerContent = await requestProviderContent(
+        prompt + '\n\nFormatting correction: return the exact JSON object specified above. Include every required field, use the exact enum values and scenario labels, and add no Markdown or commentary.',
         environment,
         provider,
-      ), input);
+      );
+      analysis = parseValidatedAnalysis(providerContent, input);
     }
     if (!analysis) {
+      console.warn('Gemini retry returned an invalid market-brief shape.', describeProviderShape(providerContent));
       throw new AnalysisError(502, 'The AI provider returned an invalid market brief.');
     }
     return {
