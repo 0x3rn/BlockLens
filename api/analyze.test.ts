@@ -199,7 +199,7 @@ describe('AI analysis function', () => {
         rationale: 'The higher timeframe is not fully aligned.',
         entryZone: '$100–$102',
         stopLoss: '$94',
-        takeProfitLevels: ['$110'],
+        takeProfitLevels: [],
         riskReward: '1:2',
         invalidation: 'A close below $94',
         positionRisk: 'Keep risk small.',

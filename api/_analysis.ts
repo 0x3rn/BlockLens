@@ -158,9 +158,9 @@ const isText = (value: unknown, maxLength = 1_200): value is string => (
   typeof value === 'string' && value.trim().length > 0 && value.length <= maxLength
 );
 
-const isTextList = (value: unknown): value is string[] => (
+const isTextList = (value: unknown, minimumLength = 1): value is string[] => (
   Array.isArray(value)
-  && value.length > 0
+  && value.length >= minimumLength
   && value.length <= 8
   && value.every((item) => isText(item, 120))
 );
@@ -476,7 +476,10 @@ const validateProviderAnalysis = (value: unknown): value is AIAnalysis => {
     && isText((tradeSetup as Record<string, unknown>).rationale, 800)
     && isText((tradeSetup as Record<string, unknown>).entryZone, 180)
     && isText((tradeSetup as Record<string, unknown>).stopLoss, 180)
-    && isTextList((tradeSetup as Record<string, unknown>).takeProfitLevels)
+    && isTextList(
+      (tradeSetup as Record<string, unknown>).takeProfitLevels,
+      (tradeSetup as Record<string, unknown>).signal === 'no-trade' ? 0 : 1,
+    )
     && isText((tradeSetup as Record<string, unknown>).riskReward, 180)
     && isText((tradeSetup as Record<string, unknown>).invalidation, 500)
     && isText((tradeSetup as Record<string, unknown>).positionRisk, 500)
@@ -514,6 +517,29 @@ const describeProviderShape = (content: string) => {
   return {
     parsed: true,
     keys: Object.keys(candidate).sort(),
+    fieldSummary: {
+      headline: typeof candidate.headline === 'string' ? candidate.headline.length : typeof candidate.headline,
+      summary: typeof candidate.summary === 'string' ? candidate.summary.length : typeof candidate.summary,
+      stance: typeof candidate.stance === 'string' ? candidate.stance : typeof candidate.stance,
+      confidence: typeof candidate.confidence,
+      risk: typeof candidate.risk === 'string' ? candidate.risk : typeof candidate.risk,
+      timeframe: typeof candidate.timeframe === 'string' ? candidate.timeframe.length : typeof candidate.timeframe,
+      supportLevels: Array.isArray(candidate.supportLevels) ? candidate.supportLevels.length : typeof candidate.supportLevels,
+      resistanceLevels: Array.isArray(candidate.resistanceLevels) ? candidate.resistanceLevels.length : typeof candidate.resistanceLevels,
+      methodology: typeof candidate.methodology === 'string' ? candidate.methodology.length : typeof candidate.methodology,
+      tradeSetup: setup && typeof setup === 'object' ? {
+        signal: typeof (setup as Record<string, unknown>).signal === 'string' ? (setup as Record<string, unknown>).signal : typeof (setup as Record<string, unknown>).signal,
+        rationale: typeof (setup as Record<string, unknown>).rationale === 'string' ? String((setup as Record<string, unknown>).rationale).length : typeof (setup as Record<string, unknown>).rationale,
+        entryZone: typeof (setup as Record<string, unknown>).entryZone === 'string' ? String((setup as Record<string, unknown>).entryZone).length : typeof (setup as Record<string, unknown>).entryZone,
+        stopLoss: typeof (setup as Record<string, unknown>).stopLoss === 'string' ? String((setup as Record<string, unknown>).stopLoss).length : typeof (setup as Record<string, unknown>).stopLoss,
+        takeProfitLevels: Array.isArray((setup as Record<string, unknown>).takeProfitLevels)
+          ? ((setup as Record<string, unknown>).takeProfitLevels as unknown[]).length
+          : typeof (setup as Record<string, unknown>).takeProfitLevels,
+        riskReward: typeof (setup as Record<string, unknown>).riskReward === 'string' ? String((setup as Record<string, unknown>).riskReward).length : typeof (setup as Record<string, unknown>).riskReward,
+        invalidation: typeof (setup as Record<string, unknown>).invalidation === 'string' ? String((setup as Record<string, unknown>).invalidation).length : typeof (setup as Record<string, unknown>).invalidation,
+        positionRisk: typeof (setup as Record<string, unknown>).positionRisk === 'string' ? String((setup as Record<string, unknown>).positionRisk).length : typeof (setup as Record<string, unknown>).positionRisk,
+      } : typeof setup,
+    },
     scenarioLabels: Array.isArray(candidate.scenarios)
       ? candidate.scenarios.map((scenario) => (
         scenario && typeof scenario === 'object' ? (scenario as Record<string, unknown>).label : typeof scenario
