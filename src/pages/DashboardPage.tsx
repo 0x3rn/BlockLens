@@ -13,7 +13,7 @@ import { formatCurrency, formatPercent } from '../utils/format';
 
 const DashboardPage: React.FC = () => {
   const { coins, loading, error, refresh, currency, watchlist } = useMarket();
-  usePageMeta('Dashboard', 'A trustworthy view of global crypto markets, leading assets, movers, and watchlisted coins.');
+  usePageMeta('Dashboard', 'Track global crypto markets, leading assets, price movers, and your watchlist.');
 
   const movers = useMemo(() => {
     const withChanges = coins.filter((coin) => coin.price_change_percentage_24h != null);
@@ -27,17 +27,17 @@ const DashboardPage: React.FC = () => {
     <main className="app-container page-stack">
       <header className="page-intro dashboard-intro">
         <div className="dashboard-hero-copy">
-          <span className="eyebrow"><Radar size={14} aria-hidden="true" /> Live crypto intelligence</span>
-          <h1>See the market <span>clearly.</span></h1>
-          <p>Track spot prices, watch forced liquidations, compare assets, and turn market history into risk-aware trade research.</p>
+          <span className="eyebrow"><Radar size={14} aria-hidden="true" /> Live crypto market data</span>
+          <h1>Track crypto markets <span>in real time.</span></h1>
+          <p>Track prices, monitor liquidations, compare assets, and review historical market data.</p>
           <div className="page-actions">
             <Link className="primary-button" to="/markets">Explore markets <ArrowRight size={16} aria-hidden="true" /></Link>
-            <Link className="secondary-button" to="/analysis"><Bot size={16} aria-hidden="true" /> Create AI brief</Link>
+            <Link className="secondary-button" to="/analysis"><Bot size={16} aria-hidden="true" /> Analyze a coin</Link>
           </div>
           <div className="hero-proof" aria-label="BlockLens capabilities">
-            <span><i aria-hidden="true" /> Real market feeds</span>
-            <span>Local portfolio</span>
-            <span>Risk-aware AI</span>
+            <span><i aria-hidden="true" /> Live market data</span>
+            <span>Portfolio tracking</span>
+            <span>AI market analysis</span>
           </div>
         </div>
         <MarketLens coins={coins} currency={currency} />
@@ -51,7 +51,7 @@ const DashboardPage: React.FC = () => {
           <DataState title="Market snapshot unavailable" message={error} onRetry={refresh} compact />
           <section className="feed-resilience-note" aria-labelledby="feed-resilience-title">
             <span className="feed-resilience-icon"><RadioTower size={18} aria-hidden="true" /></span>
-            <div><span className="eyebrow">Independent live source</span><h2 id="feed-resilience-title">The exchange tape can keep listening</h2><p>CoinGecko powers the global snapshot, while the Binance event stream below connects independently. Your locally saved watchlist and portfolio also remain available.</p></div>
+            <div><span className="eyebrow">Limited market data</span><h2 id="feed-resilience-title">Some market data is temporarily unavailable</h2><p>Live trade activity may still be available while the market overview reconnects. Your saved portfolio and watchlist are unaffected</p></div>
             <Link className="text-link" to="/watchlist">Open portfolio <ArrowRight size={14} aria-hidden="true" /></Link>
           </section>
           <LiveMarketTape />
@@ -100,13 +100,13 @@ const DashboardPage: React.FC = () => {
             </Link>
             <Link to="/compare" className="quick-action-card">
               <span className="quick-action-icon purple"><GitCompareArrows size={18} aria-hidden="true" /></span>
-              <span><strong>Compare assets</strong><small>Normalized performance across time</small></span>
+              <span><strong>Compare assets</strong><small>Compare price performance over time</small></span>
               <ArrowRight size={16} aria-hidden="true" />
             </Link>
             {coins[0] && (
               <Link to={`/coin/${coins[0].id}`} className="quick-action-card">
                 <img className="quick-coin-image" src={coins[0].image} alt="" />
-                <span><strong>{coins[0].name}</strong><small>{formatCurrency(coins[0].current_price, currency)} · Market leader</small></span>
+                <span><strong>{coins[0].name}</strong><small>{formatCurrency(coins[0].current_price, currency)} · Highest market cap</small></span>
                 <ArrowRight size={16} aria-hidden="true" />
               </Link>
             )}

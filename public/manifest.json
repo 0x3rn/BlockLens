@@ -1,7 +1,7 @@
 {
   "short_name": "BlockLens",
-  "name": "BlockLens Crypto Market Intelligence",
-  "description": "Live crypto market data, local portfolio tracking, alerts, comparisons, and AI market briefs.",
+  "name": "BlockLens · Track crypto markets in real time",
+  "description": "Track global crypto markets, leading assets, price movers, and your watchlist.",
   "icons": [
     {
       "src": "/blocklens-logo.png",

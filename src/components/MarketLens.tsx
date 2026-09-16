@@ -38,7 +38,7 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
     <aside className="market-lens" aria-labelledby="market-lens-title">
       <div className="market-lens-heading">
         <span id="market-lens-title"><Radar size={14} aria-hidden="true" /> Market Lens</span>
-        <span className={snapshot.lead ? 'lens-status live' : 'lens-status'}><i aria-hidden="true" />{snapshot.lead ? 'Live snapshot' : 'Awaiting feed'}</span>
+        <span className={snapshot.lead ? 'lens-status live' : 'lens-status'}><i aria-hidden="true" />{snapshot.lead ? 'Live snapshot' : 'Waiting for data'}</span>
       </div>
 
       <div className="lens-stage" aria-label={snapshot.lead ? `${snapshot.lead.name} market snapshot` : 'Waiting for market data'}>
@@ -76,17 +76,17 @@ const MarketLens: React.FC<MarketLensProps> = ({ coins, currency }) => {
             {formatPercent(snapshot.lead.price_change_percentage_24h)} · 24H
           </small>
         </a> : <div className="lens-core">
-          <Crosshair size={23} aria-hidden="true" /><strong>Loading market</strong><small>Market feed pending</small>
+          <Crosshair size={23} aria-hidden="true" /><strong>Loading market data</strong><small>This may take a moment</small>
         </div>}
       </div>
 
       <div className="lens-readouts">
         <div>
-          <span><span className="sr-only">Non-stable asset breadth</span><span aria-hidden="true">Asset breadth</span></span>
+          <span><span className="sr-only"></span><span aria-hidden="true">Market direction</span></span>
           <strong>{snapshot.lead ? `${snapshot.gainers} up, ${snapshot.losers} down, ${snapshot.flat} flat` : 'N/A'}</strong>
         </div>
         <div>
-          <span>Biggest 24h gainer</span>
+          <span>Top mover (24h gain)</span>
           <strong className="text-up">
             {snapshot.biggestGainer ? `${snapshot.biggestGainer.symbol.toUpperCase()} ${formatPercent(snapshot.biggestGainer.price_change_percentage_24h)}` : 'N/A'}
           </strong>

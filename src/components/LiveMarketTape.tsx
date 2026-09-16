@@ -20,12 +20,12 @@ const LiveMarketTape: React.FC = () => {
         <div>
           <span className="eyebrow"><Activity size={14} aria-hidden="true" /> Exchange activity</span>
           <h2 id="live-market-title">Live Market Tape</h2>
-          <p>Streaming spot trades and forced-order events from Binance, shown as they arrive.</p>
+          <p>See Bitcoin spot trades and futures liquidations from Binance as they happen.</p>
         </div>
         <div className="live-tape-source">
           <span className="tape-index">BL / TAPE 01</span>
           <span className={`stream-status ${status}`}><i aria-hidden="true" />{status}</span>
-          <small>Binance · live WebSocket</small>
+          <small>Binance · Live</small>
           {hasConnectionIssue && (
             <button type="button" onClick={retry} disabled={status === 'reconnecting'} aria-busy={status === 'reconnecting'}>
               <RefreshCw size={13} className={status === 'reconnecting' ? 'is-spinning' : ''} aria-hidden="true" />
@@ -59,7 +59,7 @@ const LiveMarketTape: React.FC = () => {
             <span className="source-pill danger"><Zap size={11} aria-hidden="true" /> Futures</span>
           </div>
           <div className="liquidation-session" aria-label="Liquidations observed since this page loaded">
-            <span>Session observed</span>
+            <span>This session</span>
             <strong className="text-down">Long {formatCompactCurrency(sessionTotals.long, 'usd')}</strong>
             <strong className="text-up">Short {formatCompactCurrency(sessionTotals.short, 'usd')}</strong>
           </div>
@@ -71,12 +71,12 @@ const LiveMarketTape: React.FC = () => {
                 <strong>{item.symbol.replace('USDT', '/USDT')}</strong>
                 <span>{formatCompactCurrency(item.quoteValue, 'usd')}</span>
               </div>
-            )) : <div className="tape-empty"><span /> Waiting for a forced-order event…</div>}
+            )) : <div className="tape-empty"><span /> Waiting for the next liquidation…</div>}
           </div>
         </article>
       </div>
 
-      <p className="tape-footnote">Source: Binance exchange activity. Liquidation totals cover events observed during this browser session and reset on reload, so they are not market-wide 24-hour totals.</p>
+      <p className="tape-footnote">Source: Binance exchange activity. Liquidation totals include events received since you opened this page. They are not 24-hour market totals.</p>
     </section>
   );
 };

@@ -79,12 +79,12 @@ describe('BlockLens routes', () => {
 
   it('loads the market dashboard with real-data labels', async () => {
     renderRoute();
-    await waitFor(() => expect(screen.getByRole('heading', { name: /see the market clearly/i })).toBeInTheDocument(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByRole('heading', { name: /track crypto markets in real time/i })).toBeInTheDocument(), { timeout: 3000 });
     expect(await screen.findByText(/global market overview/i)).toBeInTheDocument();
     expect(screen.getByText(/market lens/i)).toBeInTheDocument();
     expect(screen.getByText(/top 5 · non-stable · 24h/i)).toBeInTheDocument();
-    expect(screen.getByText(/non-stable asset breadth/i)).toBeInTheDocument();
-    expect(screen.getByText(/biggest 24h gainer/i)).toBeInTheDocument();
+    expect(screen.getByText(/market direction/i)).toBeInTheDocument();
+    expect(screen.getByText(/top mover \(24h gain\)/i)).toBeInTheDocument();
     expect(screen.getByText(/biggest 24h loser/i)).toBeInTheDocument();
     expect(screen.getAllByText(/coingecko/i).length).toBeGreaterThan(0);
   });
@@ -93,7 +93,7 @@ describe('BlockLens routes', () => {
     vi.mocked(fetchMarketSnapshot).mockRejectedValueOnce(new Error('offline'));
     renderRoute();
     expect(await screen.findByRole('heading', { name: /market snapshot unavailable/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /the exchange tape can keep listening/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /some market data is temporarily unavailable/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /live market tape/i })).toBeInTheDocument();
   });
 
@@ -134,7 +134,7 @@ describe('BlockLens routes', () => {
       createdAt: '2026-08-30T00:00:00.000Z',
     }]));
     renderRoute();
-    await screen.findByRole('heading', { name: /see the market clearly/i });
+    await screen.findByRole('heading', { name: /track crypto markets in real time/i });
     await waitFor(() => {
       const saved = JSON.parse(window.localStorage.getItem('blocklens_alerts') ?? '[]');
       expect(saved[0].triggeredAt).toBeUndefined();

@@ -130,7 +130,7 @@ const CoinDetailPage: React.FC = () => {
             <Star size={16} fill={isWatched ? 'currentColor' : 'none'} /> {isWatched ? 'Watching' : 'Watch asset'}
           </button>
           <Link className="secondary-button" to={`/watchlist?coin=${coin.id}`}><WalletCards size={16} /> Add position</Link>
-          <Link className="primary-button" to={`/analysis?coin=${coin.id}`}><Bot size={16} /> Create AI brief</Link>
+          <Link className="primary-button" to={`/analysis?coin=${coin.id}`}><Bot size={16} /> Analyze this coin</Link>
         </div>
       </header>
 
