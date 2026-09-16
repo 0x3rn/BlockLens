@@ -365,16 +365,90 @@ export const requestAIAnalysis = async (payload: AIAnalysisRequest | AIAnalysisS
   return response.data;
 };
 
-export const getApiErrorMessage = (error: unknown): string => {
+export type ApiErrorContext = 'market' | 'ai' | 'auth' | 'partial' | 'general';
+
+export const CONTROLLED_ERROR_MESSAGES = {
+  genericMarket: 'We couldn’t load the latest market data. Please try again.',
+  rateLimit: 'Market data is temporarily busy. Please try again in a moment.',
+  timeout: 'The request took too long. Please try again.',
+  network: 'We couldn’t connect to market data. Check your connection and try again.',
+  partial: 'Some market data is temporarily unavailable. The rest of the dashboard is still available.',
+  ai: 'We couldn’t complete the analysis. Please try again.',
+  auth: 'Your session has expired. Please sign in again.',
+  unknown: 'Something went wrong. Please try again.',
+} as const;
+
+export const getApiErrorMessage = (error: unknown, context: ApiErrorContext = 'market'): string => {
+  // Always log the actual raw error for diagnostics and debugging
+  console.error('API Error details:', error);
+
+  // Preserve messages that are already part of our controlled vocabulary
+  if (typeof error === 'string') {
+    const controlledList: string[] = Object.values(CONTROLLED_ERROR_MESSAGES);
+    if (controlledList.includes(error)) return error;
+  }
+
+  if (context === 'partial') {
+    return CONTROLLED_ERROR_MESSAGES.partial;
+  }
+
+  let status: number | undefined;
+  let code: string | undefined;
+  let rawText = '';
+
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<{ error?: string }>;
-    if (axiosError.response?.data?.error) return axiosError.response.data.error;
-    if (axiosError.response?.status === 429) {
-      return 'The market data provider is rate-limiting requests. Please wait a moment and retry.';
-    }
-    if (axiosError.code === 'ECONNABORTED') return 'The request timed out. Please retry.';
-    if (!axiosError.response) return 'The data service could not be reached. Check your connection and retry.';
+    status = axiosError.response?.status;
+    code = axiosError.code;
+    const dataError = axiosError.response?.data?.error;
+    rawText = typeof dataError === 'string' ? dataError : axiosError.message;
+  } else if (error instanceof Error) {
+    rawText = error.message;
+  } else if (typeof error === 'string') {
+    rawText = error;
   }
-  if (error instanceof Error && error.message) return error.message;
-  return 'Something went wrong while loading data. Please retry.';
+
+  const normalized = rawText.toLowerCase();
+
+  // Rate limit
+  if (status === 429 || /rate[- ]?limit|too many requests|quota|busy/i.test(normalized)) {
+    return CONTROLLED_ERROR_MESSAGES.rateLimit;
+  }
+
+  // Timeout
+  if (code === 'ECONNABORTED' || status === 408 || /timed?[- ]?out|abort/i.test(normalized)) {
+    return CONTROLLED_ERROR_MESSAGES.timeout;
+  }
+
+  // Network failure
+  if (
+    (axios.isAxiosError(error) && !error.response) ||
+    code === 'ERR_NETWORK' ||
+    /network|offline|failed to fetch|connection/i.test(normalized)
+  ) {
+    return CONTROLLED_ERROR_MESSAGES.network;
+  }
+
+  // Authentication / session problem
+  if (context === 'auth' || status === 401 || status === 403 || /expired|session|unauthorized|jwt|token/i.test(normalized)) {
+    return CONTROLLED_ERROR_MESSAGES.auth;
+  }
+
+  // Partial data failure
+  if (/partial|incomplete/i.test(normalized)) {
+    return CONTROLLED_ERROR_MESSAGES.partial;
+  }
+
+  // AI request failure
+  if (context === 'ai' || /analysis|ai brief|market brief/i.test(normalized)) {
+    return CONTROLLED_ERROR_MESSAGES.ai;
+  }
+
+  // Generic market error
+  if (context === 'market') {
+    return CONTROLLED_ERROR_MESSAGES.genericMarket;
+  }
+
+  // Fallback unknown error
+  return CONTROLLED_ERROR_MESSAGES.unknown;
 };

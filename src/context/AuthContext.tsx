@@ -26,11 +26,22 @@ const disabledAuth: AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue>(disabledAuth);
 
-const readableAuthError = (message: string) => {
+const readableAuthError = (error: unknown): string => {
+  console.error('Auth error details:', error);
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'string'
+      ? error
+      : (error && typeof error === 'object' && 'message' in error && typeof (error as { message: unknown }).message === 'string')
+        ? (error as { message: string }).message
+        : '';
+
   if (/invalid login credentials/i.test(message)) return 'Email or password is incorrect.';
   if (/user already registered/i.test(message)) return 'An account with this email already exists.';
   if (/password should be at least/i.test(message)) return 'Use a password with at least six characters.';
-  return message;
+  if (/session|jwt|expired|token|unauthorized/i.test(message)) return 'Your session has expired. Please sign in again.';
+  if (/network|fetch|offline|connection/i.test(message)) return 'We couldn’t connect to market data. Check your connection and try again.';
+  return 'Something went wrong. Please try again.';
 };
 
 export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) => {

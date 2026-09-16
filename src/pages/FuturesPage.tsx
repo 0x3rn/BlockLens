@@ -6,7 +6,7 @@ import { useMarket } from '../context/MarketContext';
 import { useToast } from '../context/ToastContext';
 import { resolveFuturesMarkPrice, useFuturesMarketPrice } from '../hooks/useFuturesMarketPrice';
 import { FUTURES_TAKER_FEE, getFuturesLiquidationPrice, getFuturesMaintenanceMargin, getFuturesReturnOnEquity, getFuturesUnrealizedPnl, getMissingOpenOrderCoinIds, getOpenOrderMarketChecks, MAX_FUTURES_LEVERAGE } from '../hooks/usePaperFutures';
-import { fetchCoinPrices, fetchMarketData } from '../services/api';
+import { fetchCoinPrices, fetchMarketData, getApiErrorMessage } from '../services/api';
 import { Coin, FuturesSide } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 import '../styles/Futures.css';
@@ -59,7 +59,7 @@ const FuturesPage: React.FC = () => {
     void fetchMarketData('usd').then((nextCoins) => {
       if (active) setUsdCoins(nextCoins);
     }).catch((loadError) => {
-      if (active) setUsdError(loadError instanceof Error ? loadError.message : 'USD futures prices are unavailable.');
+      if (active) setUsdError(getApiErrorMessage(loadError, 'market'));
     });
     return () => { active = false; };
   }, [currency, usdRequestKey]);
@@ -241,7 +241,7 @@ const FuturesPage: React.FC = () => {
     return <main className="app-container page-stack"><div className="table-skeleton futures-loading-skeleton" /></main>;
   }
   if (!selectedCoin) {
-    return <main className="app-container page-stack"><DataState title="Futures market unavailable" message={error ?? usdError ?? 'Load a market snapshot before opening a simulated position.'} onRetry={currency === 'usd' ? refresh : () => setUsdRequestKey((value) => value + 1)} /></main>;
+    return <main className="app-container page-stack"><DataState title="Futures market unavailable" message={error ?? usdError ?? 'We couldn’t load the latest market data. Please try again.'} onRetry={currency === 'usd' ? refresh : () => setUsdRequestKey((value) => value + 1)} /></main>;
   }
 
   return (

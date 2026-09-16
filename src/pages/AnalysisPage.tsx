@@ -73,7 +73,7 @@ const AnalysisPage: React.FC = () => {
       });
       showToast(`${selectedCoin.name} ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis generated.`);
     } catch (analysisError) {
-      const message = getApiErrorMessage(analysisError);
+      const message = getApiErrorMessage(analysisError, 'ai');
       setError(message);
       showToast('Trading analysis could not be generated.', 'error');
     } finally {

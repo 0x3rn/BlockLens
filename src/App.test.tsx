@@ -64,7 +64,7 @@ vi.mock('./services/api', () => ({
   fetchCoinHistory: vi.fn().mockResolvedValue([]),
   fetchCoinDetail: vi.fn(),
   requestAIAnalysis: vi.fn(),
-  getApiErrorMessage: vi.fn(() => 'Data unavailable.'),
+  getApiErrorMessage: vi.fn(() => 'We couldn’t load the latest market data. Please try again.'),
 }));
 
 const renderRoute = (path = '/') => render(

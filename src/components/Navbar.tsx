@@ -101,7 +101,7 @@ const Navbar: React.FC = () => {
             </Link>
             <div
               className={`nav-live-indicator ${error ? 'has-error' : ''}`}
-              title={error ?? `Updated ${formatDateTime(lastUpdated)}`}
+              title={error ? 'Market data is temporarily unavailable' : `Updated ${formatDateTime(lastUpdated)}`}
             >
               <span className="live-dot-pulse" aria-hidden="true" />
               <span>{error ? 'Data issue' : lastUpdated ? 'Updated' : 'Connecting'}</span>
