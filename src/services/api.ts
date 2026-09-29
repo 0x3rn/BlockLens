@@ -73,6 +73,100 @@ interface CoinGeckoTrendingItem {
   score: number;
 }
 
+interface CoinPaprikaQuote {
+  price?: number;
+  volume_24h?: number;
+  market_cap?: number;
+  percent_change_24h?: number;
+  percent_change_7d?: number;
+  percent_change_30d?: number;
+}
+
+interface CoinPaprikaTicker {
+  id?: string;
+  name?: string;
+  symbol?: string;
+  rank?: number;
+  last_updated?: string;
+  quotes?: Record<string, CoinPaprikaQuote | undefined>;
+}
+
+const coinGeckoIdByPaprikaId: Record<string, string> = {
+  'bnb-binance-coin': 'binancecoin',
+  'xrp-xrp': 'ripple',
+  'steth-lido-staked-ether': 'staked-ether',
+  'wsteth-wrapped-liquid-staked-ether-20': 'wrapped-steth',
+  'usdc-usd-coin': 'usd-coin',
+  'leo-leo-token': 'leo-token',
+  'near-near-protocol': 'near',
+  'hbar-hedera-hashgraph': 'hedera-hashgraph',
+  'avax-avalanche': 'avalanche-2',
+  'toncoin-the-open-network': 'the-open-network',
+  'cro-cryptocom-chain': 'crypto-com-chain',
+  'qnt-quant': 'quant-network',
+  'aave-new': 'aave',
+  'pi2-pi-network': 'pi-network',
+  'rndr-render-token': 'render-token',
+  'inj-injective-protocol': 'injective-protocol',
+};
+
+const finiteMarketNumber = (value: unknown, fallback = 0) => (
+  typeof value === 'number' && Number.isFinite(value) ? value : fallback
+);
+
+export const normalizeCoinPaprikaTickers = (
+  payload: unknown,
+  currency: CurrencyCode,
+): Coin[] => {
+  if (!Array.isArray(payload)) return [];
+  const quoteCurrency = currency.toUpperCase();
+  const seen = new Set<string>();
+  return (payload as CoinPaprikaTicker[]).flatMap((ticker): Coin[] => {
+    const paprikaId = ticker.id ?? '';
+    const id = coinGeckoIdByPaprikaId[paprikaId] ?? paprikaId.replace(/^[^-]+-/, '');
+    const symbol = ticker.symbol?.trim().toLowerCase() ?? '';
+    const name = ticker.name?.trim() ?? '';
+    const quote = ticker.quotes?.[quoteCurrency];
+    if (!id || !symbol || !name || !quote || seen.has(id)) return [];
+    const currentPrice = finiteMarketNumber(quote.price);
+    if (currentPrice <= 0) return [];
+    seen.add(id);
+    return [{
+      id,
+      symbol,
+      name,
+      image: `https://assets.coincap.io/assets/icons/${encodeURIComponent(symbol)}@2x.png`,
+      current_price: currentPrice,
+      market_cap: finiteMarketNumber(quote.market_cap),
+      market_cap_rank: finiteMarketNumber(ticker.rank, seen.size),
+      total_volume: finiteMarketNumber(quote.volume_24h),
+      high_24h: currentPrice,
+      low_24h: currentPrice,
+      price_change_percentage_24h: finiteMarketNumber(quote.percent_change_24h),
+      price_change_percentage_7d_in_currency: finiteMarketNumber(quote.percent_change_7d),
+      price_change_percentage_30d_in_currency: finiteMarketNumber(quote.percent_change_30d),
+      last_updated: ticker.last_updated,
+    }];
+  }).slice(0, 100);
+};
+
+const fetchCoinPaprikaSnapshot = async (currency: CurrencyCode): Promise<MarketSnapshot> => {
+  const response = await axios.get<unknown>('https://api.coinpaprika.com/v1/tickers', {
+    params: { quotes: currency.toUpperCase(), limit: 120 },
+    timeout: 15_000,
+    headers: { Accept: 'application/json' },
+  });
+  const coins = normalizeCoinPaprikaTickers(response.data, currency);
+  if (coins.length === 0) throw new Error('The backup market provider did not contain any assets.');
+  return {
+    coins,
+    metrics: null,
+    warning: 'The primary market feed is temporarily unavailable. Live prices are being served by CoinPaprika.',
+    source: 'coinpaprika',
+    asOf: new Date().toISOString(),
+  };
+};
+
 const cachedRequest = async <T>(
   key: string,
   ttl: number,
@@ -120,15 +214,22 @@ export const fetchMarketSnapshot = async (
   currency: CurrencyCode = 'usd',
   force = false,
 ): Promise<MarketSnapshot> => cachedRequest(`snapshot:${currency}`, 45_000, async () => {
-  const response = await axios.get<MarketSnapshot>('/api/market/snapshot', {
-    params: { currency },
-    timeout: 20_000,
-    headers: { Accept: 'application/json' },
-  });
-  if (!Array.isArray(response.data.coins) || response.data.coins.length === 0) {
-    throw new Error('The market snapshot did not contain any assets.');
+  try {
+    const response = await axios.get<MarketSnapshot>('/api/market/snapshot', {
+      params: { currency },
+      timeout: 20_000,
+      headers: { Accept: 'application/json' },
+    });
+    if (!Array.isArray(response.data.coins) || response.data.coins.length === 0) {
+      throw new Error('The market snapshot did not contain any assets.');
+    }
+    return { ...response.data, source: response.data.source ?? 'coingecko' };
+  } catch {
+    // Some hosts block server-to-server crypto market requests even though the
+    // provider remains reachable from the visitor's browser. Keep the app
+    // usable by moving the backup request client-side in that case.
+    return fetchCoinPaprikaSnapshot(currency);
   }
-  return response.data;
 }, force);
 
 export const fetchCoinPrices = async (
