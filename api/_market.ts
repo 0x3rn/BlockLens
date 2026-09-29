@@ -4,6 +4,8 @@ import type { ServerEnvironment } from './_env.ts';
 
 const COINGECKO_DEMO_BASE_URL = 'https://api.coingecko.com/api/v3';
 const COINGECKO_PRO_BASE_URL = 'https://pro-api.coingecko.com/api/v3';
+const COINPAPRIKA_BASE_URL = 'https://api.coinpaprika.com/v1';
+const COINCAP_ICON_BASE_URL = 'https://assets.coincap.io/assets/icons';
 const DEFAULT_CURRENCY: CurrencyCode = 'usd';
 const supportedCurrencies = new Set<CurrencyCode>(['usd', 'eur', 'gbp', 'ngn']);
 const MARKET_CACHE_TTL = 45_000;
@@ -20,10 +22,13 @@ const KRAKEN_MARKET_ENDPOINT = 'https://api.kraken.com/0/public/OHLC';
 
 type CacheEntry<T> = { value: T; expiresAt: number };
 
-const marketCache = new Map<string, CacheEntry<Coin[]>>();
+export type MarketDataSource = 'coingecko' | 'coinpaprika';
+export type MarketCoinSnapshot = { coins: Coin[]; source: MarketDataSource };
+
+const marketCache = new Map<string, CacheEntry<MarketCoinSnapshot>>();
 const historyCache = new Map<string, CacheEntry<ChartData[]>>();
 const metricsCache = new Map<string, CacheEntry<MarketMetrics>>();
-const marketPending = new Map<string, Promise<Coin[]>>();
+const marketPending = new Map<string, Promise<MarketCoinSnapshot>>();
 const historyPending = new Map<string, Promise<ChartData[]>>();
 const metricsPending = new Map<string, Promise<MarketMetrics>>();
 const candleCache = new Map<string, CacheEntry<AIAnalysisCandleSeries>>();
@@ -40,6 +45,109 @@ type CoinGeckoRequestConfig = {
   baseUrl: string;
   headers: Record<string, string>;
   plan: 'keyless' | 'demo' | 'pro';
+};
+
+type CoinPaprikaQuote = {
+  price?: number;
+  volume_24h?: number;
+  market_cap?: number;
+  percent_change_24h?: number;
+  percent_change_7d?: number;
+  percent_change_30d?: number;
+};
+
+type CoinPaprikaTicker = {
+  id?: string;
+  name?: string;
+  symbol?: string;
+  rank?: number;
+  last_updated?: string;
+  quotes?: Record<string, CoinPaprikaQuote | undefined>;
+};
+
+// CoinPaprika and CoinGecko use different slugs for a few major assets. Keep
+// the browser-facing ids compatible with the existing CoinGecko detail and
+// history routes whenever the backup feed is active.
+const coinGeckoIdByPaprikaId: Record<string, string> = {
+  'bnb-binance-coin': 'binancecoin',
+  'xrp-xrp': 'ripple',
+  'steth-lido-staked-ether': 'staked-ether',
+  'wsteth-wrapped-liquid-staked-ether-20': 'wrapped-steth',
+  'usdc-usd-coin': 'usd-coin',
+  'leo-leo-token': 'leo-token',
+  'near-near-protocol': 'near',
+  'hbar-hedera-hashgraph': 'hedera-hashgraph',
+  'avax-avalanche': 'avalanche-2',
+  'toncoin-the-open-network': 'the-open-network',
+  'cro-cryptocom-chain': 'crypto-com-chain',
+  'qnt-quant': 'quant-network',
+  'aave-new': 'aave',
+  'pi2-pi-network': 'pi-network',
+  'rndr-render-token': 'render-token',
+  'inj-injective-protocol': 'injective-protocol',
+};
+
+const finiteNumber = (value: unknown, fallback = 0) => (
+  typeof value === 'number' && Number.isFinite(value) ? value : fallback
+);
+
+const coinGeckoCompatibleId = (ticker: CoinPaprikaTicker) => {
+  const paprikaId = ticker.id ?? '';
+  return coinGeckoIdByPaprikaId[paprikaId]
+    ?? paprikaId.replace(/^[^-]+-/, '')
+    ?? paprikaId;
+};
+
+const fetchCoinPaprikaTopCoins = async (currency: CurrencyCode): Promise<Coin[]> => {
+  const quoteCurrency = currency.toUpperCase();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const url = new URL(`${COINPAPRIKA_BASE_URL}/tickers`);
+    url.search = new URLSearchParams({ quotes: quoteCurrency, limit: '120' }).toString();
+    const response = await fetch(url, {
+      headers: { Accept: 'application/json', 'User-Agent': 'BlockLens/0.1 (+https://blocklens.corstack.dev)' },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const detail = (await response.text()).replace(/\s+/g, ' ').trim().slice(0, 160);
+      throw new Error(`CoinPaprika request returned ${response.status}${detail ? `: ${detail}` : ''}`);
+    }
+
+    const payload = await response.json() as CoinPaprikaTicker[];
+    if (!Array.isArray(payload)) throw new Error('CoinPaprika returned an invalid market response.');
+    const seen = new Set<string>();
+    return payload.flatMap((ticker): Coin[] => {
+      const id = coinGeckoCompatibleId(ticker);
+      const symbol = ticker.symbol?.trim().toLowerCase() ?? '';
+      const name = ticker.name?.trim() ?? '';
+      const quote = ticker.quotes?.[quoteCurrency];
+      if (!id || !symbol || !name || !quote || seen.has(id)) return [];
+      const currentPrice = finiteNumber(quote.price);
+      if (currentPrice <= 0) return [];
+      seen.add(id);
+      return [{
+        id,
+        symbol,
+        name,
+        image: `${COINCAP_ICON_BASE_URL}/${encodeURIComponent(symbol)}@2x.png`,
+        current_price: currentPrice,
+        market_cap: finiteNumber(quote.market_cap),
+        market_cap_rank: finiteNumber(ticker.rank, seen.size),
+        total_volume: finiteNumber(quote.volume_24h),
+        // CoinPaprika's ticker response does not include an intraday high/low.
+        // Use the current quote instead of inventing a range.
+        high_24h: currentPrice,
+        low_24h: currentPrice,
+        price_change_percentage_24h: finiteNumber(quote.percent_change_24h),
+        price_change_percentage_7d_in_currency: finiteNumber(quote.percent_change_7d),
+        price_change_percentage_30d_in_currency: finiteNumber(quote.percent_change_30d),
+        last_updated: ticker.last_updated,
+      }];
+    }).slice(0, 100);
+  } finally {
+    clearTimeout(timeout);
+  }
 };
 
 const getCoinGeckoConfig = (environment: ServerEnvironment = {}): CoinGeckoRequestConfig => {
@@ -144,16 +252,41 @@ const withCache = async <T>(
 export const fetchTopCoins = async (
   currency: CurrencyCode = DEFAULT_CURRENCY,
   environment?: ServerEnvironment,
-): Promise<Coin[]> => (
-  withCache(marketCache, marketPending, `markets:${currency}`, MARKET_CACHE_TTL, () => fetchJson<Coin[]>('/coins/markets', {
-    vs_currency: currency,
-    order: 'market_cap_desc',
-    per_page: '100',
-    page: '1',
-    sparkline: 'true',
-    price_change_percentage: '7d,30d',
-    precision: 'full',
-  }, environment))
+): Promise<Coin[]> => (await fetchTopCoinsSnapshot(currency, environment)).coins;
+
+export const fetchTopCoinsSnapshot = async (
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+  environment?: ServerEnvironment,
+): Promise<MarketCoinSnapshot> => withCache(
+  marketCache,
+  marketPending,
+  `markets:${currency}`,
+  MARKET_CACHE_TTL,
+  async () => {
+    try {
+      const coins = await fetchJson<Coin[]>('/coins/markets', {
+        vs_currency: currency,
+        order: 'market_cap_desc',
+        per_page: '100',
+        page: '1',
+        sparkline: 'true',
+        price_change_percentage: '7d,30d',
+        precision: 'full',
+      }, environment);
+      if (!Array.isArray(coins) || coins.length === 0) throw new Error('CoinGecko returned an empty market response.');
+      return { coins, source: 'coingecko' };
+    } catch (coinGeckoError) {
+      try {
+        const coins = await fetchCoinPaprikaTopCoins(currency);
+        if (coins.length === 0) throw new Error('CoinPaprika returned no usable market assets.');
+        return { coins, source: 'coinpaprika' };
+      } catch (coinPaprikaError) {
+        const primary = coinGeckoError instanceof Error ? coinGeckoError.message : 'unknown CoinGecko error';
+        const backup = coinPaprikaError instanceof Error ? coinPaprikaError.message : 'unknown CoinPaprika error';
+        throw new Error(`All market providers failed. CoinGecko: ${primary}. CoinPaprika: ${backup}`);
+      }
+    }
+  },
 );
 
 export const fetchGlobalMarketMetrics = async (

@@ -1,7 +1,7 @@
 import { runAIAnalysis, AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest } from '../api/_analysis.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from '../api/_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from '../api/_rate-limit.ts';
-import { AnalysisMarketDataError, buildAnalysisRequest, fetchGlobalMarketMetrics, fetchTopCoins, normalizeAnalysisSelection } from '../api/_market.ts';
+import { AnalysisMarketDataError, buildAnalysisRequest, fetchGlobalMarketMetrics, fetchTopCoins, fetchTopCoinsSnapshot, normalizeAnalysisSelection } from '../api/_market.ts';
 import { processTelegramUpdate } from '../api/telegram/webhook.ts';
 import type { ServerEnvironment } from '../api/_env.ts';
 import type { TelegramUpdate } from '../api/telegram/_telegram.ts';
@@ -174,14 +174,18 @@ const handleMarketSnapshot = async (request: Request, env: WorkerEnvironment): P
     ? requestedCurrency as CurrencyCode
     : 'usd';
   try {
-    const [coins, metricsResult] = await Promise.all([
-      fetchTopCoins(currency, env),
+    const [market, metricsResult] = await Promise.all([
+      fetchTopCoinsSnapshot(currency, env),
       fetchGlobalMarketMetrics(currency, env).then(
         (metrics) => ({ metrics, error: null }),
         () => ({ metrics: null, error: 'Global market metrics are temporarily unavailable.' }),
       ),
     ]);
-    return json({ coins, metrics: metricsResult.metrics, warning: metricsResult.error, asOf: new Date().toISOString() }, 200, {
+    const warning = [
+      market.source === 'coinpaprika' ? 'CoinGecko is temporarily unavailable. Live prices are being served by CoinPaprika.' : null,
+      metricsResult.error,
+    ].filter(Boolean).join(' ') || null;
+    return json({ coins: market.coins, metrics: metricsResult.metrics, warning, source: market.source, asOf: new Date().toISOString() }, 200, {
       'Cache-Control': 'public, max-age=30, s-maxage=45, stale-while-revalidate=120',
     });
   } catch (error) {

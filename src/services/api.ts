@@ -57,6 +57,7 @@ export type MarketSnapshot = {
   coins: Coin[];
   metrics: MarketMetrics | null;
   warning: string | null;
+  source: 'coingecko' | 'coinpaprika';
   asOf: string;
 };
 

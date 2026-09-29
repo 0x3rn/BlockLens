@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchAnalysisCandleSeries, fetchTopCoins, normalizeAnalysisSelection } from './_market';
+import { fetchAnalysisCandleSeries, fetchTopCoins, fetchTopCoinsSnapshot, normalizeAnalysisSelection } from './_market';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -44,11 +44,48 @@ describe('CoinGecko resilience', () => {
   });
 
   it('does not retry a permanent upstream rejection', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response('bad request', { status: 400 }));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('bad request', { status: 400 }))
+      .mockResolvedValueOnce(new Response('backup unavailable', { status: 503 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(fetchTopCoins('gbp')).rejects.toThrow('returned 400: bad request');
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(fetchTopCoins('gbp')).rejects.toThrow('All market providers failed');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to CoinPaprika when the primary market feed is rejected', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('blocked upstream', { status: 403 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{
+        id: 'btc-bitcoin',
+        name: 'Bitcoin',
+        symbol: 'BTC',
+        rank: 1,
+        last_updated: '2026-09-29T13:58:15Z',
+        quotes: {
+          NGN: {
+            price: 111_547_709,
+            volume_24h: 31_411_907_770_025,
+            market_cap: 2_241_118_309_791_247,
+            percent_change_24h: 1.71,
+            percent_change_7d: -2.21,
+            percent_change_30d: -1.72,
+          },
+        },
+      }]), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const snapshot = await fetchTopCoinsSnapshot('ngn');
+
+    expect(snapshot.source).toBe('coinpaprika');
+    expect(snapshot.coins[0]).toMatchObject({
+      id: 'bitcoin',
+      symbol: 'btc',
+      current_price: 111_547_709,
+      market_cap_rank: 1,
+      price_change_percentage_7d_in_currency: -2.21,
+    });
+    expect(fetchMock.mock.calls[1][0].toString()).toContain('api.coinpaprika.com/v1/tickers');
   });
 });
 

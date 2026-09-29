@@ -5,7 +5,7 @@ import { formatCompactCurrency, formatDateTime, formatNumber, formatPercent } fr
 import '../styles/MarketData.css';
 
 const MarketData: React.FC = () => {
-  const { metrics, loading, currency, lastUpdated } = useMarket();
+  const { metrics, loading, currency, lastUpdated, marketSource } = useMarket();
 
   if (loading && !metrics) {
     return (
@@ -38,7 +38,7 @@ const MarketData: React.FC = () => {
     <section className="market-data-panel" aria-labelledby="market-overview-title">
       <div className="panel-heading-row">
         <h2 className="panel-title" id="market-overview-title">Global Market Overview</h2>
-        <span className="data-timestamp">CoinGecko · {formatDateTime(lastUpdated ?? metrics.updatedAt)}</span>
+        <span className="data-timestamp">{marketSource === 'coinpaprika' ? 'CoinPaprika' : 'CoinGecko'} · {formatDateTime(lastUpdated ?? metrics.updatedAt)}</span>
       </div>
       <div className="metrics-grid">
         {metricItems.map(({ label, value, icon: Icon, tone, iconTone }) => (
