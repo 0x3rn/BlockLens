@@ -7,7 +7,7 @@ import { useMarket } from '../context/MarketContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 const MarketsPage: React.FC = () => {
-  const { coins, loading, error, refresh, watchlist } = useMarket();
+  const { coins, loading, error, refresh, watchlist, marketSource } = useMarket();
   usePageMeta('Markets', 'Search, filter, sort, and inspect the top 100 cryptocurrencies by market capitalization.');
 
   return (
@@ -16,7 +16,7 @@ const MarketsPage: React.FC = () => {
         <div className="markets-title-wrap">
           <span className="markets-icon"><BarChart3 size={25} aria-hidden="true" /></span>
           <div>
-            <span className="eyebrow">Live CoinGecko snapshot</span>
+            <span className="eyebrow">Live {marketSource === 'coinpaprika' ? 'CoinPaprika' : 'CoinGecko'} snapshot</span>
             <h1>Markets</h1>
             <p>Search and filter the top 100 assets with precise prices and transparent update status.</p>
           </div>

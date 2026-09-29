@@ -28,7 +28,9 @@ describe('Cloudflare request and static response controls', () => {
     expect(cloudflareHeaders).toContain("X-Frame-Options: DENY");
     expect(cloudflareHeaders).toContain("frame-ancestors 'none'");
     expect(cloudflareHeaders).toContain('https://fapi.binance.com');
+    expect(cloudflareHeaders).toContain('https://api.coinpaprika.com');
     expect(vercelCsp).toContain('https://fapi.binance.com');
+    expect(vercelCsp).toContain('https://api.coinpaprika.com');
   });
 
   it('keeps AI and history quotas behind server-side database controls', () => {

@@ -1,6 +1,37 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AxiosError } from 'axios';
-import { CONTROLLED_ERROR_MESSAGES, getApiErrorMessage } from './api';
+import { CONTROLLED_ERROR_MESSAGES, getApiErrorMessage, normalizeCoinPaprikaTickers } from './api';
+
+describe('CoinPaprika market normalization', () => {
+  it('creates CoinGecko-compatible assets for the browser fallback', () => {
+    const coins = normalizeCoinPaprikaTickers([{
+      id: 'bnb-binance-coin',
+      name: 'BNB',
+      symbol: 'BNB',
+      rank: 4,
+      last_updated: '2026-09-29T13:58:15Z',
+      quotes: {
+        NGN: {
+          price: 1_200_000,
+          market_cap: 167_000_000_000_000,
+          volume_24h: 5_000_000_000_000,
+          percent_change_24h: 1.2,
+          percent_change_7d: -0.8,
+          percent_change_30d: 4.5,
+        },
+      },
+    }], 'ngn');
+
+    expect(coins).toHaveLength(1);
+    expect(coins[0]).toMatchObject({
+      id: 'binancecoin',
+      symbol: 'bnb',
+      current_price: 1_200_000,
+      market_cap_rank: 4,
+      price_change_percentage_7d_in_currency: -0.8,
+    });
+  });
+});
 
 describe('getApiErrorMessage', () => {
   beforeEach(() => {

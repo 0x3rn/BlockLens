@@ -16,6 +16,7 @@ interface MarketContextValue {
   refreshing: boolean;
   error: string | null;
   lastUpdated: string | null;
+  marketSource: 'coingecko' | 'coinpaprika';
   refresh: () => Promise<void>;
   currency: CurrencyCode;
   setCurrency: React.Dispatch<React.SetStateAction<CurrencyCode>>;
@@ -54,6 +55,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [marketSource, setMarketSource] = useState<'coingecko' | 'coinpaprika'>('coingecko');
   const [dataCurrency, setDataCurrency] = useState<CurrencyCode | null>(null);
   const requestVersion = useRef(0);
   const { currency, setCurrency } = useCurrency();
@@ -116,6 +118,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       setMetrics(snapshot.metrics);
       setDataCurrency(currency);
       setLastUpdated(snapshot.asOf);
+      setMarketSource(snapshot.source);
       setError(snapshot.warning ? 'Some market data is temporarily unavailable. The rest of the dashboard is still available.' : null);
       evaluateAlerts(snapshot.coins);
     } catch (loadError) {
@@ -152,6 +155,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     refreshing,
     error,
     lastUpdated,
+    marketSource,
     refresh: () => loadData(true),
     currency,
     setCurrency,
@@ -185,6 +189,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     currency,
     error,
     lastUpdated,
+    marketSource,
     loadData,
     loading,
     visibleMetrics,

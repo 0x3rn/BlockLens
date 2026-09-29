@@ -1,5 +1,5 @@
 import { processEnvironment } from '../_env.ts';
-import { fetchGlobalMarketMetrics, fetchTopCoins } from '../_market.ts';
+import { fetchGlobalMarketMetrics, fetchTopCoinsSnapshot } from '../_market.ts';
 import type { CurrencyCode } from '../../src/types/crypto.ts';
 
 type ResponseLike = {
@@ -31,17 +31,21 @@ export default async function handler(request: RequestLike, response: ResponseLi
 
   const currency = readCurrency(request);
   try {
-    const [coins, metricsResult] = await Promise.all([
-      fetchTopCoins(currency, processEnvironment()),
+    const [market, metricsResult] = await Promise.all([
+      fetchTopCoinsSnapshot(currency, processEnvironment()),
       fetchGlobalMarketMetrics(currency, processEnvironment()).then(
         (metrics) => ({ metrics, error: null }),
         () => ({ metrics: null, error: 'Global market metrics are temporarily unavailable.' }),
       ),
     ]);
     return response.status(200).json({
-      coins,
+      coins: market.coins,
       metrics: metricsResult.metrics,
-      warning: metricsResult.error,
+      warning: [
+        market.source === 'coinpaprika' ? 'CoinGecko is temporarily unavailable. Live prices are being served by CoinPaprika.' : null,
+        metricsResult.error,
+      ].filter(Boolean).join(' ') || null,
+      source: market.source,
       asOf: new Date().toISOString(),
     });
   } catch (error) {
