@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePersistentState } from './usePersistentState';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { database } from '../lib/database';
 
 const isStringArray = (value: unknown): value is string[] => (
   Array.isArray(value)
@@ -20,7 +20,7 @@ const saveErrorMessage = 'That watchlist change was not saved. Your existing sav
 
 export const useWatchlist = () => {
   const { user, loading: authLoading } = useAuth();
-  const client = supabase;
+  const client = database;
   const [watchlist, setWatchlist] = usePersistentState<string[]>(
     'blocklens_watchlist',
     [],

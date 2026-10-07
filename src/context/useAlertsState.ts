@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AlertCondition, Coin, CurrencyCode, PriceAlert } from '../types/crypto';
 import { usePersistentState } from '../hooks/usePersistentState';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { database } from '../lib/database';
 
 const isAlerts = (value: unknown): value is PriceAlert[] => (
   Array.isArray(value) && value.length <= 100 && value.every((item) => {
@@ -22,7 +22,7 @@ const isAlerts = (value: unknown): value is PriceAlert[] => (
 );
 export const useAlertsState = (activeCurrency: CurrencyCode) => {
   const { user, loading: authLoading } = useAuth();
-  const client = supabase;
+  const client = database;
   const [alerts, setAlerts] = usePersistentState<PriceAlert[]>(
     'blocklens_alerts',
     [],
@@ -110,7 +110,7 @@ export const useAlertsState = (activeCurrency: CurrencyCode) => {
     setAlerts(alertsRef.current);
     if (client && user) {
       if (!cloudReady.current) pendingChanges.current.set(id, nextAlert);
-      else void client.from('price_alerts').insert({ id, user_id: user.id, coin_id: coinId, condition, threshold, currency, created_at: createdAt });
+      else void client.from('price_alerts').insert({ id, user_id: user.id, coin_id: coinId, condition, threshold, currency, created_at: createdAt }).then(() => undefined);
     }
   }, [setAlerts, user]);
 
@@ -119,7 +119,7 @@ export const useAlertsState = (activeCurrency: CurrencyCode) => {
     setAlerts(alertsRef.current);
     if (client && user) {
       if (!cloudReady.current) pendingChanges.current.set(id, null);
-      else void client.from('price_alerts').delete().eq('user_id', user.id).eq('id', id);
+      else void client.from('price_alerts').delete().eq('user_id', user.id).eq('id', id).then(() => undefined);
     }
   }, [setAlerts, user]);
 
@@ -136,8 +136,8 @@ export const useAlertsState = (activeCurrency: CurrencyCode) => {
         ? coin.current_price >= alert.threshold
         : coin.current_price <= alert.threshold;
       const triggeredAt = triggered ? new Date().toISOString() : undefined;
-      if (triggeredAt && supabase && user && cloudReady.current) {
-        void supabase.from('price_alerts').update({ triggered_at: triggeredAt }).eq('user_id', user.id).eq('id', alert.id);
+      if (triggeredAt && database && user && cloudReady.current) {
+        void database.from('price_alerts').update({ triggered_at: triggeredAt }).eq('user_id', user.id).eq('id', alert.id).then(() => undefined);
       }
       return triggeredAt ? { ...alert, triggeredAt } : alert;
     }));

@@ -31,12 +31,24 @@ describe('Cloudflare request and static response controls', () => {
     expect(cloudflareHeaders).toContain('https://api.coinpaprika.com');
     expect(vercelCsp).toContain('https://fapi.binance.com');
     expect(vercelCsp).toContain('https://api.coinpaprika.com');
+    expect(cloudflareHeaders).toContain('https://identitytoolkit.googleapis.com');
+    expect(cloudflareHeaders).toContain('https://securetoken.googleapis.com');
+    expect(vercelCsp).toContain('https://identitytoolkit.googleapis.com');
+    expect(vercelCsp).toContain('https://securetoken.googleapis.com');
+    expect(cloudflareHeaders).toContain('Cross-Origin-Opener-Policy: same-origin-allow-popups');
+    expect(vercel.headers[0].headers.find(header => header.key === 'Cross-Origin-Opener-Policy')?.value).toBe('same-origin-allow-popups');
+    expect(vercelCsp).toContain('https://apis.google.com');
+    expect(cloudflareHeaders).toContain('https://apis.google.com');
+    expect(vercelCsp).toContain('frame-src https://blocklens-0x.firebaseapp.com');
+    expect(cloudflareHeaders).toContain('frame-src https://blocklens-0x.firebaseapp.com');
+    expect(cloudflareHeaders).not.toContain('https://*.supabase.co');
+    expect(vercelCsp).not.toContain('https://*.supabase.co');
   });
 
   it('keeps AI and history quotas behind server-side database controls', () => {
-    const migration = readFileSync('supabase/migrations/0004_security_hardening.sql', 'utf8');
-    expect(migration).toContain('grant execute on function public.consume_ai_analysis_quota(text) to service_role');
-    expect(migration).toContain('revoke all on public.history_write_limits from public, anon, authenticated');
+    const migration = readFileSync('neon/migrations/0001_blocklens.sql', 'utf8');
+    expect(migration).toContain('revoke all on function public.consume_ai_analysis_quota(text) from public, blocklens_app');
+    expect(migration).toContain('revoke all on public.history_write_limits from public, blocklens_app');
     expect(migration).toContain('offset 49');
     expect(migration).toContain('offset 99');
     expect(migration).toContain('octet_length(new.analysis::text) > 65536');

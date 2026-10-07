@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { CurrencyCode, PortfolioPosition } from '../types/crypto';
 import { usePersistentState } from './usePersistentState';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { database } from '../lib/database';
 
 const isPortfolio = (value: unknown): value is PortfolioPosition[] => (
   Array.isArray(value) && value.length <= 500 && value.every((item) => {
@@ -43,7 +43,7 @@ export const usePortfolio = () => {
     portfolioIdRef.current = null;
     cloudReady.current = false;
     pendingChanges.current.clear();
-    const client = supabase;
+    const client = database;
     if (!client || !user) return undefined;
 
     const loadCloudPortfolio = async () => {
@@ -122,33 +122,33 @@ export const usePortfolio = () => {
     positionsRef.current = next;
     setPositions(next);
     const portfolioId = portfolioIdRef.current;
-    if (!supabase || !user) return;
+    if (!database || !user) return;
     if (!cloudReady.current || !portfolioId) {
       pendingChanges.current.set(position.coinId, nextPosition);
       return;
     }
     void (position.quantity <= 0
-      ? supabase.from('portfolio_positions').delete().eq('portfolio_id', portfolioId).eq('coin_id', position.coinId)
-      : supabase.from('portfolio_positions').upsert({
+      ? database.from('portfolio_positions').delete().eq('portfolio_id', portfolioId).eq('coin_id', position.coinId)
+      : database.from('portfolio_positions').upsert({
         portfolio_id: portfolioId,
         coin_id: position.coinId,
         quantity: position.quantity,
         average_cost: position.averageCost,
         currency: position.currency,
         updated_at: updatedAt,
-      }, { onConflict: 'portfolio_id,coin_id' }));
+      }, { onConflict: 'portfolio_id,coin_id' })).then(() => undefined);
   }, [setPositions, user]);
 
   const removePosition = useCallback((coinId: string) => {
     positionsRef.current = positionsRef.current.filter((item) => item.coinId !== coinId);
     setPositions(positionsRef.current);
     const portfolioId = portfolioIdRef.current;
-    if (!supabase || !user) return;
+    if (!database || !user) return;
     if (!cloudReady.current || !portfolioId) {
       pendingChanges.current.set(coinId, null);
       return;
     }
-    void supabase.from('portfolio_positions').delete().eq('portfolio_id', portfolioId).eq('coin_id', coinId);
+    void database.from('portfolio_positions').delete().eq('portfolio_id', portfolioId).eq('coin_id', coinId).then(() => undefined);
   }, [setPositions, user]);
 
   return { positions, upsertPosition, removePosition };

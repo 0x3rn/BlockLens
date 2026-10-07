@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AIAnalysis, AIAnalysisHistoryEntry, CurrencyCode } from '../types/crypto';
 import { usePersistentState } from './usePersistentState';
 import { useAuth } from '../context/AuthContext';
-import { Json, supabase } from '../lib/supabase';
+import { Json, database } from '../lib/database';
 
 const MAX_HISTORY = 50;
 
@@ -107,7 +107,7 @@ export const useAIHistory = () => {
     let cancelled = false;
     cloudReady.current = false;
     pendingCreates.current = [];
-    const client = supabase;
+    const client = database;
     if (!client || !user) return undefined;
 
     const loadCloudHistory = async () => {
@@ -157,12 +157,12 @@ export const useAIHistory = () => {
     const next = [entry, ...historyRef.current].slice(0, MAX_HISTORY);
     historyRef.current = next;
     setHistory(next);
-    if (!supabase || !user) return;
+    if (!database || !user) return;
     if (!cloudReady.current) {
       pendingCreates.current.push(entry);
       return;
     }
-    void supabase.from('ai_analysis_history').upsert({
+    void database.from('ai_analysis_history').upsert({
       id: entry.id,
       user_id: user.id,
       coin_id: entry.coinId,
@@ -172,7 +172,7 @@ export const useAIHistory = () => {
       price: entry.price,
       analysis: entry.analysis as unknown as Json,
       created_at: entry.createdAt,
-    }, { onConflict: 'id' });
+    }, { onConflict: 'id' }).then(() => undefined);
   }, [setHistory, user]);
 
   return { history, saveAnalysis };

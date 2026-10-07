@@ -1,37 +1,35 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AnalysisAccessError, consumeAnalysisQuota } from './_analysis-access';
+import { consumeAnalysisQuota } from './_analysis-access';
+
+const mocks = vi.hoisted(() => ({ query: vi.fn() }));
+vi.mock('./_database.ts', () => ({ databaseClient: () => mocks.query }));
 
 const environment = {
-  SUPABASE_URL: 'https://project.supabase.co',
-  SUPABASE_SERVICE_ROLE_KEY: 'server-only-key',
+  DATABASE_URL: 'postgresql://owner:secret@ep-example.neon.tech/neondb?sslmode=require',
 };
 
 describe('shared AI analysis quota', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => mocks.query.mockReset());
 
   it('sends only a hash of the caller key to the server-only RPC', async () => {
-    const request = vi.fn().mockResolvedValue(new Response('true', {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }));
-    vi.stubGlobal('fetch', request);
+    mocks.query.mockResolvedValue([{ allowed: true }]);
 
     await consumeAnalysisQuota('web:198.51.100.7', environment);
 
-    const [url, init] = request.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://project.supabase.co/rest/v1/rpc/consume_ai_analysis_quota');
-    expect(init.headers).toMatchObject({ apikey: 'server-only-key' });
-    expect(init.body).not.toContain('198.51.100.7');
-    expect(JSON.parse(init.body as string).p_key_hash).toMatch(/^[a-f0-9]{64}$/);
+    const [parts, key] = mocks.query.mock.calls[0];
+    expect(parts.join('')).toContain('public.consume_ai_analysis_quota');
+    expect(key).not.toContain('198.51.100.7');
+    expect(key).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('fails closed when the shared quota denies or cannot evaluate a request', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('false', {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })));
-    await expect(consumeAnalysisQuota('caller', environment)).rejects.toMatchObject({ status: 429 } satisfies Partial<AnalysisAccessError>);
+    mocks.query.mockResolvedValue([{ allowed: false }]);
+    await expect(consumeAnalysisQuota('caller', environment)).rejects.toMatchObject({ status: 429 });
 
-    await expect(consumeAnalysisQuota('caller', {})).rejects.toMatchObject({ status: 503 } satisfies Partial<AnalysisAccessError>);
+    await expect(consumeAnalysisQuota('caller', {})).rejects.toMatchObject({ status: 503 });
+    mocks.query.mockRejectedValue(new Error('unavailable'));
+    await expect(consumeAnalysisQuota('caller', environment)).rejects.toMatchObject({ status: 503 });
+    mocks.query.mockResolvedValue([{ allowed: null }]);
+    await expect(consumeAnalysisQuota('caller', environment)).rejects.toMatchObject({ status: 503 });
   });
 });

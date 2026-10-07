@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('../context/AuthContext', () => ({ useAuth: () => mocks.auth }));
-vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }));
+vi.mock('../lib/database', () => ({ database: { from: mocks.from } }));
 
 import { createInitialPaperFuturesAccount, usePaperFutures } from './usePaperFutures';
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { CurrencyCode, PositionHistoryAction, PositionHistoryEntry } from '../types/crypto';
 import { usePersistentState } from './usePersistentState';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import { database } from '../lib/database';
 
 const MAX_HISTORY = 100;
 
@@ -53,7 +53,7 @@ export const usePositionHistory = () => {
     let cancelled = false;
     cloudReady.current = false;
     pendingCreates.current = [];
-    const client = supabase;
+    const client = database;
     if (!client || !user) return undefined;
 
     const loadCloudHistory = async () => {
@@ -110,12 +110,12 @@ export const usePositionHistory = () => {
     const next = [entry, ...historyRef.current].slice(0, MAX_HISTORY);
     historyRef.current = next;
     setHistory(next);
-    if (!supabase || !user) return;
+    if (!database || !user) return;
     if (!cloudReady.current) {
       pendingCreates.current.push(entry);
       return;
     }
-    void supabase.from('position_history').upsert({
+    void database.from('position_history').upsert({
       id: entry.id,
       user_id: user.id,
       coin_id: entry.coinId,
@@ -124,7 +124,7 @@ export const usePositionHistory = () => {
       average_cost: entry.averageCost,
       currency: entry.currency,
       created_at: entry.createdAt,
-    }, { onConflict: 'id' });
+    }, { onConflict: 'id' }).then(() => undefined);
   }, [setHistory, user]);
 
   return { history, recordPositionEvent };

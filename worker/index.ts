@@ -6,6 +6,7 @@ import { processTelegramUpdate } from '../api/telegram/webhook.ts';
 import type { ServerEnvironment } from '../api/_env.ts';
 import type { TelegramUpdate } from '../api/telegram/_telegram.ts';
 import type { CurrencyCode } from '../src/types/crypto.ts';
+import { AccountError, executeAccountQuery } from '../api/_account.ts';
 
 type AssetBinding = {
   fetch: (request: Request) => Promise<Response>;
@@ -223,11 +224,25 @@ const handleTelegramWebhook = async (request: Request, env: WorkerEnvironment): 
 
 const notFound = () => json({ error: 'Not found.' }, 404);
 
+const handleAccount = async (request: Request, env: WorkerEnvironment) => {
+  const headers = { 'Cache-Control': 'no-store' };
+  if (request.method !== 'POST') return json({ data: null, error: { message: 'Only POST requests are accepted.' } }, 405, { ...headers, Allow: 'POST' });
+  const body = await readJsonBody(request);
+  if (!body.ok) return json({ data: null, error: { message: 'Invalid or oversized account request.' } }, body.response.status, headers);
+  try {
+    const data = await executeAccountQuery(body.value, request.headers.get('authorization'), env);
+    return json({ data, error: null }, 200, headers);
+  } catch (error) {
+    return json({ data: null, error: { message: error instanceof AccountError ? error.message : 'Account sync is temporarily unavailable.' } }, error instanceof AccountError ? error.status : 503, headers);
+  }
+};
+
 const worker = {
   async fetch(request: Request, env: WorkerEnvironment): Promise<Response> {
     const pathname = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
 
     if (pathname === '/api/analyze') return handleAnalysis(request, env);
+    if (pathname === '/api/account') return handleAccount(request, env);
     if (pathname === '/api/market/snapshot') return handleMarketSnapshot(request, env);
     if (pathname === '/api/telegram/coins') return handleTelegramCoins(request, env);
     if (pathname === '/api/telegram/webhook') return handleTelegramWebhook(request, env);

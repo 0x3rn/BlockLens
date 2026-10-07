@@ -6,6 +6,7 @@ import analyzeHandler from './api/analyze.ts';
 import telegramCoinsHandler from './api/telegram/coins.ts';
 import telegramWebhookHandler from './api/telegram/webhook.ts';
 import marketSnapshotHandler from './api/market/snapshot.ts';
+import accountHandler from './api/account.ts';
 
 class LocalApiResponse {
   constructor(private readonly response: ServerResponse) {}
@@ -28,7 +29,7 @@ const localAnalyzeApi = (): Plugin => ({
   name: 'blocklens-local-analysis-api',
   apply: 'serve',
   configureServer(server) {
-    server.middlewares.use('/api/analyze', (request: IncomingMessage, response: ServerResponse) => {
+    const handleBody = (handler: typeof analyzeHandler) => (request: IncomingMessage, response: ServerResponse) => {
       const chunks: Buffer[] = [];
       let receivedBytes = 0;
       request.on('data', (chunk: Buffer) => {
@@ -44,7 +45,7 @@ const localAnalyzeApi = (): Plugin => ({
       request.on('end', () => {
         if (response.writableEnded) return;
         const body = Buffer.concat(chunks).toString('utf8');
-        void analyzeHandler(
+        void handler(
           { method: request.method, body, headers: request.headers },
           new LocalApiResponse(response),
         ).catch(() => {
@@ -54,7 +55,9 @@ const localAnalyzeApi = (): Plugin => ({
           }
         });
       });
-    });
+    };
+    server.middlewares.use('/api/analyze', handleBody(analyzeHandler));
+    server.middlewares.use('/api/account', handleBody(accountHandler));
   },
 });
 
@@ -128,8 +131,8 @@ export default defineConfig(({ mode }) => {
   const environment = loadEnv(mode, process.cwd(), '');
   process.env.GOOGLE_CLOUD_PROJECT = environment.GOOGLE_CLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
   process.env.GOOGLE_SERVICE_ACCOUNT_JSON = environment.GOOGLE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  process.env.SUPABASE_URL = environment.SUPABASE_URL || process.env.SUPABASE_URL;
-  process.env.SUPABASE_SERVICE_ROLE_KEY = environment.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  process.env.FIREBASE_PROJECT_ID = environment.FIREBASE_PROJECT_ID || environment.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+  process.env.DATABASE_URL = environment.DATABASE_URL || process.env.DATABASE_URL;
   process.env.COINGECKO_API_KEY = environment.COINGECKO_API_KEY || process.env.COINGECKO_API_KEY;
   process.env.COINGECKO_API_PLAN = environment.COINGECKO_API_PLAN || process.env.COINGECKO_API_PLAN;
   process.env.TELEGRAM_BOT_TOKEN = environment.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;

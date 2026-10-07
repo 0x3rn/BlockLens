@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Json, supabase } from '../lib/supabase';
+import { Json, database } from '../lib/database';
 import {
   FuturesMarginMode,
   FuturesSide,
@@ -426,7 +426,7 @@ export const usePaperFutures = () => {
     pendingAccount.current = null;
     persistVersion.current += 1;
     persistQueue.current = Promise.resolve();
-    const client = supabase;
+    const client = database;
     if (authLoading || !client || !user) return undefined;
 
     setSyncStatus('loading');
@@ -499,7 +499,7 @@ export const usePaperFutures = () => {
   const commitAccount = useCallback((next: PaperFuturesAccount) => {
     accountRef.current = next;
     setAccount(next);
-    if (!supabase || !user) return;
+    if (!database || !user) return;
     if (!cloudReady.current) {
       pendingAccount.current = next;
       return;
@@ -509,10 +509,10 @@ export const usePaperFutures = () => {
     persistQueue.current = persistQueue.current
       .catch(() => undefined)
       .then(async () => {
-        let { error } = await supabase!.from('paper_futures_accounts')
+        let { error } = await database!.from('paper_futures_accounts')
           .upsert(toCloudPayload(next, user.id), { onConflict: 'user_id' });
         if (error) {
-          const legacyWrite = await supabase!.from('paper_futures_accounts')
+          const legacyWrite = await database!.from('paper_futures_accounts')
             .upsert(toLegacyCloudPayload(next, user.id), { onConflict: 'user_id' });
           error = legacyWrite.error;
         }
@@ -531,7 +531,7 @@ export const usePaperFutures = () => {
   }, [user]);
 
   const retrySync = useCallback(() => {
-    if (!user || !supabase) return;
+    if (!user || !database) return;
     setSyncAttempt((value) => value + 1);
   }, [user]);
 

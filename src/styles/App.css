@@ -549,9 +549,9 @@ img { max-width: 100%; }
 .history-empty p { margin-bottom: 12px; color: var(--text-secondary); font-size: .75rem; line-height: 1.5; }
 
 .not-found-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; min-height: 480px; justify-content: center; }
-.account-page { max-width: 980px; }
+.account-page { max-width: 520px; }
 .account-icon { color: var(--accent); }
-.account-layout { display: block; max-width: 520px; }
+.account-layout { display: block; width: 100%; }
 .account-card, .account-benefits { padding: 24px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius); box-shadow: var(--shadow-card); }
 .account-card { display: flex; align-items: center; gap: 16px; }
 .account-card > svg { flex: 0 0 auto; color: var(--accent); }
@@ -561,6 +561,9 @@ img { max-width: 100%; }
 .account-card code { color: var(--accent); font: .72rem var(--font-mono); }
 .account-user-mark { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 42px; color: var(--accent); background: var(--accent-dim); border-radius: 10px; }
 .account-form { min-width: 0; }
+.account-google-button { width: 100%; justify-content: center; }
+.account-auth-divider { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: .72rem; }
+.account-auth-divider::before, .account-auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border-subtle); }
 .account-message { padding: 10px 12px; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 8px; }
 .account-mode-toggle { align-self: flex-start; padding: 0; color: var(--accent); background: transparent; border: 0; font-size: .72rem; font-weight: 700; }
 .account-mode-toggle:hover { color: var(--text-primary); }
@@ -630,7 +633,6 @@ img { max-width: 100%; }
   .site-footer { align-items: center; padding-bottom: 100px; }
   .feed-resilience-note { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
   .feed-resilience-note .text-link { grid-column: 2; justify-self: start; }
-  .account-layout { grid-template-columns: 1fr; }
   .account-card { align-items: flex-start; flex-wrap: wrap; }
   .account-card .secondary-button { margin-left: 0; }
   .account-card > div { min-width: 0; flex: 1 1 220px; }

@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('../context/AuthContext', () => ({ useAuth: () => mocks.auth }));
-vi.mock('../lib/supabase', () => ({ supabase: { from: mocks.from } }));
+vi.mock('../lib/database', () => ({ database: { from: mocks.from } }));
 
 import { useWatchlist } from './useWatchlist';
 
@@ -32,13 +32,13 @@ describe('account watchlist persistence', () => {
     localStorage.clear();
   });
 
-  it('hydrates the signed-in watchlist from Supabase', async () => {
+  it('hydrates the signed-in watchlist from Neon', async () => {
     const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
     expect(result.current.watchlist).toEqual(['bitcoin']);
   });
 
-  it('does not pretend a rejected Supabase mutation was saved', async () => {
+  it('does not pretend a rejected Neon mutation was saved', async () => {
     mocks.state.mutationError = { message: 'permission denied' };
     const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
@@ -68,7 +68,7 @@ describe('account watchlist persistence', () => {
     expect(result.current.watchlist).toEqual(['bitcoin', 'ethereum']);
   });
 
-  it('deletes from Supabase before removing a saved asset', async () => {
+  it('deletes from Neon before removing a saved asset', async () => {
     const { result } = renderHook(() => useWatchlist());
     await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
 
