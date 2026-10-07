@@ -5,7 +5,7 @@ import { readableAuthError, useAuth } from '../context/AuthContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 const AccountPage: React.FC = () => {
-  const { configured, loading, user, error: authError, signIn, signInWithGoogle, signUp, signOut } = useAuth();
+  const { configured, user, error: authError, signIn, signInWithGoogle, signUp, signOut } = useAuth();
   const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -71,8 +71,6 @@ const AccountPage: React.FC = () => {
           <div><h2>Sign-in is temporarily unavailable</h2><p>You can still use your portfolio, watchlist, and alerts on this device. Please try signing in again later.</p></div>
           <Link className="secondary-button" to="/watchlist">Continue <ArrowRight size={15} aria-hidden="true" /></Link>
         </section>
-      ) : loading ? (
-        <div className="account-card account-loading" role="status"><span className="route-loader-spinner" /> {pendingAction === 'email' ? (mode === 'sign-up' ? 'Creating your account…' : 'Signing in…') : 'Loading your account…'}</div>
       ) : user ? (
         <section className="account-card account-signed-in">
           <div className="account-user-mark"><UserRound size={20} aria-hidden="true" /></div>

@@ -1,5 +1,5 @@
 import { getApps, initializeApp } from 'firebase/app';
-import { browserLocalPersistence, indexedDBLocalPersistence, initializeAuth, inMemoryPersistence } from 'firebase/auth';
+import { browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence, initializeAuth, inMemoryPersistence } from 'firebase/auth';
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string | undefined,
@@ -13,10 +13,12 @@ const app = isFirebaseConfigured
   ? getApps().find((candidate) => candidate.name === 'blocklens') ?? initializeApp(config, 'blocklens')
   : null;
 
-// Firebase's default local persistence restores sign-in and syncs sign-out
-// across tabs. Account records continue to live in Neon, not browser storage.
+// Prefer localStorage to avoid relying on IndexedDB polling for idle sessions.
+// Keep IndexedDB in the hierarchy so Firebase
+// can migrate existing sessions. Session storage also survives reloads when
+// both persistent stores are unavailable.
 export const firebaseAuth = app ? initializeAuth(app, {
-  persistence: [indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence],
+  persistence: [browserLocalPersistence, indexedDBLocalPersistence, browserSessionPersistence, inMemoryPersistence],
 }) : null;
 
 export const getAccountToken = async (forceRefresh = false): Promise<string | null> => {

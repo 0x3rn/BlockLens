@@ -571,7 +571,6 @@ img { max-width: 100%; }
 .account-benefits ul { display: grid; gap: 9px; margin: 17px 0 0; padding: 0; list-style: none; color: var(--text-secondary); font-size: .75rem; }
 .account-benefits li { display: flex; align-items: center; gap: 9px; }
 .account-benefits li::before { content: ''; width: 6px; height: 6px; flex: 0 0 6px; background: var(--accent); border-radius: 50%; }
-.account-loading { justify-content: center; min-height: 110px; color: var(--text-secondary); font: 650 .72rem var(--font-mono); text-transform: uppercase; }
 .route-loader-spinner { width: 18px; height: 18px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
 .not-found-card > svg { color: var(--accent); }
 .not-found-card p { max-width: 480px; color: var(--text-secondary); line-height: 1.6; }
