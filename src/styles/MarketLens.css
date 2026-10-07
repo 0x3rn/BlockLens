@@ -80,7 +80,7 @@
 @keyframes lens-scan { to { transform: rotate(360deg); } }
 
 @media (max-width: 1050px) {
-  .market-lens { width: min(100%, 540px); }
+  .market-lens { width: min(100%, 540px); margin-inline: auto; }
 }
 
 @media (max-width: 500px) {

@@ -39,6 +39,9 @@
     "db:migrate": "node --env-file=.env.local scripts/neon-migrate.mjs --apply",
     "db:verify": "node --env-file=.env.local scripts/neon-verify.mjs",
     "auth:verify": "node --env-file=.env.local scripts/firebase-verify.mjs",
+    "auth:import": "node --env-file=.env.local scripts/firebase-import.mjs",
+    "migration:pause": "node --env-file=.env.local scripts/migration-pause.mjs",
+    "migration:verify": "node --env-file=.env.local scripts/migration-verify.mjs",
     "db:import": "node --env-file=.env.local scripts/neon-import.mjs"
   },
   "devDependencies": {
@@ -51,6 +54,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.1.1",
+    "firebase-admin": "^14.5.0",
     "jsdom": "^30.0.1",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",

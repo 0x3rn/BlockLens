@@ -45,6 +45,11 @@ describe('Firebase server authentication', () => {
       { sub: '' }, { sub: 'a'.repeat(129) },
     ]) await expect(verify(`Bearer ${await token(claims)}`, { FIREBASE_PROJECT_ID: projectId })).rejects.toMatchObject({ status: 401 });
   });
+  it('accepts a freshly issued token when Google is a second ahead of the server', async () => {
+    const now = Math.floor(Date.now() / 1_000);
+    const identity = await verify(`Bearer ${await token({ iat: now + 1, auth_time: now + 1 })}`, { FIREBASE_PROJECT_ID: projectId });
+    expect(identity.id).toBe('FirebaseUid_ABC123');
+  });
   it('rejects forged signatures, unknown keys, and malformed authorization', async () => {
     const wrongKey = (await generateKeyPair('RS256')).privateKey;
     await expect(verify(`Bearer ${await token({}, 'google-key', wrongKey)}`, { FIREBASE_PROJECT_ID: projectId })).rejects.toMatchObject({ status: 401 });

@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-07",
+  "database": {
+    "status": "verified",
+    "applicationRows": 26,
+    "quotaRows": 3,
+    "tables": {
+      "profiles": {
+        "count": 3,
+        "checksum": "89e20a19d190b2337f17c37eed2ca58ef516c3bd8ec1ccd663c283f0cca237e6"
+      },
+      "portfolios": {
+        "count": 3,
+        "checksum": "c93956e05939a2b1def2d52a51d2f720c9c22c471f8461e49f69f7db1d4c7b20"
+      },
+      "portfolio_positions": {
+        "count": 1,
+        "checksum": "3eb51ad8ca8c5e07d89d67d0889a22cd8106decff937f3c4e9b660eb38889d46"
+      },
+      "watchlist_items": {
+        "count": 15,
+        "checksum": "3a18df0e00c4f0900ba1f82b643fbe64c99bc6939b24c4adced24efa640e9bdc"
+      },
+      "price_alerts": {
+        "count": 0,
+        "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "ai_analysis_history": {
+        "count": 1,
+        "checksum": "b5a4e13137dbb8a0341d69ce5b3e7f4d2d4997b52c69ef8de9413612a63c0411"
+      },
+      "position_history": {
+        "count": 1,
+        "checksum": "1479049e38ce4d1220741a09e9d415fa84bc14757e7f37b6c60d85b19a71b0cb"
+      },
+      "paper_futures_accounts": {
+        "count": 2,
+        "checksum": "4c8dedfb39ad417349743e93e187ff0685c63dddbabc67e6a6be412975549b64"
+      },
+      "ai_analysis_rate_limits": {
+        "count": 2,
+        "checksum": "282bf2d7485b93be0b7a135b567bcb26f5d33e78803a3fe63e996ea136261255"
+      },
+      "ai_analysis_global_limit": {
+        "count": 1,
+        "checksum": "9daf316d6e5d1e7c90901a556a5ea8ef8af8a8fc377c04b1d9e14f22f38611fc"
+      },
+      "history_write_limits": {
+        "count": 0,
+        "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  "firebase": {
+    "status": "verified",
+    "sourceUsers": 3,
+    "importedUsers": 3,
+    "passwordUsers": 3,
+    "googleUsers": 0,
+    "originalUserIdsPreserved": true,
+    "passwordHashAlgorithm": "BCRYPT",
+    "identityChecksum": "85e0d9b98b411d9cc3a4dd115501e84897f794264cb6b3169d6f5e8eae0974be"
+  },
+  "validation": {"focusedTestsPassed": 21, "productionBuild": "passed"},
+  "verification": {
+    "sourceTargetCountsAndChecksumsMatch": true,
+    "importedAccountsChecked": 3,
+    "applicationTablesPerAccount": 8,
+    "realFirebaseIdTokensVerified": true,
+    "ownershipAndIsolationVerified": true
+  },
+  "cutover": {
+    "firebaseClientSignups": "enabled",
+    "supabaseWrites": "paused",
+    "supabaseRecords": "retained",
+    "productionDeployment": "not performed in this import task"
+  }
+}

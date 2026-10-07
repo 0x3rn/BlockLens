@@ -64,9 +64,12 @@ export const verifyFirebaseUser = async (authorization: string | null, environme
       requiredClaims: ['sub', 'exp', 'iat', 'auth_time'],
     });
     const now = Math.floor(Date.now() / 1_000);
+    // Google's clock can be a second ahead when a token is used immediately.
+    // Keep expiration strict while allowing only small issuance/auth clock skew.
+    const clockSkewSeconds = 5;
     if (payload.aud !== projectId || typeof payload.sub !== 'string' || payload.sub.length < 1 || payload.sub.length > 128
-      || typeof payload.iat !== 'number' || payload.iat > now
-      || typeof payload.auth_time !== 'number' || payload.auth_time > now || payload.auth_time < 0) throw new Error();
+      || typeof payload.iat !== 'number' || payload.iat > now + clockSkewSeconds
+      || typeof payload.auth_time !== 'number' || payload.auth_time > now + clockSkewSeconds || payload.auth_time < 0) throw new Error();
     return {
       id: payload.sub,
       email: typeof payload.email === 'string' ? payload.email : undefined,
