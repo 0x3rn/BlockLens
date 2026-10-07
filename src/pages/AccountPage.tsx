@@ -1,7 +1,7 @@
-import React, { FormEvent, useState } from 'react';
+import React, { FormEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Cloud, LogIn, LogOut, UserRound } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { readableAuthError, useAuth } from '../context/AuthContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 
 const AccountPage: React.FC = () => {
@@ -13,37 +13,47 @@ const AccountPage: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<'email' | 'google' | 'sign-out' | null>(null);
   const busy = pendingAction !== null;
   const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => {
+    setMessage(null);
+    setPassword('');
+  }, [user?.id]);
   usePageMeta('Account', 'Sign in to sync your BlockLens portfolio, watchlist, and alerts across devices.');
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (busy) return;
     setPendingAction('email');
     setMessage(null);
-    const result = mode === 'sign-in'
-      ? await signIn(email, password)
-      : await signUp(email, password, displayName);
-    const resultError = result.error;
-    const needsConfirmation = mode === 'sign-up' && 'needsConfirmation' in result && result.needsConfirmation;
-    if (resultError) setMessage(resultError);
-    else if (needsConfirmation) setMessage('Check your email to confirm the account, then sign in.');
-    else setMessage('Account ready. Your data is syncing.');
-    setPendingAction(null);
+    try {
+      const result = mode === 'sign-in'
+        ? await signIn(email, password)
+        : await signUp(email, password, displayName);
+      setMessage(result.error);
+    } catch (failure) { setMessage(readableAuthError(failure)); }
+    finally { setPendingAction(null); }
   };
 
   const handleSignOut = async () => {
+    if (busy) return;
     setPendingAction('sign-out');
     setMessage(null);
-    const result = await signOut();
-    setMessage(result.error ?? 'Signed out. Your local data is still available on this device.');
-    setPendingAction(null);
+    try {
+      const result = await signOut();
+      setMessage(result.error);
+      if (!result.error) setMode('sign-in');
+    } catch (failure) { setMessage(readableAuthError(failure)); }
+    finally { setPendingAction(null); }
   };
 
   const handleGoogleSignIn = async () => {
+    if (busy) return;
     setPendingAction('google');
     setMessage(null);
-    const result = await signInWithGoogle();
-    setMessage(result.error ?? 'Account ready. Your data is syncing.');
-    setPendingAction(null);
+    try {
+      const result = await signInWithGoogle();
+      setMessage(result.error);
+    } catch (failure) { setMessage(readableAuthError(failure)); }
+    finally { setPendingAction(null); }
   };
 
   return (
@@ -58,16 +68,16 @@ const AccountPage: React.FC = () => {
       {!configured ? (
         <section className="account-card account-setup-card">
           <Cloud size={25} aria-hidden="true" />
-          <div><span className="eyebrow">Local mode</span><h2>Keep using BlockLens</h2><p>Your portfolio, watchlist, and alerts are saved on this device. Account sync is unavailable right now.</p></div>
+          <div><h2>Sign-in is temporarily unavailable</h2><p>You can still use your portfolio, watchlist, and alerts on this device. Please try signing in again later.</p></div>
           <Link className="secondary-button" to="/watchlist">Continue <ArrowRight size={15} aria-hidden="true" /></Link>
         </section>
       ) : loading ? (
-        <div className="account-card account-loading" role="status"><span className="route-loader-spinner" /> Loading account</div>
+        <div className="account-card account-loading" role="status"><span className="route-loader-spinner" /> {pendingAction === 'email' ? (mode === 'sign-up' ? 'Creating your account…' : 'Signing in…') : 'Loading your account…'}</div>
       ) : user ? (
         <section className="account-card account-signed-in">
           <div className="account-user-mark"><UserRound size={20} aria-hidden="true" /></div>
           <div><span className="eyebrow">Signed in</span><h2>{user.email}</h2></div>
-          <button type="button" className="secondary-button" onClick={() => void handleSignOut()} disabled={busy}><LogOut size={15} aria-hidden="true" /> {busy ? 'Signing out' : 'Sign out'}</button>
+          <button type="button" className="secondary-button" onClick={() => void handleSignOut()} disabled={busy}><LogOut size={15} aria-hidden="true" /> {pendingAction === 'sign-out' ? 'Signing out…' : 'Sign out'}</button>
         </section>
       ) : (
         <section className="account-layout">
@@ -86,13 +96,13 @@ const AccountPage: React.FC = () => {
             {mode === 'sign-up' && <label><span>Name (optional)</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" maxLength={80} /></label>}
             <label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
             <label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} minLength={6} required /></label>
-            {(message || authError) && <p className="account-message" role="status">{message || authError}</p>}
+            {(message || authError) && <p className="account-message" role="alert">{message || authError}</p>}
             <button type="submit" className="primary-button" disabled={busy}><LogIn size={15} aria-hidden="true" /> {pendingAction === 'email' ? (mode === 'sign-in' ? 'Signing in' : 'Creating account') : (mode === 'sign-in' ? 'Sign in' : 'Create account')}</button>
             <button type="button" className="account-mode-toggle" disabled={busy} onClick={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setMessage(null); }}>{mode === 'sign-in' ? 'Need an account? Create one' : 'Already have an account? Sign in'}</button>
           </form>
         </section>
       )}
-      {configured && user && (message || authError) && <p className="account-message" role="status">{message || authError}</p>}
+      {configured && user && (message || authError) && <p className="account-message" role="alert">{message || authError}</p>}
     </main>
   );
 };

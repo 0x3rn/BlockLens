@@ -2,6 +2,11 @@ import { useEffect } from 'react';
 
 export const usePageMeta = (title: string, description: string) => {
   useEffect(() => {
+    let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical);
+    }
+    canonical.href = 'https://blocklens.corstack.dev' + window.location.pathname.replace(/\/+$/, '');
     document.title = `${title} · BlockLens`;
     const descriptionMeta = document.querySelector<HTMLMetaElement>('meta[name="description"]');
     const ogTitle = document.querySelector<HTMLMetaElement>('meta[property="og:title"]');

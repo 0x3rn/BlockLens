@@ -34,20 +34,37 @@ class AccountQuery<T extends Table, R = Tables[T]['Row'][]> implements PromiseLi
   maybeSingle() { this.request.single = 'optional'; return this as unknown as AccountQuery<T, Tables[T]['Row']>; }
   single() { this.request.single = 'required'; return this as unknown as AccountQuery<T, Tables[T]['Row']>; }
   private async execute(): Promise<Result<R>> {
+    const unavailable = this.request.operation === 'select'
+      ? 'We couldn’t load your saved data. Please try again.'
+      : 'We couldn’t save your changes. Please try again.';
+    const signedOut = 'Please sign in to access your saved data.';
     try {
-      const token = await getAccountToken();
-      if (!token) return { data: null, error: { message: 'Please sign in again.' } };
-      const response = await fetch('/api/account', {
+      let token = await getAccountToken();
+      if (!token) return { data: null, error: { message: signedOut } };
+      const request = () => fetch('/api/account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(this.request),
         signal: AbortSignal.timeout(15_000),
       });
+      let response = await request();
+      if (response.status === 401) {
+        // Refresh once before asking the user to take action. A failed data
+        // request must never sign out an otherwise valid Firebase session.
+        token = await getAccountToken(true);
+        if (!token) return { data: null, error: { message: signedOut } };
+        response = await request();
+      }
+      if (!response.ok) {
+        const message = response.status === 403 ? 'You don’t have permission to access this data.'
+          : response.status === 429 ? 'Too many requests. Please wait before trying again.'
+          : unavailable;
+        return { data: null, error: { message } };
+      }
       const result = await response.json() as Result<R>;
-      if (!response.ok) return { data: null, error: result.error ?? { message: 'Account sync is temporarily unavailable.' } };
-      return result;
+      return result.error ? { data: null, error: { message: unavailable } } : result;
     } catch {
-      return { data: null, error: { message: 'Account sync is temporarily unavailable.' } };
+      return { data: null, error: { message: unavailable } };
     }
   }
   then<TResult1 = Result<R>, TResult2 = never>(

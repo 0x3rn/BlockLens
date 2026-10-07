@@ -6,6 +6,7 @@ import analyzeHandler from './api/analyze.ts';
 import telegramCoinsHandler from './api/telegram/coins.ts';
 import telegramWebhookHandler from './api/telegram/webhook.ts';
 import marketSnapshotHandler from './api/market/snapshot.ts';
+import coinProfileHandler from './api/market/coin.ts';
 import accountHandler from './api/account.ts';
 
 class LocalApiResponse {
@@ -112,6 +113,10 @@ const localMarketApi = (): Plugin => ({
   name: 'blocklens-local-market-api',
   apply: 'serve',
   configureServer(server) {
+    server.middlewares.use('/api/market/coin', (request: IncomingMessage, response: ServerResponse) => {
+      const url = new URL(request.url ?? '/', 'http://127.0.0.1');
+      void coinProfileHandler({ method: request.method, query: Object.fromEntries(url.searchParams.entries()) }, new LocalApiResponse(response));
+    });
     server.middlewares.use('/api/market/snapshot', (request: IncomingMessage, response: ServerResponse) => {
       const url = new URL(request.url ?? '/', 'http://127.0.0.1');
       void marketSnapshotHandler(

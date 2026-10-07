@@ -15,8 +15,8 @@ export type WatchlistMutationResult =
   | { ok: true; action: 'added' | 'removed' }
   | { ok: false; error: string };
 
-const loadErrorMessage = 'Your saved watchlist could not be loaded. Retry account sync before making changes.';
-const saveErrorMessage = 'That watchlist change was not saved. Your existing saved watchlist is unchanged.';
+const loadErrorMessage = 'Your watchlist could not be loaded. Please try again.';
+const saveErrorMessage = 'Your watchlist change could not be saved. Please try again.';
 
 export const useWatchlist = () => {
   const { user, loading: authLoading } = useAuth();
@@ -90,7 +90,7 @@ export const useWatchlist = () => {
       return { ok: true, action: removing ? 'removed' : 'added' };
     }
     if (!cloudReady.current) {
-      return { ok: false, error: syncError ?? 'Your account watchlist is still loading. Try again in a moment.' };
+      return { ok: false, error: syncError ?? 'Your watchlist is loading. Please wait a moment.' };
     }
 
     const result = removing

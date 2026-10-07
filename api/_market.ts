@@ -150,7 +150,7 @@ const fetchCoinPaprikaTopCoins = async (currency: CurrencyCode): Promise<Coin[]>
   }
 };
 
-const getCoinGeckoConfig = (environment: ServerEnvironment = {}): CoinGeckoRequestConfig => {
+export const getCoinGeckoConfig = (environment: ServerEnvironment = {}): CoinGeckoRequestConfig => {
   const apiKey = environment.COINGECKO_API_KEY?.trim();
   if (!apiKey) {
     return {

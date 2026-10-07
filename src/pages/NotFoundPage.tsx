@@ -9,7 +9,7 @@ const NotFoundPage: React.FC = () => {
     <main className="app-container page-stack">
       <section className="not-found-card">
         <Telescope size={44} aria-hidden="true" />
-        <span className="eyebrow">404 · Outside the chart</span>
+        <span className="eyebrow">Page not found</span>
         <h1>This page does not exist.</h1>
         <p>The link may be outdated, or the address may have been entered incorrectly.</p>
         <Link className="primary-button" to="/"><ArrowLeft size={16} /> Return to dashboard</Link>

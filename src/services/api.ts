@@ -430,16 +430,22 @@ export const fetchMarketMetrics = async (
   };
 }, force);
 
+export const initialCoinProfile = (coinId?: string): CoinDetail | null => {
+  if (!coinId) return null;
+  const seed = document.getElementById('coin-profile-data');
+  if (!seed?.textContent || Date.now() - Number(seed.dataset.fetchedAt) > 120_000) return null;
+  try {
+    const coin = JSON.parse(seed.textContent) as CoinDetail;
+    return coin.id === coinId && coin.market_data ? coin : null;
+  } catch { return null; }
+};
+
 export const fetchCoinDetail = async (coinId: string): Promise<CoinDetail> => (
   cachedRequest(`detail:${coinId}`, 2 * 60_000, async () => {
-    const response = await marketApi.get<CoinDetail>(`/coins/${encodeURIComponent(coinId)}`, {
-      params: {
-        localization: false,
-        tickers: false,
-        community_data: false,
-        developer_data: false,
-        sparkline: false,
-      },
+    const seeded = initialCoinProfile(coinId);
+    if (seeded) return seeded;
+    const response = await axios.get<CoinDetail>('/api/market/coin', {
+      params: { coinId }, timeout: 25_000,
     });
     return response.data;
   })
@@ -471,13 +477,13 @@ export type ApiErrorContext = 'market' | 'ai' | 'auth' | 'partial' | 'general';
 
 export const CONTROLLED_ERROR_MESSAGES = {
   genericMarket: 'We couldn’t load the latest market data. Please try again.',
-  rateLimit: 'Market data is temporarily busy. Please try again in a moment.',
+  rateLimit: 'Too many requests. Please wait before trying again.',
   timeout: 'The request took too long. Please try again.',
-  network: 'We couldn’t connect to market data. Check your connection and try again.',
-  partial: 'Some market data is temporarily unavailable. The rest of the dashboard is still available.',
+  network: 'Check your connection and try again.',
+  partial: 'Some market data is temporarily unavailable. Please try again.',
   ai: 'We couldn’t complete the analysis. Please try again.',
-  auth: 'Your session has expired. Please sign in again.',
-  unknown: 'Something went wrong. Please try again.',
+  auth: 'Please sign in to continue.',
+  unknown: 'We couldn’t complete your request. Please try again.',
 } as const;
 
 export const getApiErrorMessage = (error: unknown, context: ApiErrorContext = 'market'): string => {
@@ -513,12 +519,12 @@ export const getApiErrorMessage = (error: unknown, context: ApiErrorContext = 'm
   const normalized = rawText.toLowerCase();
 
   // Rate limit
-  if (status === 429 || /rate[- ]?limit|too many requests|quota|busy/i.test(normalized)) {
+  if (status === 429 || (!status && /rate[- ]?limit|too many requests|quota|busy/i.test(normalized))) {
     return CONTROLLED_ERROR_MESSAGES.rateLimit;
   }
 
   // Timeout
-  if (code === 'ECONNABORTED' || status === 408 || /timed?[- ]?out|abort/i.test(normalized)) {
+  if (code === 'ECONNABORTED' || status === 408 || (!status && /timed?[- ]?out|abort/i.test(normalized))) {
     return CONTROLLED_ERROR_MESSAGES.timeout;
   }
 
@@ -526,13 +532,14 @@ export const getApiErrorMessage = (error: unknown, context: ApiErrorContext = 'm
   if (
     (axios.isAxiosError(error) && !error.response) ||
     code === 'ERR_NETWORK' ||
-    /network|offline|failed to fetch|connection/i.test(normalized)
+    (!status && /network|offline|failed to fetch|connection/i.test(normalized))
   ) {
     return CONTROLLED_ERROR_MESSAGES.network;
   }
 
   // Authentication / session problem
-  if (context === 'auth' || status === 401 || status === 403 || /expired|session|unauthorized|jwt|token/i.test(normalized)) {
+  if (context === 'auth') {
+    if (status && status >= 500) return 'Sign-in is temporarily unavailable. Please try again later.';
     return CONTROLLED_ERROR_MESSAGES.auth;
   }
 

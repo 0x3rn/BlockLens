@@ -19,8 +19,11 @@ export const firebaseAuth = app ? initializeAuth(app, {
   persistence: [indexedDBLocalPersistence, browserLocalPersistence, inMemoryPersistence],
 }) : null;
 
-export const getAccountToken = async (): Promise<string | null> => {
+export const getAccountToken = async (forceRefresh = false): Promise<string | null> => {
   if (!firebaseAuth) return null;
   await firebaseAuth.authStateReady();
-  return firebaseAuth.currentUser ? firebaseAuth.currentUser.getIdToken() : null;
+  const user = firebaseAuth.currentUser;
+  if (!user) return null;
+  const token = await user.getIdToken(forceRefresh);
+  return firebaseAuth.currentUser?.uid === user.uid ? token : null;
 };

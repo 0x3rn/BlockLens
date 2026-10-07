@@ -277,8 +277,8 @@ const PortfolioPage: React.FC = () => {
 
       <section aria-labelledby="watchlist-title">
         <div className="section-heading"><div><span className="eyebrow"><Star size={13} /> Saved assets</span><h2 id="watchlist-title">Watchlist</h2></div><span className="section-count">{watchlist.length} assets</span></div>
-        {user && watchlistSyncStatus === 'loading' && <div className="watchlist-sync-state" role="status"><ShieldCheck size={17} /><p>Loading your saved account watchlist…</p></div>}
-        {user && watchlistSyncError && <div className="watchlist-sync-state error" role="alert"><ShieldCheck size={17} /><p>{watchlistSyncError}</p><button type="button" onClick={retryWatchlistSync}>Retry sync</button></div>}
+        {user && watchlistSyncStatus === 'loading' && <div className="watchlist-sync-state" role="status"><ShieldCheck size={17} /><p>Loading your watchlist…</p></div>}
+        {user && watchlistSyncError && <div className="watchlist-sync-state error" role="alert"><ShieldCheck size={17} /><p>{watchlistSyncError}</p><button type="button" onClick={retryWatchlistSync}>Try again</button></div>}
         {watchlist.length === 0 ? (
           <div className="portfolio-empty"><Star size={38} /><h3>Your watchlist is empty</h3><p>Add assets from Markets using the star button.</p><Link className="primary-button" to="/markets">Browse markets</Link></div>
         ) : (
@@ -293,7 +293,7 @@ const PortfolioPage: React.FC = () => {
               </article>
             ))}
             {unavailableWatchIds.map((id) => (
-              <article className="portfolio-card unavailable-card" key={id}><div><strong>{id}</strong><p>Outside the current top-100 snapshot. It remains saved.</p></div><button type="button" className="remove-watch-button" onClick={() => void handleToggleWatchlist(id)}><Trash2 size={14} /> Remove</button></article>
+              <article className="portfolio-card unavailable-card" key={id}><div><strong>{id}</strong><p>Price data is unavailable for this saved asset.</p></div><button type="button" className="remove-watch-button" onClick={() => void handleToggleWatchlist(id)}><Trash2 size={14} /> Remove</button></article>
             ))}
           </div>
         )}

@@ -50,7 +50,7 @@ describe('account watchlist persistence', () => {
 
     expect(mutationResult).toMatchObject({ ok: false });
     expect(result.current.watchlist).toEqual(['bitcoin']);
-    expect(result.current.syncError).toMatch(/not saved/i);
+    expect(result.current.syncError).toMatch(/could not be saved/i);
   });
 
   it('persists a successful change before updating signed-in state', async () => {

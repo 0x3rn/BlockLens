@@ -154,7 +154,7 @@ const FuturesPage: React.FC = () => {
     event.preventDefault();
     setFormError(null);
     if (!selectedCoin || !markPrice) {
-      setFormError('A live mark price is required before opening a position.');
+      setFormError('The current price is unavailable. Please try placing your trade again shortly.');
       return;
     }
     const parsedStop = stopLoss.trim() ? Number(stopLoss) : null;
@@ -266,14 +266,14 @@ const FuturesPage: React.FC = () => {
       {paperFuturesSyncStatus === 'loading' && (
         <div className="futures-sync-state" role="status">
           <span className="inline-spinner" aria-hidden="true" />
-          <p>Syncing your simulated account.</p>
+          <p>Loading your trading account…</p>
         </div>
       )}
       {paperFuturesSyncError && (
         <div className="futures-sync-state error" role="alert">
           <ShieldAlert size={15} aria-hidden="true" />
           <p>{paperFuturesSyncError}</p>
-          <button type="button" className="futures-feed-retry" onClick={retryPaperFuturesSync}>Retry account</button>
+          <button type="button" className="futures-feed-retry" onClick={retryPaperFuturesSync}>Try again</button>
         </div>
       )}
 
@@ -348,7 +348,7 @@ const FuturesPage: React.FC = () => {
           </div>
           {formError && <p className="futures-form-error" role="alert"><ShieldAlert size={15} aria-hidden="true" /> {formError}</p>}
           <button type="submit" className={`futures-submit-button ${reduceOnly ? 'reduce' : side}`} disabled={(Boolean(selectedPosition) && !reduceOnly) || accountSyncBusy || feedStatus === 'connecting' || markPrice <= 0}>
-            {paperFuturesSyncStatus === 'loading' ? 'Syncing account' : paperFuturesSyncStatus === 'saving' ? 'Saving order' : selectedPosition ? 'Position already open' : orderType === 'market' ? `Open ${side}` : `Place ${orderType === 'limit' ? 'limit' : 'stop'} order`}
+            {paperFuturesSyncStatus === 'loading' ? 'Loading account…' : paperFuturesSyncStatus === 'error' ? 'Account unavailable' : paperFuturesSyncStatus === 'saving' ? 'Saving order…' : selectedPosition ? 'Position already open' : orderType === 'market' ? `Open ${side}` : `Place ${orderType === 'limit' ? 'limit' : 'stop'} order`}
           </button>
           <p className="form-help">Market orders fill now. Limit and stop orders reserve margin until the live mark price reaches them.</p>
         </form>
@@ -397,7 +397,7 @@ const FuturesPage: React.FC = () => {
                     <article className="futures-position-row" key={position.id}>
                       <div className="futures-position-heading"><div className="futures-order-asset"><img src={positionCoin?.image ?? ''} alt="" /><div><strong>{position.coinName}</strong><span>{position.symbol.toUpperCase()} · {position.leverage}x</span></div></div><span className={`signal-badge ${position.side}`}>{position.side}</span></div>
                       <div className="futures-position-values"><div><span>Entry</span><strong>{formatCurrency(position.entryPrice, 'usd')}</strong></div><div><span>Mark</span><strong>{formatCurrency(positionMark, 'usd')}</strong></div><div><span>Stop loss</span><strong className="text-down">{position.stopLoss != null ? formatCurrency(position.stopLoss, 'usd') : '—'}</strong></div><div><span>Take profit</span><strong className="text-up">{position.takeProfit != null ? formatCurrency(position.takeProfit, 'usd') : '—'}</strong></div><div><span>Liquidation</span><strong>{formatCurrency(liquidationPrice, 'usd')}</strong></div><div><span>Maintenance</span><strong>{formatCurrency(maintenanceMargin, 'usd')}</strong></div><div><span>P&amp;L</span><strong className={pnl >= 0 ? 'text-up' : 'text-down'}>{formatCurrency(pnl, 'usd')}</strong></div><div><span>ROE</span><strong className={roe >= 0 ? 'text-up' : 'text-down'}>{roe >= 0 ? '+' : ''}{roe.toFixed(2)}%</strong></div></div>
-                      <div className="futures-position-footer"><span>{position.quantity.toPrecision(6)} {position.symbol.toUpperCase()} · {formatCurrency(position.margin, 'usd')} margin</span><div className="futures-position-actions"><label><span>Close</span><select value={closePercent} onChange={(event) => setClosePercent(event.target.value)} aria-label="Amount to close"><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%</option></select></label><button type="button" className="futures-close-button" onClick={() => closeSelectedPosition(position.id, positionMark)} disabled={!positionMark || paperFuturesSyncStatus !== 'ready'}><X size={14} aria-hidden="true" /> {paperFuturesSyncStatus === 'saving' ? 'Saving position' : paperFuturesSyncStatus === 'loading' ? 'Syncing account' : paperFuturesSyncStatus === 'error' ? 'Retry account first' : Number(closePercent) === 100 ? 'Close position' : 'Reduce position'}</button></div></div>
+                      <div className="futures-position-footer"><span>{position.quantity.toPrecision(6)} {position.symbol.toUpperCase()} · {formatCurrency(position.margin, 'usd')} margin</span><div className="futures-position-actions"><label><span>Close</span><select value={closePercent} onChange={(event) => setClosePercent(event.target.value)} aria-label="Amount to close"><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%</option></select></label><button type="button" className="futures-close-button" onClick={() => closeSelectedPosition(position.id, positionMark)} disabled={!positionMark || paperFuturesSyncStatus !== 'ready'}><X size={14} aria-hidden="true" /> {paperFuturesSyncStatus === 'saving' ? 'Saving position…' : paperFuturesSyncStatus === 'loading' ? 'Loading account…' : paperFuturesSyncStatus === 'error' ? 'Account unavailable' : Number(closePercent) === 100 ? 'Close position' : 'Reduce position'}</button></div></div>
                     </article>
                   );
                 })}

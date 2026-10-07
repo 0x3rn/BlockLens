@@ -119,7 +119,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
       setDataCurrency(currency);
       setLastUpdated(snapshot.asOf);
       setMarketSource(snapshot.source);
-      setError(snapshot.warning ? 'Some market data is temporarily unavailable. The rest of the dashboard is still available.' : null);
+      setError(snapshot.warning ? 'Some market data is temporarily unavailable. Please try again.' : null);
       evaluateAlerts(snapshot.coins);
     } catch (loadError) {
       if (requestVersion.current !== version) return;

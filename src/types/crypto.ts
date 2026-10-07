@@ -28,6 +28,7 @@ export interface Coin {
 }
 
 export interface CoinDetail {
+  dataSource?: 'coingecko' | 'coinpaprika';
   id: string;
   symbol: string;
   name: string;
@@ -35,22 +36,22 @@ export interface CoinDetail {
   description?: { en?: string };
   links?: { homepage?: string[]; blockchain_site?: string[] };
   market_data: {
-    current_price: Record<CurrencyCode, number>;
-    market_cap: Record<CurrencyCode, number>;
+    current_price: Partial<Record<CurrencyCode, number>>;
+    market_cap: Partial<Record<CurrencyCode, number>>;
     market_cap_rank: number;
-    total_volume: Record<CurrencyCode, number>;
-    high_24h: Record<CurrencyCode, number>;
-    low_24h: Record<CurrencyCode, number>;
-    ath: Record<CurrencyCode, number>;
-    ath_date: Record<CurrencyCode, string>;
-    atl: Record<CurrencyCode, number>;
-    atl_date: Record<CurrencyCode, string>;
-    price_change_percentage_24h: number;
-    price_change_percentage_7d: number;
-    price_change_percentage_30d: number;
+    total_volume: Partial<Record<CurrencyCode, number>>;
+    high_24h: Partial<Record<CurrencyCode, number>>;
+    low_24h: Partial<Record<CurrencyCode, number>>;
+    ath: Partial<Record<CurrencyCode, number>>;
+    ath_date: Partial<Record<CurrencyCode, string>>;
+    atl: Partial<Record<CurrencyCode, number>>;
+    atl_date: Partial<Record<CurrencyCode, string>>;
+    price_change_percentage_24h: number | null;
+    price_change_percentage_7d: number | null;
+    price_change_percentage_30d: number | null;
     price_change_percentage_90d?: number;
     price_change_percentage_180d?: number;
-    price_change_percentage_1y: number;
+    price_change_percentage_1y: number | null;
     total_supply: number | null;
     circulating_supply: number | null;
     max_supply: number | null;

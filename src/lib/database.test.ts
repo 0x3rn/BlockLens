@@ -19,7 +19,26 @@ describe('Neon account client', () => {
   it('returns mutation failures so hooks never report a rejected write as saved', async () => {
     mocks.token.mockResolvedValue('firebase-id-token');
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: null, error: { message: 'denied' } }), { status: 403 })));
-    expect(await database!.from('watchlist_items').upsert({ user_id: 'owner', coin_id: 'bitcoin' }, { onConflict: 'user_id,coin_id' })).toMatchObject({ error: { message: 'denied' } });
+    expect(await database!.from('watchlist_items').upsert({ user_id: 'owner', coin_id: 'bitcoin' }, { onConflict: 'user_id,coin_id' })).toMatchObject({ error: { message: 'You don’t have permission to access this data.' } });
+  });
+  it('refreshes an expired API token once and retains the signed-in account', async () => {
+    mocks.token.mockResolvedValueOnce('old-token').mockResolvedValueOnce('fresh-token');
+    const request = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: { message: 'JWT diagnostic' } }), { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ data: [], error: null })));
+    vi.stubGlobal('fetch', request);
+    expect(await database!.from('watchlist_items').select()).toEqual({ data: [], error: null });
+    expect(mocks.token).toHaveBeenLastCalledWith(true);
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(request.mock.calls[1][1].headers.Authorization).toBe('Bearer fresh-token');
+  });
+  it('stops after one refresh and hides server diagnostics without claiming the session expired', async () => {
+    mocks.token.mockResolvedValue('valid-token');
+    const request = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ error: { message: 'Firebase project misconfigured / internal token diagnostic' } }), { status: 401 })));
+    vi.stubGlobal('fetch', request);
+    const result = await database!.from('watchlist_items').select();
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(result.error?.message).toBe('We couldn’t load your saved data. Please try again.');
   });
   it('does not query without a session and handles unavailable APIs', async () => {
     const request = vi.fn(); vi.stubGlobal('fetch', request);

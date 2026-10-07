@@ -1,3 +1,4 @@
+import { handleCoinApi, handleCoinPage } from './coin-page.ts';
 import { runAIAnalysis, AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest } from '../api/_analysis.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from '../api/_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from '../api/_rate-limit.ts';
@@ -241,6 +242,8 @@ const worker = {
   async fetch(request: Request, env: WorkerEnvironment): Promise<Response> {
     const pathname = new URL(request.url).pathname.replace(/\/+$/, '') || '/';
 
+    if (pathname.startsWith('/coin/')) return handleCoinPage(request, env, pathname.slice('/coin/'.length));
+    if (pathname === '/api/market/coin') return handleCoinApi(request, env);
     if (pathname === '/api/analyze') return handleAnalysis(request, env);
     if (pathname === '/api/account') return handleAccount(request, env);
     if (pathname === '/api/market/snapshot') return handleMarketSnapshot(request, env);

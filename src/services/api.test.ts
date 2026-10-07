@@ -149,6 +149,14 @@ describe('getApiErrorMessage', () => {
       CONTROLLED_ERROR_MESSAGES.auth,
     );
   });
+  it.each(['market', 'ai'] as const)('does not blame the user’s session for %s provider authorization failures', context => {
+    const providerError = { isAxiosError: true, response: { status: 403, data: { error: 'Upstream API token expired' } } };
+    expect(getApiErrorMessage(providerError, context)).toBe(context === 'market' ? CONTROLLED_ERROR_MESSAGES.genericMarket : CONTROLLED_ERROR_MESSAGES.ai);
+  });
+  it('does not blame the user’s connection or request volume for server configuration failures', () => {
+    const serverError = { isAxiosError: true, response: { status: 503, data: { error: 'Quota database connection is not configured' } } };
+    expect(getApiErrorMessage(serverError, 'ai')).toBe(CONTROLLED_ERROR_MESSAGES.ai);
+  });
 
   it('returns fallback message for unknown or unclassified errors', () => {
     expect(getApiErrorMessage({}, 'general')).toBe(

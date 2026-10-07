@@ -5,11 +5,11 @@ import { DataState } from './DataState';
 import PriceChart from './PriceChart';
 import { useMarket } from '../context/MarketContext';
 import { useToast } from '../context/ToastContext';
-import { fetchCoinDetail, getApiErrorMessage } from '../services/api';
+import { fetchCoinDetail, getApiErrorMessage, initialCoinProfile } from '../services/api';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { CoinDetail as CoinDetailType } from '../types/crypto';
 import { formatCompactCurrency, formatCurrency, formatDate, formatNumber, formatPercent } from '../utils/format';
-import '../styles/CoinDetail.css';
+
 
 const plainText = (value = ''): string => value
   .replace(/<[^>]+>/g, ' ')
@@ -23,8 +23,8 @@ const CoinDetailPage: React.FC = () => {
   const { coinId } = useParams<{ coinId: string }>();
   const { currency, watchlist, toggleWatchlist } = useMarket();
   const { showToast } = useToast();
-  const [coin, setCoin] = useState<CoinDetailType | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [coin, setCoin] = useState<CoinDetailType | null>(() => initialCoinProfile(coinId));
+  const [loading, setLoading] = useState(() => !initialCoinProfile(coinId));
   const [error, setError] = useState<string | null>(null);
   const requestVersion = useRef(0);
   usePageMeta(
@@ -42,7 +42,7 @@ const CoinDetailPage: React.FC = () => {
     }
 
     const version = ++requestVersion.current;
-    setLoading(true);
+    setLoading(!initialCoinProfile(coinId));
     setError(null);
     return fetchCoinDetail(coinId)
       .then((data) => {
@@ -108,7 +108,7 @@ const CoinDetailPage: React.FC = () => {
     <main className="app-container page-stack coin-detail-container">
       <div className="detail-topline">
         <Link className="back-link" to="/markets"><ArrowLeft size={16} /> Back to markets</Link>
-        <span className="data-source-label">Market data by CoinGecko</span>
+        <span className="data-source-label">Market data by {coin.dataSource === 'coinpaprika' ? 'CoinPaprika' : 'CoinGecko'}</span>
       </div>
 
       <header className="coin-detail-header">

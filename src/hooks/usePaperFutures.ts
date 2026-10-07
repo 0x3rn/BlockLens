@@ -332,7 +332,7 @@ const fromCloudRow = (row: {
 const commonInputError = (input: OpenFuturesPositionInput, current: PaperFuturesAccount) => {
   if (current.positions.length >= MAX_POSITIONS) return 'Close a position before adding another.';
   if (current.positions.some((position) => position.coinId === input.coinId)) return 'Close the existing position for this asset first.';
-  if (!Number.isFinite(input.price) || input.price <= 0) return 'A live mark price is required.';
+  if (!Number.isFinite(input.price) || input.price <= 0) return 'The current price is unavailable. Please try placing your trade again shortly.';
   if (!Number.isFinite(input.margin) || input.margin <= 0) return 'Enter a margin greater than zero.';
   if (!Number.isFinite(input.leverage) || input.leverage < 1 || input.leverage > MAX_FUTURES_LEVERAGE) return `Leverage must be between 1x and ${MAX_FUTURES_LEVERAGE}x.`;
   return null;
@@ -357,14 +357,6 @@ const buildPosition = (input: OpenFuturesPositionInput, price: number, orderId?:
     lastFundingAt: now,
     ...(orderId ? { orderId } : {}),
   } as PaperFuturesPosition;
-};
-
-const actionLabel = (action: PaperFuturesTradeAction) => {
-  if (action === 'liquidated') return 'liquidated';
-  if (action === 'stop-loss') return 'stopped out';
-  if (action === 'take-profit') return 'closed at target';
-  if (action === 'funding') return 'funding applied';
-  return 'closed';
 };
 
 export const usePaperFutures = () => {
@@ -462,7 +454,7 @@ export const usePaperFutures = () => {
         error = legacyResult.error;
         if (cancelled) return;
         if (error) {
-          setSyncError('Your simulated account could not be loaded. Nothing will open until it is synced.');
+          setSyncError('Your trading account could not be loaded. Please try again before placing a trade.');
           setSyncStatus('error');
           return;
         }
@@ -483,7 +475,7 @@ export const usePaperFutures = () => {
       }
       if (cancelled) return;
       if (writeError) {
-        setSyncError('Your simulated account could not be saved. Check your account connection and retry.');
+        setSyncError('Your trades could not be saved. Please try again.');
         setSyncStatus('error');
         return;
       }
@@ -518,7 +510,7 @@ export const usePaperFutures = () => {
         }
         if (error) {
           if (version === persistVersion.current) {
-            setSyncError('Your simulated account could not be saved. Check your account connection and retry.');
+            setSyncError('Your trades could not be saved. Please try again.');
             setSyncStatus('error');
           }
           return;
@@ -535,9 +527,14 @@ export const usePaperFutures = () => {
     setSyncAttempt((value) => value + 1);
   }, [user]);
 
+  const accountSyncMessage = syncStatus === 'error'
+    ? 'Your trading account is unavailable. Please try again before placing a trade.'
+    : syncStatus === 'saving' ? 'Saving your trade. Please wait a moment.'
+      : 'Your trading account is loading. Please wait a moment.';
+
   const openPosition = useCallback((input: OpenFuturesPositionInput, orderId?: string): FuturesActionResult => {
     const current = accountRef.current;
-    if (user && syncStatus !== 'ready') return { ok: false, message: 'Your simulated account is still syncing. Try again when it is ready.' };
+    if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
     const inputError = commonInputError(input, current);
     if (inputError) return { ok: false, message: inputError };
     const notional = input.margin * input.leverage;
@@ -569,14 +566,14 @@ export const usePaperFutures = () => {
       updatedAt: new Date().toISOString(),
     });
     return { ok: true, message: `${input.side === 'long' ? 'Long' : 'Short'} position opened.`, position, trade };
-  }, [commitAccount, syncStatus, user]);
+  }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
   const closePosition = useCallback((positionId: string, price: number, action: Exclude<PaperFuturesTradeAction, 'open' | 'funding'> = 'close', requestedQuantity?: number, orderId?: string): FuturesActionResult => {
     const current = accountRef.current;
-    if (user && syncStatus !== 'ready') return { ok: false, message: 'Your simulated account is still syncing. Try again when it is ready.' };
+    if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
     const position = current.positions.find((item) => item.id === positionId);
     if (!position) return { ok: false, message: 'That position is no longer open.' };
-    if (!Number.isFinite(price) || price <= 0) return { ok: false, message: 'A live mark price is required to close.' };
+    if (!Number.isFinite(price) || price <= 0) return { ok: false, message: 'The current price is unavailable. Please try closing this position again shortly.' };
     const quantity = requestedQuantity == null ? position.quantity : requestedQuantity;
     if (!Number.isFinite(quantity) || quantity <= 0 || quantity > position.quantity + Number.EPSILON) return { ok: false, message: 'Enter a closing quantity within the open position.' };
     const fraction = Math.min(1, quantity / position.quantity);
@@ -618,20 +615,20 @@ export const usePaperFutures = () => {
       ok: true,
       message: action === 'liquidated'
         ? `${position.symbol.toUpperCase()} position liquidated.`
-        : `${position.symbol.toUpperCase()} ${isFullClose ? 'position closed' : 'position reduced'} (${actionLabel(action)}).`,
+        : `${position.symbol.toUpperCase()} ${isFullClose ? 'position closed' : 'position reduced'}${action === 'stop-loss' ? ' by stop loss' : action === 'take-profit' ? ' at take profit' : ''}.`,
       trade,
       position: remainingPosition ?? undefined,
     };
-  }, [commitAccount, syncStatus, user]);
+  }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
   const placeOrder = useCallback((input: PlaceFuturesOrderInput): FuturesActionResult => {
     const current = accountRef.current;
-    if (user && syncStatus !== 'ready') return { ok: false, message: 'Your simulated account is still syncing. Try again when it is ready.' };
+    if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
     if (input.reduceOnly) {
       const position = input.positionId ? current.positions.find((item) => item.id === input.positionId) : undefined;
       if (!position) return { ok: false, message: 'Choose an open position for a reduce-only order.' };
       const quantity = input.quantity ?? position.quantity;
-      if (!Number.isFinite(quantity) || quantity <= 0 || quantity > position.quantity) return { ok: false, message: 'The reduce-only quantity is not valid.' };
+      if (!Number.isFinite(quantity) || quantity <= 0 || quantity > position.quantity) return { ok: false, message: 'Enter a quantity greater than zero and no larger than your open position.' };
     } else {
       const inputError = commonInputError(input, current);
       if (inputError) return { ok: false, message: inputError };
@@ -642,8 +639,8 @@ export const usePaperFutures = () => {
     const referencePrice = input.limitPrice ?? input.triggerPrice ?? input.price;
     if (!Number.isFinite(referencePrice) || referencePrice <= 0) return { ok: false, message: 'Enter a valid order price.' };
     const isLongEntry = input.side === 'long';
-    if (!input.reduceOnly && input.orderType === 'limit' && (isLongEntry ? referencePrice >= input.price : referencePrice <= input.price)) return { ok: false, message: `A ${isLongEntry ? 'long' : 'short'} limit entry must rest beyond the current mark price.` };
-    if (!input.reduceOnly && input.orderType !== 'limit' && (isLongEntry ? referencePrice <= input.price : referencePrice >= input.price)) return { ok: false, message: `A ${isLongEntry ? 'long' : 'short'} stop entry must trigger beyond the current mark price.` };
+    if (!input.reduceOnly && input.orderType === 'limit' && (isLongEntry ? referencePrice >= input.price : referencePrice <= input.price)) return { ok: false, message: `Set the limit price ${isLongEntry ? 'below' : 'above'} the current mark price for a ${isLongEntry ? 'long' : 'short'} order.` };
+    if (!input.reduceOnly && input.orderType !== 'limit' && (isLongEntry ? referencePrice <= input.price : referencePrice >= input.price)) return { ok: false, message: `Set the trigger price ${isLongEntry ? 'above' : 'below'} the current mark price for a ${isLongEntry ? 'long' : 'short'} stop order.` };
     const now = new Date().toISOString();
     const order: PaperFuturesOrder = {
       id: createId('order'),
@@ -676,7 +673,7 @@ export const usePaperFutures = () => {
       updatedAt: now,
     });
     return { ok: true, message: `${input.orderType === 'limit' ? 'Limit' : 'Stop'} order placed.`, order };
-  }, [commitAccount, syncStatus, user]);
+  }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
   const checkOrders = useCallback((coinId: string, markPrice: number): FuturesActionResult[] => {
     if (!Number.isFinite(markPrice) || markPrice <= 0) return [];
@@ -710,7 +707,7 @@ export const usePaperFutures = () => {
       if (current.balance < fee) {
         const rejected = { ...order, status: 'rejected' as const, cancelledAt: new Date().toISOString() };
         commitAccount({ ...current, balance: current.balance + order.margin, orders: current.orders.map((item) => item.id === order.id ? rejected : item), updatedAt: new Date().toISOString() });
-        results.push({ ok: false, message: `${order.symbol.toUpperCase()} order was rejected because the entry fee is unavailable.`, order: rejected });
+        results.push({ ok: false, message: `${order.symbol.toUpperCase()} order was rejected because your available balance cannot cover the trading fee.`, order: rejected });
         return;
       }
       const positionInput: OpenFuturesPositionInput = {
