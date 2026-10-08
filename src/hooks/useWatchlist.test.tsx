@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => {
@@ -21,8 +21,15 @@ vi.mock('../lib/database', () => ({ database: { from: mocks.from } }));
 
 import { useWatchlist } from './useWatchlist';
 
+const deferredSave = () => {
+  let resolve!: (value: { error: null }) => void;
+  const promise = new Promise<{ error: null }>((done) => { resolve = done; });
+  return { promise, resolve: () => resolve({ error: null }) };
+};
+
 describe('account watchlist persistence', () => {
   afterEach(() => {
+    cleanup();
     mocks.auth.loading = false;
     mocks.auth.user = { id: '00000000-0000-4000-8000-000000000001' };
     mocks.state.selectResult = { data: [{ coin_id: 'bitcoin' }], error: null };
@@ -90,5 +97,77 @@ describe('account watchlist persistence', () => {
     act(() => result.current.retryWatchlistSync());
     await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
     expect(result.current.watchlist).toEqual(['ethereum']);
+  });
+
+  it('keeps both additions when their saves complete in reverse order', async () => {
+    const ethereum = deferredSave();
+    const solana = deferredSave();
+    mocks.query.upsert.mockImplementationOnce(() => ethereum.promise).mockImplementationOnce(() => solana.promise);
+    const { result } = renderHook(() => useWatchlist());
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+    let first!: ReturnType<typeof result.current.toggleWatchlist>;
+    let second!: ReturnType<typeof result.current.toggleWatchlist>;
+    act(() => {
+      first = result.current.toggleWatchlist('ethereum');
+      second = result.current.toggleWatchlist('solana');
+    });
+    await act(async () => { solana.resolve(); await second; });
+    await act(async () => { ethereum.resolve(); await first; });
+    expect(result.current.watchlist).toEqual(['bitcoin', 'solana', 'ethereum']);
+  });
+
+  it('does not restore a removed asset when another pending addition finishes', async () => {
+    const save = deferredSave();
+    mocks.query.upsert.mockImplementationOnce(() => save.promise);
+    const { result } = renderHook(() => useWatchlist());
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+    let addition!: ReturnType<typeof result.current.toggleWatchlist>;
+    await act(async () => {
+      addition = result.current.toggleWatchlist('ethereum');
+      await result.current.toggleWatchlist('bitcoin');
+    });
+    await act(async () => { save.resolve(); await addition; });
+    expect(result.current.watchlist).toEqual(['ethereum']);
+  });
+
+  it('shares a pending change when the same star is clicked twice', async () => {
+    const save = deferredSave();
+    mocks.query.upsert.mockImplementationOnce(() => save.promise);
+    const { result } = renderHook(() => useWatchlist());
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+    let changes!: Promise<unknown[]>;
+    act(() => {
+      changes = Promise.all([result.current.toggleWatchlist('ethereum'), result.current.toggleWatchlist('ethereum')]);
+    });
+    expect(mocks.query.upsert).toHaveBeenCalledTimes(1);
+    await act(async () => { save.resolve(); await changes; });
+    expect(result.current.watchlist).toEqual(['bitcoin', 'ethereum']);
+  });
+
+  it('does not copy a save finishing after sign-out into the device watchlist', async () => {
+    localStorage.setItem('blocklens_watchlist', JSON.stringify(['solana']));
+    const save = deferredSave();
+    mocks.query.upsert.mockImplementationOnce(() => save.promise);
+    const { result, rerender } = renderHook(() => useWatchlist());
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+    let change!: ReturnType<typeof result.current.toggleWatchlist>;
+    act(() => { change = result.current.toggleWatchlist('ethereum'); });
+    mocks.auth.user = null;
+    rerender();
+    await waitFor(() => expect(result.current.watchlist).toEqual(['solana']));
+    await act(async () => { save.resolve(); await change; });
+    expect(result.current.watchlist).toEqual(['solana']);
+    expect(JSON.parse(localStorage.getItem('blocklens_watchlist')!)).toEqual(['solana']);
+  });
+
+  it('does not treat an unresolved auth session as an anonymous save', async () => {
+    mocks.auth.loading = true;
+    mocks.auth.user = null;
+    const { result } = renderHook(() => useWatchlist());
+    await act(async () => {
+      await expect(result.current.toggleWatchlist('ethereum')).resolves.toMatchObject({ ok: false });
+    });
+    expect(result.current.watchlist).toEqual([]);
+    expect(mocks.query.upsert).not.toHaveBeenCalled();
   });
 });

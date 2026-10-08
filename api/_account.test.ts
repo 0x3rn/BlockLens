@@ -41,4 +41,12 @@ describe('account SQL boundary', () => {
     await expect(executeAccountQuery(select, 'Bearer forged', { FIREBASE_PROJECT_ID: 'blocklens-test' })).rejects.toMatchObject({ status: 401 });
     expect(request).not.toHaveBeenCalled();
   });
+  it.each([
+    { operation: 'upsert', filters: [], values: { balance: 9990 }, onConflict: 'user_id' },
+    { operation: 'update', filters: [{ column: 'user_id', operator: 'eq', value: userId }], values: { balance: 9990, updated_at: '2026-10-08T10:00:01Z' } },
+    { operation: 'update', filters: [{ column: 'updated_at', operator: 'eq', value: '2026-10-08T10:00:00Z' }], values: { balance: 9990, updated_at: '2026-10-08T10:00:00Z' } },
+    { operation: 'update', filters: [{ column: 'updated_at', operator: 'eq', value: 'invalid' }], values: { balance: 9990, updated_at: '2026-10-08T10:00:01Z' } },
+  ])('rejects paper-ledger writes that bypass or reuse a revision', request => {
+    expect(() => compileAccountQuery({ table: 'paper_futures_accounts', ...request }, userId)).toThrow('Invalid account request');
+  });
 });

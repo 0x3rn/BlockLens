@@ -69,6 +69,22 @@ describe('Neon Postgres schema and account isolation', () => {
     } finally { await db.exec('rollback'); }
     expect((await db.query('select * from paper_futures_accounts')).rows).toEqual([]);
   });
+  it('rejects a stale paper-ledger save while preserving orders and owner isolation', async () => {
+    const revision = '2026-10-08T10:00:00.000Z';
+    const nextRevision = '2026-10-08T10:00:00.001Z';
+    await db.query('insert into paper_futures_accounts(user_id, balance, realized_pnl, updated_at) values ($1, 10000, 0, $2)', [owner, revision]);
+    try {
+      const orders = [{ id: 'reserved-order', status: 'open', margin: 10, reservedFee: .02 }];
+      const request = { table: 'paper_futures_accounts', operation: 'update', values: { balance: 9989.98, orders, updated_at: nextRevision }, filters: [{ column: 'user_id', operator: 'eq', value: owner }, { column: 'updated_at', operator: 'eq', value: revision }], columns: 'updated_at' };
+      const write = compileAccountQuery(request, owner);
+      expect((await asUser(owner, () => db.query(write.text, write.parameters))).rows).toHaveLength(1);
+      expect((await asUser(owner, () => db.query(write.text, write.parameters))).rows).toHaveLength(0);
+      const strangerWrite = compileAccountQuery({ ...request, values: { ...request.values, updated_at: '2026-10-08T10:00:00.002Z' }, filters: [{ column: 'updated_at', operator: 'eq', value: nextRevision }] }, stranger);
+      expect((await asUser(stranger, () => db.query(strangerWrite.text, strangerWrite.parameters))).rows).toHaveLength(0);
+      const saved = await asUser(owner, () => db.query('select balance, orders from paper_futures_accounts'));
+      expect(saved.rows).toEqual([{ balance: '9989.980000000000000000', orders }]);
+    } finally { await db.query('delete from paper_futures_accounts where user_id = $1', [owner]); }
+  });
   it('keeps the atomic quota server-only and rejects the ninth request', async () => {
     await expect(asUser(owner, () => db.query('select consume_ai_analysis_quota($1)', ['a'.repeat(64)]))).rejects.toThrow(/permission denied/);
     for (let i = 0; i < 8; i++) {

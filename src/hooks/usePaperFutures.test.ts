@@ -11,7 +11,7 @@ const position = (side: 'long' | 'short'): PaperFuturesPosition => ({
   side,
   quantity: 0.1,
   entryPrice: 100,
-  margin: 20,
+  margin: 2,
   leverage: 5,
   stopLoss: null,
   takeProfit: null,
@@ -26,14 +26,14 @@ describe('paper futures calculations', () => {
   });
 
   it('keeps liquidation levels on the loss side of the entry', () => {
-    expect(getFuturesLiquidationPrice(position('long'))).toBeCloseTo(80.5);
-    expect(getFuturesLiquidationPrice(position('short'))).toBeCloseTo(119.5);
+    expect(getFuturesLiquidationPrice(position('long'))).toBeCloseTo(80.40201);
+    expect(getFuturesLiquidationPrice(position('short'))).toBeCloseTo(119.40299);
   });
 
   it('reports margin requirements and return on equity', () => {
     expect(getFuturesMaintenanceMargin(position('long'), 110)).toBeCloseTo(0.055);
-    expect(getFuturesReturnOnEquity(position('long'), 110)).toBeCloseTo(5);
-    expect(getFuturesReturnOnEquity(position('short'), 110)).toBeCloseTo(-5);
+    expect(getFuturesReturnOnEquity(position('long'), 110)).toBeCloseTo(50);
+    expect(getFuturesReturnOnEquity(position('short'), 110)).toBeCloseTo(-50);
   });
 
   it('triggers limit entries on a retrace and stop entries on a breakout', () => {

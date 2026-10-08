@@ -269,6 +269,7 @@ export interface PaperFuturesOrder {
   createdAt: string;
   filledAt: string | null;
   cancelledAt: string | null;
+  reservedFee?: number;
 }
 
 export interface PaperFuturesTrade {

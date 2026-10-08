@@ -1,12 +1,12 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ArrowRight, Bot, History as HistoryIcon, WalletCards } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useMarket } from '../context/MarketContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { formatCurrency, formatDateTime } from '../utils/format';
 import { analysisModeDefinitions } from '../config/analysisModes';
 
-type HistoryView = 'analysis' | 'positions';
+type HistoryView = 'analysis' | 'positions' | 'futures';
 
 const fallbackCoinName = (coinId: string) => coinId
   .split('-')
@@ -14,9 +14,16 @@ const fallbackCoinName = (coinId: string) => coinId
   .join(' ');
 
 const HistoryPage: React.FC = () => {
-  const { aiHistory, positionHistory, positions, coins } = useMarket();
-  const [view, setView] = useState<HistoryView>('analysis');
-  usePageMeta('History', 'Review previous AI trading briefs and portfolio position activity.');
+  const { aiHistory, positionHistory, positions, coins, paperFutures } = useMarket();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedView = searchParams.get('view');
+  const view: HistoryView = requestedView === 'positions' || requestedView === 'futures' ? requestedView : 'analysis';
+  const setView = (next: HistoryView) => setSearchParams((previous) => {
+    const params = new URLSearchParams(previous);
+    params.set('view', next);
+    return params;
+  });
+  usePageMeta('History', 'Review your AI briefs, portfolio activity, and paper trades.');
 
   const latestAnalysis = useMemo(() => aiHistory.slice(0, 50), [aiHistory]);
   const latestPositions = useMemo(() => positionHistory.slice(0, 100), [positionHistory]);
@@ -29,7 +36,7 @@ const HistoryPage: React.FC = () => {
           <div>
             <span className="eyebrow">Activity archive</span>
             <h1>History</h1>
-            <p>Previous AI briefs and portfolio position activity, kept in one place.</p>
+            <p>Review your AI briefs, portfolio activity, and paper trades.</p>
           </div>
         </div>
         <div className="markets-stats history-stats">
@@ -39,6 +46,9 @@ const HistoryPage: React.FC = () => {
       </header>
 
       <div className="history-tabs" role="tablist" aria-label="History views">
+        <button type="button" role="tab" aria-selected={view === 'futures'} className={view === 'futures' ? 'is-active' : ''} onClick={() => setView('futures')}>
+          <HistoryIcon size={15} aria-hidden="true" /> Paper trades <span>{paperFutures.trades.length}</span>
+        </button>
         <button
           type="button"
           role="tab"
@@ -63,7 +73,36 @@ const HistoryPage: React.FC = () => {
         </button>
       </div>
 
-      {view === 'analysis' ? (
+      {view === 'futures' ? (
+        <section className="history-section" role="tabpanel" aria-label="Paper trade history">
+          <div className="section-heading compact-heading">
+            <div><span className="eyebrow">Paper trading</span><h2>Trade history</h2></div>
+            <Link className="text-link" to="/futures">Open Trade <ArrowRight size={14} aria-hidden="true" /></Link>
+          </div>
+          {paperFutures.trades.length === 0 ? (
+            <div className="history-empty"><HistoryIcon size={20} aria-hidden="true" /><h3>No paper trades yet</h3><p>Your simulated trades will appear here.</p></div>
+          ) : (
+            <div className="history-list">
+              {paperFutures.trades.map((trade) => (
+                <article className="history-card" key={trade.id}>
+                  <div className="history-card-main">
+                    <div className="history-card-topline">
+                      <div className="history-asset-label"><strong>{trade.coinName}</strong><span>{trade.symbol.toUpperCase()} · {trade.side} · {trade.action.replaceAll('-', ' ')}</span></div>
+                      <time dateTime={trade.createdAt}>{formatDateTime(trade.createdAt)}</time>
+                    </div>
+                    <div className="position-history-values">
+                      <div><span>Quantity</span><strong>{trade.quantity.toLocaleString('en-US', { maximumSignificantDigits: 8 })}</strong></div>
+                      <div><span>Price</span><strong>{formatCurrency(trade.price, 'usd')}</strong></div>
+                      <div><span>Fee</span><strong>{formatCurrency(trade.fee, 'usd')}</strong></div>
+                      <div><span>{trade.action === 'open' ? 'Entry cost' : 'Realized P&L'}</span><strong>{formatCurrency(trade.action === 'open' ? -trade.fee : trade.realizedPnl, 'usd')}</strong></div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : view === 'analysis' ? (
         <section className="history-section" role="tabpanel" aria-label="AI brief history">
           <div className="section-heading compact-heading">
             <div><span className="eyebrow">Saved research</span><h2>Previous AI briefs</h2></div>

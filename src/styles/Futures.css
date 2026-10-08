@@ -16,6 +16,7 @@
 .futures-account-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; background: var(--border-subtle); border: 1px solid var(--border-subtle); border-radius: var(--radius); }
 .futures-account-bar > div { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 15px 17px; background: var(--bg-card); }
 .futures-account-bar span { color: var(--text-muted); font-size: .63rem; }
+.futures-account-bar small { color: var(--text-muted); font-size: .6rem; line-height: 1.4; }
 .futures-account-bar strong { overflow: hidden; color: var(--text-primary); font: 700 .9rem var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .futures-market-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 15px 17px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 11px; }
 .futures-market-toolbar .coin-select-control { flex: 0 1 300px; }
@@ -65,7 +66,7 @@
 .futures-order-preview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 11px; background: var(--bg-secondary); border-radius: 8px; }
 .futures-order-preview > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .futures-order-preview span { color: var(--text-muted); font-size: .61rem; }
-.futures-order-preview strong { overflow: hidden; color: var(--text-primary); font: 650 .68rem var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.futures-order-preview strong { color: var(--text-primary); font: 650 .68rem var(--font-mono); overflow-wrap: anywhere; }
 .futures-risk-controls { display: flex; flex-direction: column; gap: 9px; padding: 11px; background: rgba(10,11,24,.52); border: 1px solid var(--border-subtle); border-radius: 8px; }
 .futures-risk-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .futures-risk-heading span { color: var(--text-secondary); font-size: .68rem; font-weight: 750; }

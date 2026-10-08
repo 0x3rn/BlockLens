@@ -59,6 +59,15 @@ export const compileAccountQuery = (input: unknown, userId: string) => {
   const where = ` where ${predicates.join(' and ')}`;
   let text: string;
   const operation = input.operation;
+  // A cached client must not bypass the paper ledger's revision check.
+  // New ledgers use insert; all changes require the revision that was read.
+  if (table === 'paper_futures_accounts' && operation === 'upsert') return invalid();
+  if (table === 'paper_futures_accounts' && operation === 'update') {
+    const revision = input.filters.find(filter => object(filter) && filter.column === 'updated_at' && filter.operator === 'eq');
+    if (!object(revision) || typeof revision.value !== 'string' || !Number.isFinite(Date.parse(revision.value))
+      || !object(input.values) || typeof input.values.updated_at !== 'string' || !Number.isFinite(Date.parse(input.values.updated_at))
+      || Date.parse(input.values.updated_at) === Date.parse(revision.value)) return invalid();
+  }
   if (operation === 'select') {
     let order = '';
     if (input.order !== undefined) {

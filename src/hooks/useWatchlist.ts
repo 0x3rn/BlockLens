@@ -32,6 +32,9 @@ export const useWatchlist = () => {
   const [loadVersion, setLoadVersion] = useState(0);
   const watchlistRef = useRef(watchlist);
   const cloudReady = useRef(false);
+  const sessionVersion = useRef(0);
+  const pendingChanges = useRef(new Map<string, Promise<WatchlistMutationResult>>());
+  const userId = user?.id;
 
   useEffect(() => {
     watchlistRef.current = watchlist;
@@ -39,16 +42,24 @@ export const useWatchlist = () => {
 
   useEffect(() => {
     let cancelled = false;
+    sessionVersion.current += 1;
+    pendingChanges.current.clear();
     cloudReady.current = false;
+    const cancel = () => {
+      cancelled = true;
+      sessionVersion.current += 1;
+      cloudReady.current = false;
+      pendingChanges.current.clear();
+    };
 
     if (authLoading) {
       setSyncStatus('loading');
-      return () => { cancelled = true; };
+      return cancel;
     }
-    if (!client || !user) {
+    if (!client || !userId) {
       setSyncStatus('local');
       setSyncError(null);
-      return () => { cancelled = true; };
+      return cancel;
     }
 
     setSyncStatus('loading');
@@ -57,7 +68,7 @@ export const useWatchlist = () => {
       const { data, error } = await client
         .from('watchlist_items')
         .select('coin_id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: true });
       if (cancelled) return;
       if (error) {
@@ -74,38 +85,60 @@ export const useWatchlist = () => {
     };
 
     void loadCloudWatchlist();
-    return () => { cancelled = true; };
-  }, [authLoading, client, loadVersion, setWatchlist, user]);
+    return cancel;
+  }, [authLoading, client, loadVersion, setWatchlist, userId]);
 
   const toggleWatchlist = useCallback(async (id: string): Promise<WatchlistMutationResult> => {
     if (!/^[a-z0-9-]{1,100}$/.test(id)) return { ok: false, error: 'That asset cannot be saved.' };
+    if (authLoading) return { ok: false, error: 'Please wait a moment and try again.' };
+    const pending = pendingChanges.current.get(id);
+    if (pending) return pending;
     const removing = watchlistRef.current.includes(id);
-    const next = removing
-      ? watchlistRef.current.filter((coinId) => coinId !== id)
-      : [...new Set([...watchlistRef.current, id])];
-
-    if (!client || !user) {
+    const applyChange = () => {
+      // Merge each confirmed change into the latest list, including other completed saves.
+      const next = removing
+        ? watchlistRef.current.filter((coinId) => coinId !== id)
+        : [...new Set([...watchlistRef.current, id])];
       watchlistRef.current = next;
       setWatchlist(next);
+    };
+
+    if (!client || !userId) {
+      applyChange();
       return { ok: true, action: removing ? 'removed' : 'added' };
     }
     if (!cloudReady.current) {
       return { ok: false, error: syncError ?? 'Your watchlist is loading. Please wait a moment.' };
     }
 
-    const result = removing
-      ? await client.from('watchlist_items').delete().eq('user_id', user.id).eq('coin_id', id)
-      : await client.from('watchlist_items').upsert({ user_id: user.id, coin_id: id }, { onConflict: 'user_id,coin_id' });
-    if (result.error) {
-      setSyncError(saveErrorMessage);
-      return { ok: false, error: saveErrorMessage };
+    const version = sessionVersion.current;
+    const change = (async (): Promise<WatchlistMutationResult> => {
+      try {
+        const result = removing
+          ? await client.from('watchlist_items').delete().eq('user_id', userId).eq('coin_id', id)
+          : await client.from('watchlist_items').upsert({ user_id: userId, coin_id: id }, { onConflict: 'user_id,coin_id' });
+        if (version !== sessionVersion.current) {
+          return { ok: false, error: 'Your account changed. Please try again.' };
+        }
+        if (result.error) {
+          setSyncError(saveErrorMessage);
+          return { ok: false, error: saveErrorMessage };
+        }
+        applyChange();
+        setSyncError(null);
+        return { ok: true, action: removing ? 'removed' : 'added' };
+      } catch {
+        if (version === sessionVersion.current) setSyncError(saveErrorMessage);
+        return { ok: false, error: saveErrorMessage };
+      }
+    })();
+    pendingChanges.current.set(id, change);
+    try {
+      return await change;
+    } finally {
+      if (pendingChanges.current.get(id) === change) pendingChanges.current.delete(id);
     }
-
-    watchlistRef.current = next;
-    setWatchlist(next);
-    setSyncError(null);
-    return { ok: true, action: removing ? 'removed' : 'added' };
-  }, [client, setWatchlist, syncError, user]);
+  }, [authLoading, client, setWatchlist, syncError, userId]);
 
   const retryWatchlistSync = useCallback(() => {
     setLoadVersion((version) => version + 1);

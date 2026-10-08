@@ -103,6 +103,26 @@ export const createInitialPaperFuturesAccount = (): PaperFuturesAccount => ({
   updatedAt: new Date().toISOString(),
 });
 
+export const getFuturesReservedBalance = (orders: PaperFuturesOrder[]) => orders.reduce(
+  (sum, order) => sum + (order.status === 'open' ? order.margin + (order.reservedFee ?? 0) : 0), 0,
+);
+
+export const validateFuturesProtection = (side: FuturesSide, entry: number, stop: number | null, target: number | null) => {
+  if (stop != null && (!Number.isFinite(stop) || stop <= 0 || (side === 'long' ? stop >= entry : stop <= entry))) {
+    return `The stop loss must be ${side === 'long' ? 'below' : 'above'} the entry price.`;
+  }
+  if (target != null && (!Number.isFinite(target) || target <= 0 || (side === 'long' ? target <= entry : target >= entry))) {
+    return `The take profit must be ${side === 'long' ? 'above' : 'below'} the entry price.`;
+  }
+  return null;
+};
+
+// Never evict an open order: it still owns reserved funds.
+const retainOrders = (orders: PaperFuturesOrder[]) => [
+  ...orders.filter(order => order.status === 'open'),
+  ...orders.filter(order => order.status !== 'open'),
+].slice(0, MAX_ORDERS);
+
 const isFiniteNonNegative = (value: unknown): value is number => (
   typeof value === 'number' && Number.isFinite(value) && value >= 0
 );
@@ -144,6 +164,7 @@ const isOrder = (value: unknown): value is PaperFuturesOrder => {
     && ['market', 'limit', 'stop-market', 'take-profit', 'stop-loss'].includes(order.type)
     && ['open', 'filled', 'cancelled', 'rejected'].includes(order.status)
     && isFiniteNonNegative(order.margin)
+    && (order.reservedFee === undefined || isFiniteNonNegative(order.reservedFee))
     && typeof order.leverage === 'number'
     && Number.isFinite(order.leverage)
     && order.leverage >= 1
@@ -269,19 +290,12 @@ export const getFuturesMaintenanceMargin = (position: PaperFuturesPosition, mark
 );
 
 export const getFuturesLiquidationPrice = (position: PaperFuturesPosition, crossBalance = 0) => {
-  if ((position.marginMode ?? 'isolated') === 'isolated') {
-    const isolated = position.side === 'long'
-      ? position.entryPrice * (1 - (1 / position.leverage) + FUTURES_MAINTENANCE_RATE)
-      : position.entryPrice * (1 + (1 / position.leverage) - FUTURES_MAINTENANCE_RATE);
-    return Math.max(0, isolated);
-  }
-  const maintenanceMargin = getFuturesMaintenanceMargin(position);
-  const liquidationBuffer = position.margin + Math.max(0, crossBalance);
-  const priceMove = position.quantity > 0 ? Math.max(0, liquidationBuffer - maintenanceMargin) / position.quantity : position.entryPrice;
-  const liquidation = position.side === 'long'
-    ? position.entryPrice - priceMove
-    : position.entryPrice + priceMove;
-  return Math.max(0, liquidation);
+  const collateral = position.margin + (position.marginMode === 'cross' ? Math.max(0, crossBalance) : 0);
+  const entryValue = position.entryPrice * position.quantity;
+  // Solve collateral + directional P&L = maintenance at the liquidation mark.
+  const numerator = position.side === 'long' ? entryValue - collateral : entryValue + collateral;
+  const denominator = position.quantity * (position.side === 'long' ? 1 - FUTURES_MAINTENANCE_RATE : 1 + FUTURES_MAINTENANCE_RATE);
+  return denominator > 0 ? Math.max(0, numerator / denominator) : 0;
 };
 
 export const shouldTriggerFuturesOrder = (order: Pick<PaperFuturesOrder, 'type' | 'side' | 'limitPrice' | 'triggerPrice'>, markPrice: number) => {
@@ -291,8 +305,7 @@ export const shouldTriggerFuturesOrder = (order: Pick<PaperFuturesOrder, 'type' 
   return order.side === 'long' ? markPrice >= referencePrice : markPrice <= referencePrice;
 };
 
-const toCloudPayload = (account: PaperFuturesAccount, userId: string) => ({
-  user_id: userId,
+const toCloudValues = (account: PaperFuturesAccount) => ({
   balance: account.balance,
   realized_pnl: account.realizedPnl,
   positions: account.positions as unknown as Json,
@@ -300,15 +313,7 @@ const toCloudPayload = (account: PaperFuturesAccount, userId: string) => ({
   trades: account.trades as unknown as Json,
   updated_at: account.updatedAt,
 });
-
-const toLegacyCloudPayload = (account: PaperFuturesAccount, userId: string) => ({
-  user_id: userId,
-  balance: account.balance,
-  realized_pnl: account.realizedPnl,
-  positions: account.positions as unknown as Json,
-  trades: account.trades as unknown as Json,
-  updated_at: account.updatedAt,
-});
+const toCloudPayload = (account: PaperFuturesAccount, userId: string) => ({ user_id: userId, ...toCloudValues(account) });
 
 const fromCloudRow = (row: {
   balance: number;
@@ -372,6 +377,8 @@ export const usePaperFutures = () => {
   const persistQueue = useRef(Promise.resolve());
   const persistVersion = useRef(0);
   const accountOwnerId = useRef<string | null | undefined>(undefined);
+  const remoteUpdatedAt = useRef<string | null>(null);
+  const syncConflict = useRef(false);
 
   useEffect(() => { accountRef.current = account; }, [account]);
 
@@ -423,7 +430,7 @@ export const usePaperFutures = () => {
 
     setSyncStatus('loading');
     setSyncError(null);
-    pendingAccount.current = shouldReusePaperFuturesAccountOnRetry(syncAttempt, previousOwnerId, user.id, previousAccount)
+    pendingAccount.current = !syncConflict.current && shouldReusePaperFuturesAccountOnRetry(syncAttempt, previousOwnerId, user.id, previousAccount)
       ? previousAccount
       : null;
     const emptyAccount = createInitialPaperFuturesAccount();
@@ -431,54 +438,59 @@ export const usePaperFutures = () => {
     accountRef.current = startingAccount;
     setAccount(startingAccount);
     const loadCloudAccount = async () => {
-      let orderLedgerAvailable = true;
-      let firstResult = await client
+      const { data, error } = await client
         .from('paper_futures_accounts')
         .select('balance, realized_pnl, positions, orders, trades, updated_at')
         .eq('user_id', user.id)
         .maybeSingle();
-      let data: { balance: number; realized_pnl: number; positions: Json; orders?: Json; trades: Json; updated_at: string } | null = firstResult.data;
-      let error = firstResult.error;
       if (cancelled) return;
       if (error) {
-        // Projects that ran the original history migration do not have the
-        // optional order-ledger column yet. Keep existing accounts usable while
-        // the follow-up migration is applied.
-        orderLedgerAvailable = false;
-        const legacyResult = await client
-          .from('paper_futures_accounts')
-          .select('balance, realized_pnl, positions, trades, updated_at')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        data = legacyResult.data ? { ...legacyResult.data, orders: undefined } : null;
-        error = legacyResult.error;
-        if (cancelled) return;
-        if (error) {
-          setSyncError('Your trading account could not be loaded. Please try again before placing a trade.');
-          setSyncStatus('error');
-          return;
-        }
+        setSyncError('Your trading account could not be loaded. Please try again before placing a trade.');
+        setSyncStatus('error');
+        return;
       }
       const remote = data ? fromCloudRow(data) : null;
+      if (data && !remote) {
+        setSyncError('Your saved trading account could not be read. Your trades have been kept unchanged.');
+        setSyncStatus('error');
+        return;
+      }
+      if (pendingAccount.current && remote && remoteUpdatedAt.current
+          && Date.parse(remote.updatedAt) !== Date.parse(remoteUpdatedAt.current)
+          && Date.parse(remote.updatedAt) !== Date.parse(pendingAccount.current.updatedAt)) {
+        syncConflict.current = true;
+        setSyncError('Your trading account changed in another tab or device. Reload your account before trading.');
+        setSyncStatus('error');
+        return;
+      }
       const resolved = pendingAccount.current ?? remote ?? emptyAccount;
       accountOwnerId.current = user.id;
       accountRef.current = resolved;
       setAccount(resolved);
-      let { error: writeError } = await client
-        .from('paper_futures_accounts')
-        .upsert(toCloudPayload(resolved, user.id), { onConflict: 'user_id' });
-      if (writeError && !orderLedgerAvailable) {
-        const legacyWrite = await client
-          .from('paper_futures_accounts')
-          .upsert(toLegacyCloudPayload(resolved, user.id), { onConflict: 'user_id' });
-        writeError = legacyWrite.error;
-      }
+      remoteUpdatedAt.current = remote?.updatedAt ?? null;
+      // Reading an existing account must not write an old snapshot over a
+      // newer trade from another tab. Only create or retry an unsaved ledger.
+      const writeResult = !remote
+        ? await client.from('paper_futures_accounts').insert(toCloudPayload(resolved, user.id)).select('updated_at').maybeSingle()
+        : pendingAccount.current && Date.parse(remote.updatedAt) !== Date.parse(resolved.updatedAt)
+          ? await client.from('paper_futures_accounts')
+            .update(toCloudValues(resolved)).eq('user_id', user.id).eq('updated_at', remote.updatedAt)
+            .select('updated_at').maybeSingle()
+          : null;
       if (cancelled) return;
-      if (writeError) {
+      if (writeResult?.error) {
         setSyncError('Your trades could not be saved. Please try again.');
         setSyncStatus('error');
         return;
       }
+      if (writeResult && !writeResult.data) {
+        syncConflict.current = true;
+        setSyncError('Your trading account changed in another tab or device. Reload your account before trading.');
+        setSyncStatus('error');
+        return;
+      }
+      remoteUpdatedAt.current = writeResult?.data?.updated_at ?? remote?.updatedAt ?? resolved.updatedAt;
+      syncConflict.current = false;
       cloudReady.current = true;
       setSyncStatus('ready');
       setSyncError(null);
@@ -489,6 +501,7 @@ export const usePaperFutures = () => {
   }, [authLoading, syncAttempt, user]);
 
   const commitAccount = useCallback((next: PaperFuturesAccount) => {
+    next = { ...next, updatedAt: new Date(Math.max(Date.now(), (Date.parse(accountRef.current.updatedAt) || 0) + 1)).toISOString() };
     accountRef.current = next;
     setAccount(next);
     if (!database || !user) return;
@@ -501,13 +514,10 @@ export const usePaperFutures = () => {
     persistQueue.current = persistQueue.current
       .catch(() => undefined)
       .then(async () => {
-        let { error } = await database!.from('paper_futures_accounts')
-          .upsert(toCloudPayload(next, user.id), { onConflict: 'user_id' });
-        if (error) {
-          const legacyWrite = await database!.from('paper_futures_accounts')
-            .upsert(toLegacyCloudPayload(next, user.id), { onConflict: 'user_id' });
-          error = legacyWrite.error;
-        }
+        if (accountOwnerId.current !== user.id || syncConflict.current || !remoteUpdatedAt.current) return;
+        const { data, error } = await database!.from('paper_futures_accounts')
+          .update(toCloudValues(next)).eq('user_id', user.id).eq('updated_at', remoteUpdatedAt.current)
+          .select('updated_at').maybeSingle();
         if (error) {
           if (version === persistVersion.current) {
             setSyncError('Your trades could not be saved. Please try again.');
@@ -515,6 +525,13 @@ export const usePaperFutures = () => {
           }
           return;
         }
+        if (!data) {
+          syncConflict.current = true;
+          setSyncError('Your trading account changed in another tab or device. Reload your account before trading.');
+          setSyncStatus('error');
+          return;
+        }
+        remoteUpdatedAt.current = data.updated_at;
         if (version === persistVersion.current) {
           setSyncError(null);
           setSyncStatus('ready');
@@ -537,6 +554,8 @@ export const usePaperFutures = () => {
     if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
     const inputError = commonInputError(input, current);
     if (inputError) return { ok: false, message: inputError };
+    const protectionError = validateFuturesProtection(input.side, input.price, input.stopLoss, input.takeProfit);
+    if (protectionError) return { ok: false, message: protectionError };
     const notional = input.margin * input.leverage;
     const fee = notional * FUTURES_TAKER_FEE;
     if (current.balance < input.margin + fee) return { ok: false, message: 'Your available balance cannot cover that margin and fee.' };
@@ -574,13 +593,15 @@ export const usePaperFutures = () => {
     const position = current.positions.find((item) => item.id === positionId);
     if (!position) return { ok: false, message: 'That position is no longer open.' };
     if (!Number.isFinite(price) || price <= 0) return { ok: false, message: 'The current price is unavailable. Please try closing this position again shortly.' };
-    const quantity = requestedQuantity == null ? position.quantity : requestedQuantity;
-    if (!Number.isFinite(quantity) || quantity <= 0 || quantity > position.quantity + Number.EPSILON) return { ok: false, message: 'Enter a closing quantity within the open position.' };
+    const requested = requestedQuantity == null ? position.quantity : requestedQuantity;
+    if (!Number.isFinite(requested) || requested <= 0 || requested > position.quantity + position.quantity * 1e-10) return { ok: false, message: 'Enter a closing quantity within the open position.' };
+    const quantity = Math.min(position.quantity, requested);
     const fraction = Math.min(1, quantity / position.quantity);
     const releasedMargin = position.margin * fraction;
     const grossPnl = getFuturesUnrealizedPnl(position, price) * fraction;
-    const pnl = Math.max(-releasedMargin, grossPnl);
-    const fee = quantity * price * FUTURES_TAKER_FEE;
+    const lossLimit = releasedMargin + (position.marginMode === 'cross' ? current.balance : 0);
+    const pnl = Math.max(-lossLimit, grossPnl);
+    const fee = Math.min(quantity * price * FUTURES_TAKER_FEE, Math.max(0, current.balance + releasedMargin + pnl));
     const realizedPnl = pnl - fee;
     const trade: PaperFuturesTrade = {
       id: createId('trade'),
@@ -599,14 +620,19 @@ export const usePaperFutures = () => {
       ...(orderId ? { orderId } : {}),
     };
     const remainingQuantity = position.quantity - quantity;
-    const remainingPosition = remainingQuantity > Math.max(position.quantity * 0.000001, 1e-12)
+    const remainingPosition = remainingQuantity > 0
       ? { ...position, quantity: remainingQuantity, margin: Math.max(0, position.margin - releasedMargin) }
       : null;
     commitAccount({
       balance: Math.max(0, current.balance + releasedMargin + realizedPnl),
       realizedPnl: current.realizedPnl + realizedPnl,
       positions: current.positions.flatMap((item) => item.id !== positionId ? [item] : (remainingPosition ? [remainingPosition] : [])),
-      orders: current.orders,
+      orders: current.orders.map(order => {
+        if (order.status !== 'open' || !order.reduceOnly || order.positionId !== positionId || order.id === orderId) return order;
+        return remainingPosition
+          ? { ...order, quantity: Math.min(order.quantity ?? remainingQuantity, remainingQuantity) }
+          : { ...order, status: 'cancelled' as const, cancelledAt: trade.createdAt };
+      }),
       trades: [trade, ...current.trades].slice(0, MAX_TRADES),
       updatedAt: new Date().toISOString(),
     });
@@ -624,20 +650,26 @@ export const usePaperFutures = () => {
   const placeOrder = useCallback((input: PlaceFuturesOrderInput): FuturesActionResult => {
     const current = accountRef.current;
     if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
+    if (current.orders.filter(order => order.status === 'open').length >= MAX_ORDERS) return { ok: false, message: 'Cancel an open order before placing another.' };
     if (input.reduceOnly) {
       const position = input.positionId ? current.positions.find((item) => item.id === input.positionId) : undefined;
       if (!position) return { ok: false, message: 'Choose an open position for a reduce-only order.' };
+      if (input.coinId !== position.coinId || input.side === position.side) return { ok: false, message: 'A reduce-only order must close the selected position.' };
       const quantity = input.quantity ?? position.quantity;
       if (!Number.isFinite(quantity) || quantity <= 0 || quantity > position.quantity) return { ok: false, message: 'Enter a quantity greater than zero and no larger than your open position.' };
     } else {
       const inputError = commonInputError(input, current);
       if (inputError) return { ok: false, message: inputError };
-      if (current.balance < input.margin) return { ok: false, message: 'Your available balance cannot cover that margin.' };
+      if (current.balance < input.margin * (1 + input.leverage * FUTURES_TAKER_FEE)) return { ok: false, message: 'Your available balance cannot cover that margin and fee.' };
     }
     if (input.orderType === 'limit' && input.limitPrice == null) return { ok: false, message: 'Enter a limit price.' };
     if (input.orderType !== 'limit' && input.triggerPrice == null) return { ok: false, message: 'Enter a trigger price.' };
-    const referencePrice = input.limitPrice ?? input.triggerPrice ?? input.price;
+    const referencePrice = input.orderType === 'limit' ? input.limitPrice! : input.triggerPrice!;
     if (!Number.isFinite(referencePrice) || referencePrice <= 0) return { ok: false, message: 'Enter a valid order price.' };
+    if (!input.reduceOnly) {
+      const protectionError = validateFuturesProtection(input.side, referencePrice, input.stopLoss, input.takeProfit);
+      if (protectionError) return { ok: false, message: protectionError };
+    }
     const isLongEntry = input.side === 'long';
     if (!input.reduceOnly && input.orderType === 'limit' && (isLongEntry ? referencePrice >= input.price : referencePrice <= input.price)) return { ok: false, message: `Set the limit price ${isLongEntry ? 'below' : 'above'} the current mark price for a ${isLongEntry ? 'long' : 'short'} order.` };
     if (!input.reduceOnly && input.orderType !== 'limit' && (isLongEntry ? referencePrice <= input.price : referencePrice >= input.price)) return { ok: false, message: `Set the trigger price ${isLongEntry ? 'above' : 'below'} the current mark price for a ${isLongEntry ? 'long' : 'short'} stop order.` };
@@ -663,12 +695,13 @@ export const usePaperFutures = () => {
       createdAt: now,
       filledAt: null,
       cancelledAt: null,
+      reservedFee: input.reduceOnly ? 0 : input.margin * input.leverage * FUTURES_TAKER_FEE,
     };
     commitAccount({
-      balance: input.reduceOnly ? current.balance : current.balance - input.margin,
+      balance: Math.max(0, current.balance - order.margin - (order.reservedFee ?? 0)),
       realizedPnl: current.realizedPnl,
       positions: current.positions,
-      orders: [order, ...current.orders].slice(0, MAX_ORDERS),
+      orders: retainOrders([order, ...current.orders]),
       trades: current.trades,
       updatedAt: now,
     });
@@ -676,15 +709,24 @@ export const usePaperFutures = () => {
   }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
   const checkOrders = useCallback((coinId: string, markPrice: number): FuturesActionResult[] => {
+    if (user && syncStatus !== 'ready') return [];
     if (!Number.isFinite(markPrice) || markPrice <= 0) return [];
     const openOrders = accountRef.current.orders.filter((order) => order.status === 'open' && order.coinId === coinId);
     const results: FuturesActionResult[] = [];
     openOrders.forEach((order) => {
+      if (accountRef.current.orders.find(item => item.id === order.id)?.status !== 'open') return;
       if (!shouldTriggerFuturesOrder(order, markPrice)) return;
       if (order.reduceOnly && order.positionId) {
         const action: Exclude<PaperFuturesTradeAction, 'open' | 'funding'> = order.type === 'take-profit' ? 'take-profit' : order.type === 'stop-loss' ? 'stop-loss' : 'close';
-        const result = closePosition(order.positionId, markPrice, action, order.quantity ?? undefined, order.id);
-        if (!result.ok) return;
+        const position = accountRef.current.positions.find(item => item.id === order.positionId);
+        if (!position) {
+          const current = accountRef.current;
+          commitAccount({ ...current, orders: current.orders.map(item => item.id === order.id ? { ...item, status: 'cancelled' as const, cancelledAt: new Date().toISOString() } : item) });
+          return;
+        }
+        const quantity = Math.min(order.quantity ?? position.quantity, position.quantity);
+        const result = closePosition(order.positionId, markPrice, action, quantity, order.id);
+        if (!result.ok) { results.push(result); return; }
         const current = accountRef.current;
         const filled = { ...order, status: 'filled' as const, filledAt: new Date().toISOString() };
         commitAccount({ ...current, orders: current.orders.map((item) => item.id === order.id ? filled : item), updatedAt: new Date().toISOString() });
@@ -694,19 +736,19 @@ export const usePaperFutures = () => {
       const current = accountRef.current;
       if (current.positions.length >= MAX_POSITIONS) {
         const rejected = { ...order, status: 'rejected' as const, cancelledAt: new Date().toISOString() };
-        commitAccount({ ...current, balance: current.balance + order.margin, orders: current.orders.map((item) => item.id === order.id ? rejected : item), updatedAt: new Date().toISOString() });
+        commitAccount({ ...current, balance: current.balance + order.margin + (order.reservedFee ?? 0), orders: current.orders.map((item) => item.id === order.id ? rejected : item), updatedAt: new Date().toISOString() });
         results.push({ ok: false, message: 'The position limit has been reached. Close a position before this order fills.', order: rejected });
         return;
       }
       if (current.positions.some((position) => position.coinId === order.coinId)) {
         const cancelled = { ...order, status: 'cancelled' as const, cancelledAt: new Date().toISOString() };
-        commitAccount({ ...current, balance: current.balance + order.margin, orders: current.orders.map((item) => item.id === order.id ? cancelled : item), updatedAt: new Date().toISOString() });
+        commitAccount({ ...current, balance: current.balance + order.margin + (order.reservedFee ?? 0), orders: current.orders.map((item) => item.id === order.id ? cancelled : item), updatedAt: new Date().toISOString() });
         return;
       }
       const fee = order.margin * order.leverage * FUTURES_TAKER_FEE;
-      if (current.balance < fee) {
+      if (current.balance + (order.reservedFee ?? 0) + 1e-9 < fee) {
         const rejected = { ...order, status: 'rejected' as const, cancelledAt: new Date().toISOString() };
-        commitAccount({ ...current, balance: current.balance + order.margin, orders: current.orders.map((item) => item.id === order.id ? rejected : item), updatedAt: new Date().toISOString() });
+        commitAccount({ ...current, balance: current.balance + order.margin + (order.reservedFee ?? 0), orders: current.orders.map((item) => item.id === order.id ? rejected : item), updatedAt: new Date().toISOString() });
         results.push({ ok: false, message: `${order.symbol.toUpperCase()} order was rejected because your available balance cannot cover the trading fee.`, order: rejected });
         return;
       }
@@ -741,7 +783,7 @@ export const usePaperFutures = () => {
       };
       const filled = { ...order, status: 'filled' as const, quantity: position.quantity, filledAt: new Date().toISOString() };
       commitAccount({
-        balance: current.balance - fee,
+        balance: Math.max(0, current.balance + (order.reservedFee ?? 0) - fee),
         realizedPnl: current.realizedPnl - fee,
         positions: [...current.positions, position].slice(0, MAX_POSITIONS),
         orders: current.orders.map((item) => item.id === order.id ? filled : item),
@@ -751,25 +793,28 @@ export const usePaperFutures = () => {
       results.push({ ok: true, message: `${order.symbol.toUpperCase()} ${order.side} order filled.`, position, order: filled, trade });
     });
     return results;
-  }, [closePosition, commitAccount]);
+  }, [closePosition, commitAccount, syncStatus, user]);
 
   const cancelOrder = useCallback((orderId: string): FuturesActionResult => {
     const current = accountRef.current;
+    if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
     const order = current.orders.find((item) => item.id === orderId);
     if (!order || order.status !== 'open') return { ok: false, message: 'That order is no longer open.' };
     const cancelled: PaperFuturesOrder = { ...order, status: 'cancelled', cancelledAt: new Date().toISOString() };
-    commitAccount({ ...current, balance: current.balance + order.margin, orders: current.orders.map((item) => item.id === orderId ? cancelled : item), updatedAt: new Date().toISOString() });
+    commitAccount({ ...current, balance: current.balance + order.margin + (order.reservedFee ?? 0), orders: current.orders.map((item) => item.id === orderId ? cancelled : item), updatedAt: new Date().toISOString() });
     return { ok: true, message: `${order.symbol.toUpperCase()} order cancelled.`, order: cancelled };
-  }, [commitAccount]);
+  }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
   const checkPosition = useCallback((positionId: string, markPrice: number): FuturesActionResult | null => {
+    if (user && syncStatus !== 'ready') return null;
     let position = accountRef.current.positions.find((item) => item.id === positionId);
     if (!position || !Number.isFinite(markPrice) || markPrice <= 0) return null;
     const elapsed = Date.now() - Date.parse(position.lastFundingAt || position.openedAt);
     const intervals = Number.isFinite(elapsed) ? Math.floor(elapsed / FUTURES_FUNDING_INTERVAL_MS) : 0;
     if (intervals > 0) {
       const funding = getFuturesNotional(position, markPrice) * FUTURES_FUNDING_RATE * intervals;
-      const fundingPnl = position.side === 'long' ? -funding : funding;
+      const current = accountRef.current;
+      const fundingPnl = position.side === 'long' ? -Math.min(funding, current.balance + position.margin) : funding;
       const fundingTrade: PaperFuturesTrade = {
         id: createId('trade'),
         coinId: position.coinId,
@@ -787,8 +832,8 @@ export const usePaperFutures = () => {
         fundingRate: FUTURES_FUNDING_RATE * intervals,
       };
       const lastFundingAt = new Date(Date.parse(position.lastFundingAt || position.openedAt) + intervals * FUTURES_FUNDING_INTERVAL_MS).toISOString();
-      const fundedPosition = { ...position, lastFundingAt };
-      const current = accountRef.current;
+      const marginDebit = Math.max(0, -fundingPnl - current.balance);
+      const fundedPosition = { ...position, margin: position.margin - marginDebit, lastFundingAt };
       commitAccount({
         ...current,
         balance: Math.max(0, current.balance + fundingPnl),
@@ -807,7 +852,7 @@ export const usePaperFutures = () => {
     const targetHit = position.takeProfit != null && (position.side === 'long' ? markPrice >= position.takeProfit : markPrice <= position.takeProfit);
     if (targetHit) return closePosition(positionId, markPrice, 'take-profit');
     return null;
-  }, [closePosition, commitAccount]);
+  }, [closePosition, commitAccount, syncStatus, user]);
 
   return {
     account,
