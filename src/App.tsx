@@ -52,7 +52,8 @@ const AppShell: React.FC = () => (
       <Suspense fallback={<PageLoader />}><Outlet /></Suspense>
     </div>
     <footer className="site-footer">
-      <p><strong>BlockLens</strong> is an educational market tool. Data may be delayed and is not financial advice.</p>
+      <Link className="footer-brand" to="/" aria-label="BlockLens dashboard"><span className="footer-brand-mark"><img src="/blocklens-logo.png" width="28" height="28" alt="" /></span><strong>BlockLens</strong></Link>
+      <p>An educational market tool. Data may be delayed and is not financial advice.</p>
       <p>Market data by <a href="https://www.coingecko.com/" target="_blank" rel="noreferrer">CoinGecko</a> · Built by <a href="https://somto.xyz" target="_blank" rel="noreferrer">Somto Ike</a> · <Link to="/markets">Markets</Link></p>
     </footer>
   </div>

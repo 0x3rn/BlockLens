@@ -60,7 +60,7 @@ const AccountPage: React.FC = () => {
     <main className="app-container page-stack account-page">
       <header className="page-intro page-header-card account-header">
         <div className="markets-title-wrap">
-          <span className="markets-icon account-icon"><UserRound size={23} aria-hidden="true" /></span>
+          <span className="markets-icon account-icon"><img src="/blocklens-logo.png" width="40" height="40" alt="" /></span>
           <div><h1>Account</h1><p>Sync your portfolio, watchlist, and alerts across your devices.</p></div>
         </div>
       </header>

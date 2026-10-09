@@ -550,7 +550,8 @@ img { max-width: 100%; }
 
 .not-found-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; min-height: 480px; justify-content: center; }
 .account-page { max-width: 520px; }
-.account-icon { color: var(--accent); }
+.account-icon { color: var(--accent); overflow: hidden; background: #e5edf1; border-color: rgba(255,255,255,.16); border-radius: 10px; }
+.account-icon img { display: block; width: 40px; height: 40px; transform: scale(1.12); }
 .account-layout { display: block; width: 100%; }
 .account-card, .account-benefits { padding: 24px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius); box-shadow: var(--shadow-card); }
 .account-card { display: flex; align-items: center; gap: 16px; }
@@ -586,6 +587,9 @@ img { max-width: 100%; }
 
 .site-footer { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; width: min(100% - 48px, 1320px); margin: 8px auto 0; padding: 24px 0 34px; border-top: 1px solid var(--border-subtle); text-align: center; }
 .site-footer p { color: var(--text-muted); font-size: .68rem; line-height: 1.5; }
+.site-footer .footer-brand { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 6px; color: var(--text-primary); font: 750 .94rem var(--font-heading); }
+.footer-brand-mark { display: grid; place-items: center; width: 28px; height: 28px; overflow: hidden; background: #e5edf1; border-radius: 7px; }
+.footer-brand img { display: block; transform: scale(1.12); }
 .site-footer a { color: var(--text-secondary); }
 .site-footer a:hover { color: var(--accent); }
 
