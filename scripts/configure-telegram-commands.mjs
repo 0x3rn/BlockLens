@@ -1,7 +1,7 @@
 import { pathToFileURL } from 'node:url';
 
 export const telegramCommands = [
-  { command: 'ai_analysis', description: 'Choose an analysis horizon' },
+  { command: 'ai_analysis', description: 'Choose an approach, then a trading horizon' },
   { command: 'short_term_trade', description: 'Short-term trade: 6 hours to 3 days' },
   { command: 'swing_trade', description: 'Swing trade: 3 days to 4 weeks' },
   { command: 'long_term_trade', description: 'Long-term trade: 1 to 12+ months' },

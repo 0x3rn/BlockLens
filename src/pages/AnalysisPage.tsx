@@ -8,7 +8,8 @@ import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { getApiErrorMessage, requestAIAnalysis } from '../services/api';
 import { analysisModeDefinitions, isAIAnalysisMode } from '../config/analysisModes';
-import { AIAnalysis, AIAnalysisMode } from '../types/crypto';
+import { analysisProfileDefinitions, isAIAnalysisRiskProfile } from '../config/analysisProfiles';
+import { AIAnalysis, AIAnalysisMode, AIAnalysisRiskProfile } from '../types/crypto';
 import { formatCurrency, formatDateTime, formatPercent } from '../utils/format';
 
 const AnalysisPage: React.FC = () => {
@@ -17,7 +18,10 @@ const AnalysisPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedCoin = searchParams.get('coin');
   const requestedMode = searchParams.get('mode');
-  const [analysisMode, setAnalysisMode] = useState<AIAnalysisMode>(isAIAnalysisMode(requestedMode) ? requestedMode : 'swing');
+  const analysisMode = isAIAnalysisMode(requestedMode) ? requestedMode : 'swing';
+  const requestedProfile = searchParams.get('profile');
+  const riskProfile = isAIAnalysisRiskProfile(requestedProfile) ? requestedProfile : 'conservative';
+  const profileDefinition = analysisProfileDefinitions[riskProfile];
   const selectedCoin = useMemo(() => (
     coins.find((coin) => coin.id === requestedCoin) ?? coins[0] ?? null
   ), [coins, requestedCoin]);
@@ -25,6 +29,7 @@ const AnalysisPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const briefRef = useRef<HTMLElement>(null);
+  const requestVersion = useRef(0);
   const researchGroups = analysis ? [
     { label: 'Coin-specific', catalysts: analysis.research.coinCatalysts },
     { label: 'Macro', catalysts: analysis.research.macroCatalysts },
@@ -34,12 +39,22 @@ const AnalysisPage: React.FC = () => {
   useEffect(() => {
     setAnalysis(null);
     setError(null);
-  }, [selectedCoin?.id, currency, analysisMode]);
+    setLoading(false);
+    // A response for an old selection must not replace or save the current brief.
+    requestVersion.current += 1;
+    return () => { requestVersion.current += 1; };
+  }, [selectedCoin?.id, currency, analysisMode, riskProfile]);
 
   const selectMode = (mode: AIAnalysisMode) => {
-    setAnalysisMode(mode);
     const next = new URLSearchParams(searchParams);
     next.set('mode', mode);
+    if (selectedCoin) next.set('coin', selectedCoin.id);
+    setSearchParams(next);
+  };
+
+  const selectProfile = (profile: AIAnalysisRiskProfile) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('profile', profile);
     if (selectedCoin) next.set('coin', selectedCoin.id);
     setSearchParams(next);
   };
@@ -53,7 +68,8 @@ const AnalysisPage: React.FC = () => {
   }, [analysis]);
 
   const handleAnalyze = async () => {
-    if (!selectedCoin) return;
+    if (!selectedCoin || loading) return;
+    const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
     try {
@@ -61,23 +77,27 @@ const AnalysisPage: React.FC = () => {
         coinId: selectedCoin.id,
         currency,
         mode: analysisMode,
+        ...(riskProfile === 'risk' ? { riskProfile } : {}),
       });
-      setAnalysis(result);
+      if (version !== requestVersion.current) return;
+      const brief = { ...result, riskProfile };
+      setAnalysis(brief);
       saveAIAnalysis({
         coinId: selectedCoin.id,
         coinName: selectedCoin.name,
         coinSymbol: selectedCoin.symbol,
         currency,
         price: selectedCoin.current_price,
-        analysis: result,
+        analysis: brief,
       });
       showToast(`${selectedCoin.name} ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis generated.`);
     } catch (analysisError) {
+      if (version !== requestVersion.current) return;
       const message = getApiErrorMessage(analysisError, 'ai');
       setError(message);
       showToast('Trading analysis could not be generated.', 'error');
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   };
 
@@ -89,14 +109,18 @@ const AnalysisPage: React.FC = () => {
           <div>
             <span className="eyebrow">Technical trade planning</span>
             <h1>AI Trading Analysis</h1>
-            <p>Choose a trading horizon, then combine closed exchange candles, computed indicators, and verified market catalysts.</p>
+            <p>Choose your approach and trading horizon, then explore setups from closed exchange candles, computed indicators, and verified market catalysts.</p>
           </div>
         </div>
         <label className="coin-select-control">
           <span>Analyze asset</span>
           <select
             value={selectedCoin?.id ?? ''}
-            onChange={(event) => setSearchParams({ coin: event.target.value, mode: analysisMode })}
+            onChange={(event) => {
+              const next = new URLSearchParams(searchParams);
+              next.set('coin', event.target.value);
+              setSearchParams(next);
+            }}
             disabled={coins.length === 0}
           >
             {coins.map((coin) => <option value={coin.id} key={coin.id}>{coin.name} ({coin.symbol.toUpperCase()})</option>)}
@@ -108,6 +132,33 @@ const AnalysisPage: React.FC = () => {
         <AlertTriangle size={17} className="warning-icon" aria-hidden="true" />
         <p><strong>Educational research only.</strong> Trade setups can be incomplete or wrong and are not personalized financial advice. Verify the levels independently, size risk conservatively, and never trade solely from generated output.</p>
       </div>
+
+      <section className={`analysis-risk-card ${riskProfile}`} aria-labelledby="analysis-approach-title">
+        <div className="analysis-approach-heading">
+          <div><span className="eyebrow">Risk approach</span><h2 id="analysis-approach-title">Choose how you explore the market</h2></div>
+          <div className="analysis-profile-tabs" role="tablist" aria-label="Analysis approach">
+            {(['conservative', 'risk'] as const).map((profile) => (
+              <button type="button" role="tab" id={`approach-tab-${profile}`} aria-selected={riskProfile === profile}
+                aria-controls="analysis-approach-panel" tabIndex={riskProfile === profile ? 0 : -1}
+                onClick={() => selectProfile(profile)}
+                onKeyDown={(event) => {
+                  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+                  event.preventDefault();
+                  const next = event.key === 'Home' ? 'conservative' : event.key === 'End' ? 'risk' : profile === 'risk' ? 'conservative' : 'risk';
+                  selectProfile(next);
+                  document.getElementById(`approach-tab-${next}`)?.focus();
+                }} key={profile}>
+                {profile === 'risk' ? <Crosshair size={16} aria-hidden="true" /> : <ShieldAlert size={16} aria-hidden="true" />}
+                {analysisProfileDefinitions[profile].label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div id="analysis-approach-panel" role="tabpanel" aria-labelledby={`approach-tab-${riskProfile}`} tabIndex={0}>
+          <h3>{profileDefinition.title}</h3><p>{profileDefinition.description}</p>
+          <span className="analysis-approach-tradeoff">{profileDefinition.tradeoff}</span>
+        </div>
+      </section>
 
       <section className="analysis-mode-panel" aria-labelledby="analysis-horizon-title">
         <div className="analysis-mode-intro">
@@ -150,6 +201,7 @@ const AnalysisPage: React.FC = () => {
                   {formatPercent(selectedCoin.price_change_percentage_24h)} today
                 </span>
               </div>
+              <span className={`analysis-profile-label ${riskProfile}`}>{profileDefinition.label} approach</span>
               {currency !== 'usd' && <p className="analysis-currency-note">Switch display currency to USD to use verified exchange-candle analysis.</p>}
               <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading || currency !== 'usd'} aria-busy={loading}>
                 {loading ? <LoaderCircle size={17} className="is-spinning" aria-hidden="true" /> : <Bot size={17} aria-hidden="true" />}
@@ -182,7 +234,7 @@ const AnalysisPage: React.FC = () => {
             <section ref={briefRef} className="ai-brief" aria-labelledby="brief-headline">
               <div className="brief-heading">
                 <div>
-                  <span className={`stance-badge ${analysis.stance}`}>{analysisModeDefinitions[analysis.mode].label} · {analysis.stance} bias</span>
+                  <span className={`stance-badge ${analysis.stance}`}>{analysisProfileDefinitions[analysis.riskProfile ?? 'conservative'].label} · {analysisModeDefinitions[analysis.mode].label} · {analysis.stance} bias</span>
                   <h2 id="brief-headline">{analysis.headline}</h2>
                   <p>{analysis.summary}</p>
                 </div>

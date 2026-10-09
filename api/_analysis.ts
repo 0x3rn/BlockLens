@@ -1,5 +1,6 @@
 import type { AIAnalysis, AIAnalysisCandleInterval, AIAnalysisCandleSeries, AIAnalysisRequest, AnalysisCatalyst, AnalysisResearch, CandleData, ChartData } from '../src/types/crypto.ts';
 import { analysisModeDefinitions, isAIAnalysisMode } from '../src/config/analysisModes.ts';
+import { isAIAnalysisRiskProfile } from '../src/config/analysisProfiles.ts';
 import type { ServerEnvironment } from './_env.ts';
 import { requestVertexCompletion, requestVertexGroundedResearch } from './_vertex-fetch.ts';
 
@@ -185,6 +186,7 @@ export const normalizeAIAnalysisRequest = (value: unknown): AIAnalysisRequest | 
   const chartData30d = normalizeChart(input.chartData30d);
   const chartData1y = normalizeChart(input.chartData1y);
   if (!isAIAnalysisMode(input.mode)) return null;
+  if (input.riskProfile !== undefined && !isAIAnalysisRiskProfile(input.riskProfile)) return null;
   const candleSeries = normalizeCandleSeries(input.candleSeries, input.mode);
   const valid = typeof input.coinId === 'string'
     && /^[a-z0-9-]{1,100}$/.test(input.coinId)
@@ -212,6 +214,7 @@ export const normalizeAIAnalysisRequest = (value: unknown): AIAnalysisRequest | 
     price: input.price as number,
     change24h: input.change24h as number,
     mode: input.mode,
+    riskProfile: input.riskProfile ?? 'conservative',
     candleSeries: candleSeries!,
     chartData7d: chartData7d!,
     chartData30d: chartData30d!,
@@ -373,7 +376,14 @@ const getGroundedResearch = async (input: AIAnalysisRequest, environment: Server
 
 const buildPrompt = (input: AIAnalysisRequest, research: AnalysisResearch) => {
   const definition = analysisModeDefinitions[input.mode];
-  const modeRules = input.mode === 'short-term'
+  const riskApproach = input.riskProfile === 'risk';
+  const modeRules = riskApproach
+    ? input.mode === 'short-term'
+      ? 'Use 15m for execution, 1H for momentum, 4H for structure, and 1D for regime context. Consider early momentum, range breaks, and reversals even when 1H and 4H are not fully aligned; identify the conflict and the price trigger that makes the entry defensible. The setup must fit a 6-hour to 3-day holding period.'
+      : input.mode === 'swing'
+        ? 'Use 4H for execution, 1D as the primary trend, and 1W for regime context. Consider emerging daily momentum, breakouts, or reversals before weekly confirmation; explain any daily/weekly disagreement and require a price-based trigger. The setup must fit a 3-day to 4-week holding period.'
+        : 'Use 1D for timing, 1W for primary structure, and 1M for cycle context. Consider an early accumulation thesis or cycle reversal before all timeframes agree, and describe the downside if the prevailing cycle continues. The signal may be LONG or NO TRADE only; never return SHORT. Frame entry as an accumulation zone and the stop as thesis invalidation. The thesis must fit a 1-to-12-plus-month holding period.'
+    : input.mode === 'short-term'
     ? 'Use 15m for execution, 1H for momentum, 4H for structure, and 1D as the regime veto. Prefer NO TRADE when 1H and 4H conflict. The setup must fit a 6-hour to 3-day holding period.'
     : input.mode === 'swing'
       ? 'Use 4H for execution, 1D as the primary trend, and 1W as the regime veto. Prefer NO TRADE when daily and weekly structure conflict. The setup must fit a 3-day to 4-week holding period.'
@@ -409,10 +419,10 @@ const buildPrompt = (input: AIAnalysisRequest, research: AnalysisResearch) => {
 
 Rules:
 - ${modeRules}
-- Respect the timeframe hierarchy above. Higher-timeframe structure can veto a lower-timeframe entry; a lower timeframe cannot override the higher-timeframe regime.
+- ${riskApproach ? 'Risk approach: actively evaluate earlier conditional opportunities with fewer confirmations. Higher-timeframe disagreement is a risk to explain, not an automatic veto. Do not force a trade: choose NO TRADE if there is no evidence-backed trigger, credible invalidation, or defensible reward relative to downside. Describe the missing confirmation and false-breakout or reversal-failure risk in the rationale.' : 'Respect the timeframe hierarchy above. Higher-timeframe structure can veto a lower-timeframe entry; a lower timeframe cannot override the higher-timeframe regime.'}
 - Computed features are deterministic inputs. Do not recalculate or invent indicators. RSI14 is simple 14-period RSI, ATR14 is simple 14-period true range, and relativeVolume20 compares the last closed candle with the preceding 20.
 - Provide one conditional technical setup: LONG, SHORT, or NO TRADE. Choose NO TRADE whenever the supplied data does not show a defensible edge.
-- The setup must include a price-based entry zone, stop loss, take-profit levels, risk/reward estimate, invalidation condition, and conservative position-risk note.
+- ${riskApproach ? 'The setup must include a price-based entry zone with an explicit activation trigger, stop loss grounded in structure and ATR, take-profit levels, risk/reward estimate, invalidation condition, and a position-risk note that explains the added uncertainty and predefined loss limit. Earlier entries do not justify larger position sizes or wider arbitrary stops. Label the actual setup risk low, medium, or high from volatility, regime conflict, and failure exposure; do not confuse the selected Risk approach with measured risk.' : 'The setup must include a price-based entry zone, stop loss, take-profit levels, risk/reward estimate, invalidation condition, and conservative position-risk note.'}
 - Never promise profit, imply certainty, recommend leverage, or present the setup as personalized financial advice.
 - Present uncertainty and three conditional scenarios: Bullish, Base, and Bearish.
 - Use only the supplied market data and, when present, the verified research object below. Do not invent news, sentiment, catalysts, indicators, candle values, or exact precision unsupported by those inputs.
@@ -555,11 +565,14 @@ const requestProviderContent = async (
   prompt: string,
   environment: ServerEnvironment,
   provider: ProviderKind,
+  riskProfile: AIAnalysisRequest['riskProfile'] = 'conservative',
 ): Promise<string> => {
   const messages = [
     {
       role: 'system' as const,
-      content: 'You are a cautious technical market analyst. Provide conditional LONG, SHORT, or NO TRADE setups from supplied data, with explicit risk controls and uncertainty. Never provide personalized financial advice, guarantees, or leverage recommendations.',
+      content: riskProfile === 'risk'
+        ? 'You are an opportunity-seeking technical market analyst. Evaluate early momentum, breakouts, and reversals from supplied data without requiring every timeframe to agree. Provide conditional LONG, SHORT, or NO TRADE setups with explicit activation triggers, invalidation, downside, and honest uncertainty. Do not force a signal or inflate confidence. Never provide personalized financial advice, guarantees, or leverage recommendations.'
+        : 'You are a cautious technical market analyst. Provide conditional LONG, SHORT, or NO TRADE setups from supplied data, with explicit risk controls and uncertainty. Never provide personalized financial advice, guarantees, or leverage recommendations.',
     },
     { role: 'user' as const, content: prompt },
   ];
@@ -599,7 +612,7 @@ export const runAIAnalysis = async (
   try {
     const research = await getGroundedResearch(input, environment);
     const prompt = buildPrompt(input, research);
-    let providerContent = await requestProviderContent(prompt, environment, provider);
+    let providerContent = await requestProviderContent(prompt, environment, provider, input.riskProfile);
     let analysis = parseValidatedAnalysis(providerContent, input);
     if (!analysis) {
       // Models can occasionally omit or rename a field despite JSON mode. Retry
@@ -609,6 +622,7 @@ export const runAIAnalysis = async (
         prompt + '\n\nFormatting correction: return the exact JSON object specified above. Include every required field, use the exact enum values and scenario labels, and add no Markdown or commentary.',
         environment,
         provider,
+        input.riskProfile,
       );
       analysis = parseValidatedAnalysis(providerContent, input);
     }
@@ -619,6 +633,7 @@ export const runAIAnalysis = async (
     return {
       ...analysis,
       mode: input.mode,
+      riskProfile: input.riskProfile ?? 'conservative',
       confidence: research.status === 'unavailable' ? Math.min(analysis.confidence, 75) : analysis.confidence,
       timeframe: analysisModeDefinitions[input.mode].holdingPeriod,
       methodology: buildMethodology(input),

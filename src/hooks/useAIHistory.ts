@@ -3,6 +3,7 @@ import { AIAnalysis, AIAnalysisHistoryEntry, CurrencyCode } from '../types/crypt
 import { usePersistentState } from './usePersistentState';
 import { useAuth } from '../context/AuthContext';
 import { Json, database } from '../lib/database';
+import { isAIAnalysisRiskProfile } from '../config/analysisProfiles';
 
 const MAX_HISTORY = 50;
 
@@ -21,6 +22,7 @@ const isAIAnalysis = (value: unknown): value is AIAnalysis => {
   if (!value || typeof value !== 'object') return false;
   const analysis = value as AIAnalysis;
   return (analysis.mode === undefined || ['short-term', 'swing', 'long-term'].includes(analysis.mode))
+    && (analysis.riskProfile === undefined || isAIAnalysisRiskProfile(analysis.riskProfile))
     && typeof analysis.headline === 'string'
     && typeof analysis.summary === 'string'
     && ['bullish', 'neutral', 'bearish'].includes(analysis.stance)
@@ -82,7 +84,7 @@ const toHistoryEntry = (row: {
     coinSymbol: row.coin_symbol,
     currency: row.currency as CurrencyCode,
     price: Number(row.price),
-    analysis: { ...(row.analysis as unknown as AIAnalysis), mode: (row.analysis as unknown as AIAnalysis).mode ?? 'swing' },
+    analysis: { ...(row.analysis as unknown as AIAnalysis), mode: (row.analysis as unknown as AIAnalysis).mode ?? 'swing', riskProfile: (row.analysis as unknown as AIAnalysis).riskProfile ?? 'conservative' },
     createdAt: row.created_at,
   };
 };

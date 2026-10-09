@@ -4,9 +4,11 @@ export interface AIAnalysisSelectionRequest {
   coinId: string;
   currency: CurrencyCode;
   mode: AIAnalysisMode;
+  riskProfile?: AIAnalysisRiskProfile;
 }
 
 export type AIAnalysisMode = 'short-term' | 'swing' | 'long-term';
+export type AIAnalysisRiskProfile = 'conservative' | 'risk';
 export type AIAnalysisCandleInterval = '15m' | '1h' | '4h' | '1d' | '1w' | '1M';
 
 export interface Coin {
@@ -185,6 +187,7 @@ export interface AnalysisResearch {
 
 export interface AIAnalysis {
   mode: AIAnalysisMode;
+  riskProfile?: AIAnalysisRiskProfile;
   headline: string;
   summary: string;
   stance: 'bullish' | 'neutral' | 'bearish';
@@ -306,6 +309,7 @@ export interface AIAnalysisRequest {
   price: number;
   change24h: number;
   mode: AIAnalysisMode;
+  riskProfile?: AIAnalysisRiskProfile;
   candleSeries: AIAnalysisCandleSeries[];
   chartData7d: ChartData[];
   chartData30d: ChartData[];

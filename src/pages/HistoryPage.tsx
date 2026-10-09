@@ -5,6 +5,7 @@ import { useMarket } from '../context/MarketContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { formatCurrency, formatDateTime } from '../utils/format';
 import { analysisModeDefinitions } from '../config/analysisModes';
+import { analysisProfileDefinitions } from '../config/analysisProfiles';
 
 type HistoryView = 'analysis' | 'positions' | 'futures';
 
@@ -133,14 +134,14 @@ const HistoryPage: React.FC = () => {
                       <p className="history-summary">{entry.analysis.summary}</p>
                       <div className="history-meta-row">
                         <span className={`signal-badge ${setup.signal}`}>{setup.signal === 'no-trade' ? 'No trade' : setup.signal}</span>
-                        <span>{analysisModeDefinitions[entry.analysis.mode ?? 'swing'].label}</span>
+                        <span>{analysisProfileDefinitions[entry.analysis.riskProfile ?? 'conservative'].label} · {analysisModeDefinitions[entry.analysis.mode ?? 'swing'].label}</span>
                         <span>{entry.analysis.confidence}% confidence</span>
                         <span>{formatCurrency(entry.price, entry.currency)}</span>
                         <time dateTime={entry.createdAt}>{formatDateTime(entry.createdAt)}</time>
                       </div>
                     </div>
                     <div className="history-card-action">
-                      <Link className="text-link" to={`/analysis?coin=${entry.coinId}`}>Review asset <ArrowRight size={14} aria-hidden="true" /></Link>
+                      <Link className="text-link" to={`/analysis?coin=${entry.coinId}&mode=${entry.analysis.mode ?? 'swing'}&profile=${entry.analysis.riskProfile ?? 'conservative'}`}>Review asset <ArrowRight size={14} aria-hidden="true" /></Link>
                     </div>
                   </article>
                 );

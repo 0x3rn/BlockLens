@@ -30,7 +30,9 @@ const validRequest = {
 
 describe('multi-timeframe analysis contract', () => {
   it('accepts complete, ordered, mode-specific closed candle series', () => {
-    expect(normalizeAIAnalysisRequest(validRequest)).toMatchObject({ mode: 'swing' });
+    expect(normalizeAIAnalysisRequest(validRequest)).toMatchObject({ mode: 'swing', riskProfile: 'conservative' });
+    expect(normalizeAIAnalysisRequest({ ...validRequest, riskProfile: 'risk' })).toMatchObject({ riskProfile: 'risk' });
+    expect(normalizeAIAnalysisRequest({ ...validRequest, riskProfile: 'reckless' })).toBeNull();
   });
 
   it('rejects missing timeframes, duplicate timestamps, and invalid OHLC bounds', () => {

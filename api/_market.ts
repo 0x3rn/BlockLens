@@ -1,5 +1,6 @@
 import type { AIAnalysisCandleInterval, AIAnalysisCandleSeries, AIAnalysisMode, AIAnalysisRequest, AIAnalysisSelectionRequest, CandleData, ChartData, Coin, CurrencyCode, MarketMetrics } from '../src/types/crypto.ts';
 import { analysisModeDefinitions, isAIAnalysisMode } from '../src/config/analysisModes.ts';
+import { isAIAnalysisRiskProfile } from '../src/config/analysisProfiles.ts';
 import type { ServerEnvironment } from './_env.ts';
 
 const COINGECKO_DEMO_BASE_URL = 'https://api.coingecko.com/api/v3';
@@ -687,11 +688,14 @@ export const normalizeAnalysisSelection = (value: unknown): AIAnalysisSelectionR
   if (!value || typeof value !== 'object') return null;
   const candidate = value as Record<string, unknown>;
   const keys = Object.keys(candidate);
-  if (keys.length !== 3 || !keys.every((key) => key === 'coinId' || key === 'currency' || key === 'mode')) return null;
+  if (!keys.every((key) => ['coinId', 'currency', 'mode', 'riskProfile'].includes(key))) return null;
   if (typeof candidate.coinId !== 'string' || !isSupportedCoinId(candidate.coinId)) return null;
   if (!supportedCurrencies.has(candidate.currency as CurrencyCode)) return null;
   if (!isAIAnalysisMode(candidate.mode)) return null;
-  return { coinId: candidate.coinId, currency: candidate.currency as CurrencyCode, mode: candidate.mode };
+  if (candidate.riskProfile !== undefined && !isAIAnalysisRiskProfile(candidate.riskProfile)) return null;
+  return { coinId: candidate.coinId, currency: candidate.currency as CurrencyCode, mode: candidate.mode,
+    ...(candidate.riskProfile !== undefined ? { riskProfile: candidate.riskProfile } : {}),
+  };
 };
 
 /** Build the exact payload accepted by api/analyze.ts for a selected coin. */

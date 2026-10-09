@@ -383,6 +383,20 @@ img { max-width: 100%; }
 .alert-row span, .alert-row small { color: var(--text-muted); font-size: .68rem; }
 
 .analysis-disclaimer { min-height: 0; }
+.analysis-risk-card { padding: 18px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius); }
+.analysis-risk-card.risk { border-color: rgba(255,189,74,.35); }
+.analysis-approach-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.analysis-approach-heading h2 { margin: 4px 0 0; font-size: 1rem; }
+.analysis-profile-tabs { display: flex; gap: 4px; padding: 4px; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 10px; }
+.analysis-profile-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 8px 14px; color: var(--text-secondary); font-size: .76rem; font-weight: 750; background: transparent; border: 1px solid transparent; border-radius: 7px; }
+.analysis-profile-tabs button[aria-selected="true"] { color: var(--accent); background: var(--bg-card); border-color: var(--border-glow); }
+.analysis-profile-tabs button#approach-tab-risk[aria-selected="true"] { color: var(--amber); border-color: rgba(255,189,74,.4); }
+.analysis-risk-card [role="tabpanel"] h3 { margin: 0 0 6px; font-size: .85rem; }
+.analysis-risk-card [role="tabpanel"] p { max-width: 850px; color: var(--text-secondary); font-size: .76rem; line-height: 1.65; }
+.analysis-approach-tradeoff { display: block; margin-top: 10px; color: var(--text-muted); font-size: .7rem; line-height: 1.55; }
+.analysis-risk-card.risk .analysis-approach-tradeoff { color: var(--amber); }
+.analysis-profile-label { align-self: flex-start; color: var(--accent); font-size: .72rem; font-weight: 700; }
+.analysis-profile-label.risk { color: var(--amber); }
 .analysis-mode-panel { display: grid; grid-template-columns: minmax(210px, .55fr) minmax(0, 1.45fr); gap: 22px; align-items: center; padding: 18px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius); }
 .analysis-mode-intro h2 { margin: 4px 0 6px; font-size: 1rem; }
 .analysis-mode-intro p { color: var(--text-secondary); font-size: .72rem; line-height: 1.55; }

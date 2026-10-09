@@ -3,6 +3,8 @@ import handler from './analyze';
 import { getGemini } from './_ai';
 import { consumeAnalysisQuota } from './_analysis-access';
 import { buildAnalysisRequest } from './_market';
+import { runAIAnalysis } from './_analysis';
+import { requestVertexCompletion, requestVertexGroundedResearch } from './_vertex-fetch';
 
 vi.mock('./_ai', () => ({ getGemini: vi.fn() }));
 vi.mock('./_vertex-fetch', () => ({ requestVertexCompletion: vi.fn(), requestVertexGroundedResearch: vi.fn() }));
@@ -94,7 +96,7 @@ describe('AI analysis function', () => {
     expect(getBody()).toEqual({ error: 'Gemini trading analysis is not configured on this deployment yet.' });
   });
 
-  it('returns a validated structured brief for valid provider JSON', async () => {
+  it.each(['conservative', 'risk'] as const)('returns a validated %s brief and keeps its instructions separate', async (riskProfile) => {
     process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
     const analysis = {
@@ -135,22 +137,64 @@ describe('AI analysis function', () => {
     ];
     const { response, getStatus, getBody } = createResponse();
 
-    await handler(request(fullRequest({ chartData7d: chart, chartData30d: chart, chartData1y: chart })), response);
+    vi.mocked(buildAnalysisRequest).mockResolvedValue(fullRequest({ chartData7d: chart, chartData30d: chart, chartData1y: chart }) as Awaited<ReturnType<typeof buildAnalysisRequest>>);
+    await handler(request({ coinId: 'bitcoin', currency: 'usd', mode: 'swing', riskProfile }), response);
 
     expect(getStatus()).toBe(200);
     const { methodology: _providerMethodology, timeframe: _providerTimeframe, ...expectedAnalysis } = analysis;
-    expect(getBody()).toMatchObject({ ...expectedAnalysis, mode: 'swing', timeframe: '3 days–4 weeks', dataAsOf: '2026-08-30T00:00:00.000Z' });
+    expect(getBody()).toMatchObject({ ...expectedAnalysis, mode: 'swing', riskProfile, timeframe: '3 days–4 weeks', dataAsOf: '2026-08-30T00:00:00.000Z' });
     expect((getBody() as { methodology: string }).methodology).toContain('closed Binance Spot candles');
     expect(getBody()).toMatchObject({ research: { status: 'unavailable', coinCatalysts: [], macroCatalysts: [], sources: [] } });
     expect(getGemini).toHaveBeenCalledTimes(1);
     const providerRequest = createCompletion.mock.calls[0][0];
     expect(providerRequest.model).toBe('google/gemini-3.7-flash');
     expect(providerRequest.response_format).toEqual({ type: 'json_object' });
+    expect(providerRequest.temperature).toBe(0.2);
+    if (riskProfile === 'risk') {
+      expect(providerRequest.messages[0].content).toContain('opportunity-seeking');
+      expect(providerRequest.messages[1].content).toContain('before weekly confirmation');
+      expect(providerRequest.messages[1].content).not.toContain('Prefer NO TRADE when daily and weekly structure conflict');
+      expect(providerRequest.messages[1].content).toContain('Do not force a trade');
+    } else {
+      expect(providerRequest.messages[0].content).toContain('cautious technical market analyst');
+      expect(providerRequest.messages[1].content).toContain('Prefer NO TRADE when daily and weekly structure conflict');
+      expect(providerRequest.messages[1].content).toContain('conservative position-risk note');
+    }
     expect(providerRequest.messages[1].content).toContain('3-day to 4-week holding period');
     expect(providerRequest.messages[1].content).toContain('"interval":"4h"');
     expect(JSON.stringify(providerRequest)).not.toContain('server-only-test-key');
     expect(JSON.stringify(providerRequest)).not.toContain('do-not-forward');
     expect(consumeAnalysisQuota).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects an unknown risk profile before market fetch or quota consumption', async () => {
+    process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
+    const { response, getStatus } = createResponse();
+    await handler(request({ coinId: 'bitcoin', currency: 'usd', mode: 'swing', riskProfile: 'reckless' }), response);
+    expect(getStatus()).toBe(400);
+    expect(buildAnalysisRequest).not.toHaveBeenCalled();
+    expect(consumeAnalysisQuota).not.toHaveBeenCalled();
+  });
+
+  it.each(['conservative', 'risk'] as const)('passes %s instructions through the Cloudflare provider and keeps research limits', async (riskProfile) => {
+    const providerBrief = {
+      headline: 'Wait for a trigger', summary: 'The supplied range is intact.', stance: 'neutral', confidence: 90, risk: 'high', timeframe: '3 days–4 weeks',
+      supportLevels: ['$95'], resistanceLevels: ['$110'],
+      tradeSetup: { signal: 'no-trade', rationale: 'No defensible trigger yet.', entryZone: '$100', stopLoss: '$95', takeProfitLevels: ['$110'], riskReward: '1:2', invalidation: 'A close below $95', positionRisk: 'Predefine the loss limit.' },
+      scenarios: [
+        { label: 'Bullish', trigger: 'Breaks $110', target: '$120', invalidatedBy: 'Falls below $105' },
+        { label: 'Base', trigger: 'Holds range', target: '$95–$110', invalidatedBy: 'Leaves range' },
+        { label: 'Bearish', trigger: 'Breaks $95', target: '$85', invalidatedBy: 'Reclaims $100' },
+      ], methodology: 'Closed candles.',
+    };
+    vi.mocked(requestVertexGroundedResearch).mockResolvedValueOnce({ content: '{}', queries: [], sources: [] });
+    vi.mocked(requestVertexCompletion).mockResolvedValueOnce(JSON.stringify(providerBrief));
+    const result = await runAIAnalysis(fullRequest({ riskProfile }), { GOOGLE_CLOUD_PROJECT: 'test-project', GOOGLE_SERVICE_ACCOUNT_JSON: '{}' }, 'fetch');
+    const messages = vi.mocked(requestVertexCompletion).mock.calls[0][0];
+    expect(messages[0].content).toContain(riskProfile === 'risk' ? 'opportunity-seeking' : 'cautious');
+    expect(result).toMatchObject({ riskProfile, confidence: 75, tradeSetup: { signal: 'no-trade' } });
+    expect(getGemini).not.toHaveBeenCalled();
   });
 
   it('retries once when Gemini returns malformed or incomplete JSON', async () => {
@@ -232,7 +276,7 @@ describe('AI analysis function', () => {
     expect(createCompletion).toHaveBeenCalledTimes(1);
   });
 
-  it('rejects a short recommendation for long-term analysis', async () => {
+  it.each(['conservative', 'risk'] as const)('rejects a short recommendation for long-term %s analysis', async (riskProfile) => {
     process.env.GOOGLE_CLOUD_PROJECT = 'test-project';
     process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{"client_email":"test@example.com","private_key":"server-only-test-key"}';
     const invalidLongTerm = {
@@ -251,7 +295,7 @@ describe('AI analysis function', () => {
     const longTermSeries = ['1d', '1w', '1M'].map((interval) => ({ interval, source: 'binance-spot', symbol: 'BTCUSDT', candles }));
     const { response, getStatus } = createResponse();
 
-    await handler(request(fullRequest({ mode: 'long-term', candleSeries: longTermSeries })), response);
+    await handler(request(fullRequest({ mode: 'long-term', candleSeries: longTermSeries, riskProfile })), response);
 
     expect(getStatus()).toBe(502);
     expect(createCompletion).toHaveBeenCalledTimes(2);

@@ -11,6 +11,12 @@ describe('analysis selection boundary', () => {
     expect(normalizeAnalysisSelection({ coinId: 'bitcoin', currency: 'usd', mode: 'short-term' })).toEqual({ coinId: 'bitcoin', currency: 'usd', mode: 'short-term' });
   });
 
+  it('accepts either risk profile while preserving legacy selections', () => {
+    for (const riskProfile of ['conservative', 'risk']) {
+      expect(normalizeAnalysisSelection({ coinId: 'bitcoin', currency: 'usd', mode: 'swing', riskProfile })).toMatchObject({ riskProfile });
+    }
+  });
+
   it.each([
     null,
     {},
@@ -18,6 +24,8 @@ describe('analysis selection boundary', () => {
     { coinId: '../bitcoin', currency: 'usd', mode: 'swing' },
     { coinId: 'bitcoin', currency: 'cad', mode: 'swing' },
     { coinId: 'bitcoin', currency: 'usd', mode: 'day-trade' },
+    { coinId: 'bitcoin', currency: 'usd', mode: 'swing', riskProfile: 'reckless' },
+    { coinId: 'bitcoin', currency: 'usd', mode: 'swing', riskProfile: null },
     { coinId: 'bitcoin', currency: 'usd', mode: 'swing', price: 1 },
     { coinId: 'x'.repeat(101), currency: 'usd', mode: 'swing' },
   ])('rejects malformed or unsupported selections: %j', (value) => {

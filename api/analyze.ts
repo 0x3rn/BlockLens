@@ -57,6 +57,7 @@ export default async function handler(request: RequestLike, response: ResponseLi
       if (!selection) return response.status(400).json({ error: 'The selected asset is incomplete or invalid.' });
       try {
         input = await buildAnalysisRequest(selection.coinId, selection.currency, environment, selection.mode);
+        input = { ...input, riskProfile: selection.riskProfile ?? 'conservative' };
       } catch (error) {
         console.error('Analysis market-data fetch failed:', error instanceof Error ? error.message : 'Unknown provider error');
         if (error instanceof AnalysisMarketDataError) return response.status(error.status).json({ error: error.message });

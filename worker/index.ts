@@ -114,6 +114,7 @@ const handleAnalysis = async (request: Request, env: WorkerEnvironment): Promise
       if (!selection) return json({ error: 'The selected asset is incomplete or invalid.' }, 400);
       try {
         input = await buildAnalysisRequest(selection.coinId, selection.currency, env, selection.mode);
+        input = { ...input, riskProfile: selection.riskProfile ?? 'conservative' };
       } catch (error) {
         console.error('Cloudflare analysis market-data fetch failed:', error instanceof Error ? error.message : 'Unknown provider error');
         if (error instanceof AnalysisMarketDataError) return json({ error: error.message }, error.status);

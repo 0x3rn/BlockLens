@@ -4,7 +4,8 @@ import { consumeAnalysisQuota } from '../_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from '../_rate-limit.ts';
 import { isAIAnalysisConfigured, normalizeAIAnalysisRequest, runAIAnalysis, type ProviderKind } from '../_analysis.ts';
 import { analysisModeDefinitions } from '../../src/config/analysisModes.ts';
-import type { AIAnalysis, AIAnalysisMode, AIAnalysisRequest, Coin } from '../../src/types/crypto.ts';
+import { analysisProfileDefinitions, isAIAnalysisRiskProfile } from '../../src/config/analysisProfiles.ts';
+import type { AIAnalysis, AIAnalysisMode, AIAnalysisRequest, AIAnalysisRiskProfile, Coin } from '../../src/types/crypto.ts';
 import {
   answerCallbackQuery,
   chunkTelegramHtml,
@@ -49,18 +50,35 @@ const modesByCode: Record<TelegramModeCode, AIAnalysisMode> = {
   long: 'long-term',
 };
 
-const parseModeCode = (value: string): AIAnalysisMode | null => modesByCode[value as TelegramModeCode] ?? null;
+const parseModeCode = (value: string): AIAnalysisMode | null => Object.hasOwn(modesByCode, value) ? modesByCode[value as TelegramModeCode] : null;
 
-const modePickerKeyboard = (): InlineKeyboardMarkup => ({
+const profilePickerKeyboard = (mode?: AIAnalysisMode): InlineKeyboardMarkup => ({
   inline_keyboard: [
-    [{ text: '⚡ Short-term · 6h–3d', callback_data: 'ai:mode:short' }],
-    [{ text: '↗ Swing · 3d–4w', callback_data: 'ai:mode:swing' }],
-    [{ text: '◉ Long-term · 1–12m+', callback_data: 'ai:mode:long' }],
+    [{ text: 'Conservative', callback_data: `ai:profile:conservative${mode ? `:${modeCodes[mode]}` : ''}` }],
+    [{ text: 'Risk', callback_data: `ai:profile:risk${mode ? `:${modeCodes[mode]}` : ''}` }],
   ],
 });
 
-const modePickerText = [
+const profilePickerText = [
   '<b>AI market analysis</b>',
+  'Choose your analysis approach.',
+  '',
+  '<b>Conservative:</b> Wait for stronger confirmation and agreement across timeframes.',
+  '<b>Risk:</b> Explore earlier momentum, breakout, and reversal setups with clear triggers and invalidation.',
+].join('\n');
+
+const modePickerKeyboard = (riskProfile: AIAnalysisRiskProfile): InlineKeyboardMarkup => ({
+  inline_keyboard: [
+    [{ text: '⚡ Short-term · 6h–3d', callback_data: `ai:mode:${riskProfile}:short` }],
+    [{ text: '↗ Swing · 3d–4w', callback_data: `ai:mode:${riskProfile}:swing` }],
+    [{ text: '◉ Long-term · 1–12m+', callback_data: `ai:mode:${riskProfile}:long` }],
+    [{ text: 'Change approach', callback_data: 'ai:profiles' }],
+  ],
+});
+
+const modePickerText = (riskProfile: AIAnalysisRiskProfile) => [
+  '<b>AI market analysis</b>',
+  `<b>Approach:</b> ${analysisProfileDefinitions[riskProfile].label}`,
   'Choose a trading horizon. Each mode uses different closed candles and searches for catalysts relevant to that period.',
 ].join('\n');
 
@@ -79,39 +97,41 @@ const coinButtonText = (coin: Coin) => {
   return `#${coin.market_cap_rank ?? '?'} ${label}`.slice(0, 62);
 };
 
-const coinListKeyboard = (coins: Coin[], page: number, mode: AIAnalysisMode): InlineKeyboardMarkup => {
+const coinListKeyboard = (coins: Coin[], page: number, mode: AIAnalysisMode, riskProfile: AIAnalysisRiskProfile): InlineKeyboardMarkup => {
   const view = coinsForPage(coins, page);
   const modeCode = modeCodes[mode];
   const rows = [] as { text: string; callback_data: string }[][];
   for (let index = 0; index < view.items.length; index += 2) {
     const row = view.items.slice(index, index + 2).map((coin, rowOffset) => ({
       text: coinButtonText(coin),
-      callback_data: `ai:coin:${modeCode}:${view.page}:${index + rowOffset}`,
+      callback_data: `ai:coin:${riskProfile}:${modeCode}:${view.page}:${index + rowOffset}`,
     }));
     rows.push(row);
   }
 
   const navigation = [] as { text: string; callback_data: string }[];
-  if (view.page > 0) navigation.push({ text: '‹ Previous', callback_data: `ai:page:${modeCode}:${view.page - 1}` });
-  if (view.page < view.pageCount - 1) navigation.push({ text: 'Next ›', callback_data: `ai:page:${modeCode}:${view.page + 1}` });
+  if (view.page > 0) navigation.push({ text: '‹ Previous', callback_data: `ai:page:${riskProfile}:${modeCode}:${view.page - 1}` });
+  if (view.page < view.pageCount - 1) navigation.push({ text: 'Next ›', callback_data: `ai:page:${riskProfile}:${modeCode}:${view.page + 1}` });
   if (navigation.length > 0) rows.push(navigation);
-  rows.push([{ text: 'Change horizon', callback_data: 'ai:modes' }]);
+  rows.push([{ text: 'Change horizon', callback_data: `ai:modes:${riskProfile}` }, { text: 'Change approach', callback_data: `ai:profiles:${modeCode}` }]);
   return { inline_keyboard: rows };
 };
 
-const coinListText = (page: number, total: number, mode: AIAnalysisMode) => {
+const coinListText = (page: number, total: number, mode: AIAnalysisMode, riskProfile: AIAnalysisRiskProfile) => {
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(Math.max(page, 0), pageCount - 1);
   const definition = analysisModeDefinitions[mode];
   return [
     `<b>${escapeHtml(definition.label)} AI analysis · ${escapeHtml(definition.holdingPeriod)}</b>`,
+    `<b>Approach:</b> ${analysisProfileDefinitions[riskProfile].label}`,
     `Choose a coin · ${safePage + 1} of ${pageCount}`,
     escapeHtml(definition.description),
   ].join('\n');
 };
 
-const backToCoinsKeyboard = (mode: AIAnalysisMode, page = 0): InlineKeyboardMarkup => ({
-  inline_keyboard: [[{ text: 'Back to coins', callback_data: `ai:page:${modeCodes[mode]}:${page}` }], [{ text: 'Change horizon', callback_data: 'ai:modes' }]],
+const backToCoinsKeyboard = (mode: AIAnalysisMode, page: number, riskProfile: AIAnalysisRiskProfile): InlineKeyboardMarkup => ({
+  inline_keyboard: [[{ text: 'Back to coins', callback_data: `ai:page:${riskProfile}:${modeCodes[mode]}:${page}` }],
+    [{ text: 'Change horizon', callback_data: `ai:modes:${riskProfile}` }, { text: 'Change approach', callback_data: `ai:profiles:${modeCodes[mode]}` }]],
 });
 
 const readBody = (request: RequestLike): unknown => {
@@ -134,11 +154,12 @@ const sendCoinPicker = async (
   page = 0,
   environment: ServerEnvironment,
   message?: TelegramMessage,
+  riskProfile: AIAnalysisRiskProfile = 'conservative',
 ) => {
   const coins = await fetchTopCoins(currency, environment);
   const view = coinsForPage(coins, page);
-  const text = coinListText(view.page, coins.length, mode);
-  const keyboard = coinListKeyboard(coins, view.page, mode);
+  const text = coinListText(view.page, coins.length, mode, riskProfile);
+  const keyboard = coinListKeyboard(coins, view.page, mode, riskProfile);
   if (message) {
     await editMessageText(chatId, message.message_id, text, environment, keyboard);
   } else {
@@ -146,9 +167,13 @@ const sendCoinPicker = async (
   }
 };
 
-const sendModePicker = async (chatId: number, environment: ServerEnvironment, message?: TelegramMessage) => {
-  if (message) await editMessageText(chatId, message.message_id, modePickerText, environment, modePickerKeyboard());
-  else await sendMessage(chatId, modePickerText, environment, modePickerKeyboard());
+const sendProfilePicker = async (chatId: number, environment: ServerEnvironment, message?: TelegramMessage, mode?: AIAnalysisMode) => {
+  if (message) await editMessageText(chatId, message.message_id, profilePickerText, environment, profilePickerKeyboard(mode));
+  else await sendMessage(chatId, profilePickerText, environment, profilePickerKeyboard(mode));
+};
+
+const sendModePicker = async (chatId: number, environment: ServerEnvironment, message: TelegramMessage, riskProfile: AIAnalysisRiskProfile) => {
+  await editMessageText(chatId, message.message_id, modePickerText(riskProfile), environment, modePickerKeyboard(riskProfile));
 };
 
 const generateAnalysis = async (
@@ -183,6 +208,7 @@ const formatAnalysis = (coin: Coin, analysis: AIAnalysis) => {
   const catalysts = [...analysis.research.coinCatalysts, ...analysis.research.macroCatalysts];
   const lines = [
     `<b>${escapeHtml(coin.name)} · ${escapeHtml(definition.label)} AI analysis</b>`,
+    `<b>Approach:</b> ${analysisProfileDefinitions[analysis.riskProfile ?? 'conservative'].label}`,
     `<b>Horizon:</b> ${escapeHtml(definition.holdingPeriod)}`,
     `<b>Signal:</b> ${escapeHtml(signal)} · <b>Confidence:</b> ${analysis.confidence}%`,
     `<b>Bias:</b> ${escapeHtml(analysis.stance)} · <b>Risk:</b> ${escapeHtml(analysis.risk)}`,
@@ -229,6 +255,7 @@ const handleCoinSelection = async (
   page: number,
   environment: ServerEnvironment,
   provider: ProviderKind,
+  riskProfile: AIAnalysisRiskProfile,
 ) => {
   const message = callback.message;
   if (!message) return;
@@ -236,17 +263,17 @@ const handleCoinSelection = async (
   await editMessageText(
     chatId,
     message.message_id,
-    `<b>${escapeHtml(coin.name)} · ${escapeHtml(analysisModeDefinitions[mode].label)} AI analysis</b>\nLoading closed candles and checking current market catalysts…`,
+    `<b>${escapeHtml(coin.name)} · ${escapeHtml(analysisModeDefinitions[mode].label)} AI analysis</b>\n<b>Approach:</b> ${analysisProfileDefinitions[riskProfile].label}\nLoading closed candles and checking current market catalysts…`,
     environment,
-    backToCoinsKeyboard(mode, page),
+    backToCoinsKeyboard(mode, page, riskProfile),
   );
 
   try {
-    const payload = await buildAnalysisRequest(coin.id, currency, environment, mode);
+    const payload = { ...await buildAnalysisRequest(coin.id, currency, environment, mode), riskProfile };
     const analysis = await generateAnalysis(payload, callback.from.id, environment, provider);
     const chunks = formatAnalysis(coin, analysis);
-    await editMessageText(chatId, message.message_id, chunks[0], environment, backToCoinsKeyboard(mode, page));
-    for (const chunk of chunks.slice(1)) await sendMessage(chatId, chunk, environment, backToCoinsKeyboard(mode, page));
+    await editMessageText(chatId, message.message_id, chunks[0], environment, backToCoinsKeyboard(mode, page, riskProfile));
+    for (const chunk of chunks.slice(1)) await sendMessage(chatId, chunk, environment, backToCoinsKeyboard(mode, page, riskProfile));
   } catch (error) {
     console.error('Telegram AI analysis failed:', error instanceof Error ? error.message : 'Unknown error');
     await editMessageText(
@@ -254,9 +281,22 @@ const handleCoinSelection = async (
       message.message_id,
       'The AI brief could not be generated right now. Please try again shortly.',
       environment,
-      backToCoinsKeyboard(mode, page),
+      backToCoinsKeyboard(mode, page, riskProfile),
     );
   }
+};
+
+// Old bot messages omit the approach; continue interpreting them as Conservative.
+const parseAnalysisCallback = (parts: string[], numberCount: number) => {
+  const hasProfile = parts.length === numberCount + 2;
+  if (!hasProfile && parts.length !== numberCount + 1) return null;
+  const riskProfile = hasProfile ? parts[0] : 'conservative';
+  const mode = parseModeCode(parts[hasProfile ? 1 : 0]);
+  const rawNumbers = parts.slice(hasProfile ? 2 : 1);
+  if (!isAIAnalysisRiskProfile(riskProfile) || !mode || !rawNumbers.every((value) => /^\d+$/u.test(value))) return null;
+  const numbers = rawNumbers.map(Number);
+  if (!numbers.every((value) => Number.isSafeInteger(value) && value >= 0)) return null;
+  return { riskProfile, mode, numbers };
 };
 
 const handleCallback = async (
@@ -272,28 +312,51 @@ const handleCallback = async (
   }
 
   const data = callback.data ?? '';
-  if (data === 'ai:modes') {
-    if (callback.message) await sendModePicker(callback.message.chat.id, environment, callback.message);
+  if (data === 'ai:profiles' || data.startsWith('ai:profiles:')) {
+    const mode = data === 'ai:profiles' ? undefined : parseModeCode(data.slice('ai:profiles:'.length));
+    if (mode === null || !callback.message) return;
+    await sendProfilePicker(callback.message.chat.id, environment, callback.message, mode);
+    return;
+  }
+  if (data.startsWith('ai:profile:')) {
+    const [riskProfile, modeCode, ...extra] = data.slice('ai:profile:'.length).split(':');
+    const mode = modeCode === undefined ? undefined : parseModeCode(modeCode);
+    if (!isAIAnalysisRiskProfile(riskProfile) || mode === null || extra.length > 0 || !callback.message) return;
+    if (!mode) await sendModePicker(callback.message.chat.id, environment, callback.message, riskProfile);
+    else {
+      try {
+        await sendCoinPicker(callback.message.chat.id, mode, 0, environment, callback.message, riskProfile);
+      } catch (error) {
+        console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
+        await editMessageText(callback.message.chat.id, callback.message.message_id, 'The live coin list is unavailable right now. Please try again shortly.', environment, modePickerKeyboard(riskProfile));
+      }
+    }
+    return;
+  }
+  if (data === 'ai:modes' || data.startsWith('ai:modes:')) {
+    const riskProfile = data === 'ai:modes' ? 'conservative' : data.slice('ai:modes:'.length);
+    if (!isAIAnalysisRiskProfile(riskProfile) || !callback.message) return;
+    await sendModePicker(callback.message.chat.id, environment, callback.message, riskProfile);
     return;
   }
   if (data.startsWith('ai:mode:')) {
-    const mode = parseModeCode(data.slice('ai:mode:'.length));
-    if (!mode || !callback.message) return;
+    const selection = parseAnalysisCallback(data.slice('ai:mode:'.length).split(':'), 0);
+    if (!selection || !callback.message) return;
+    const { mode, riskProfile } = selection;
     try {
-      await sendCoinPicker(callback.message.chat.id, mode, 0, environment, callback.message);
+      await sendCoinPicker(callback.message.chat.id, mode, 0, environment, callback.message, riskProfile);
     } catch (error) {
       console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
-      await editMessageText(callback.message.chat.id, callback.message.message_id, 'The live coin list is unavailable right now. Please try again shortly.', environment, modePickerKeyboard());
+      await editMessageText(callback.message.chat.id, callback.message.message_id, 'The live coin list is unavailable right now. Please try again shortly.', environment, modePickerKeyboard(riskProfile));
     }
     return;
   }
   if (data.startsWith('ai:page:')) {
-    const [modeCode, rawPage, ...extra] = data.slice('ai:page:'.length).split(':');
-    const mode = parseModeCode(modeCode);
-    const page = Number(rawPage);
-    if (!mode || extra.length > 0 || !Number.isInteger(page) || page < 0 || !callback.message) return;
+    const selection = parseAnalysisCallback(data.slice('ai:page:'.length).split(':'), 1);
+    if (!selection || !callback.message) return;
+    const { mode, riskProfile, numbers: [page] } = selection;
     try {
-      await sendCoinPicker(callback.message.chat.id, mode, page, environment, callback.message);
+      await sendCoinPicker(callback.message.chat.id, mode, page, environment, callback.message, riskProfile);
     } catch (error) {
       console.error('Telegram coin list failed:', error instanceof Error ? error.message : 'Unknown market-data error');
       await editMessageText(
@@ -301,28 +364,27 @@ const handleCallback = async (
         callback.message.message_id,
         'The live coin list is unavailable right now. Please try again shortly.',
         environment,
-        backToCoinsKeyboard(mode, page),
+        backToCoinsKeyboard(mode, page, riskProfile),
       );
     }
     return;
   }
   if (data.startsWith('ai:coin:')) {
-    const [modeCode, rawPage, rawIndex, ...extra] = data.slice('ai:coin:'.length).split(':');
-    const mode = parseModeCode(modeCode);
-    const page = Number(rawPage);
-    const index = Number(rawIndex);
-    if (!mode || extra.length > 0 || !Number.isInteger(page) || page < 0 || !Number.isInteger(index) || index < 0 || index >= PAGE_SIZE || !callback.message) return;
+    const selection = parseAnalysisCallback(data.slice('ai:coin:'.length).split(':'), 2);
+    if (!selection || !callback.message) return;
+    const { mode, riskProfile, numbers: [page, index] } = selection;
+    if (index >= PAGE_SIZE) return;
     try {
       const coins = await fetchTopCoins(currency, environment);
       const coin = coinsForPage(coins, page).items[index];
       if (!coin) {
-        await editMessageText(callback.message.chat.id, callback.message.message_id, 'That coin is no longer in the current list.', environment, backToCoinsKeyboard(mode, page));
+        await editMessageText(callback.message.chat.id, callback.message.message_id, 'That coin is no longer in the current list.', environment, backToCoinsKeyboard(mode, page, riskProfile));
         return;
       }
-      await handleCoinSelection(callback, coin, mode, page, environment, provider);
+      await handleCoinSelection(callback, coin, mode, page, environment, provider, riskProfile);
     } catch (error) {
       console.error('Telegram coin selection failed:', error instanceof Error ? error.message : 'Unknown market-data error');
-      await editMessageText(callback.message.chat.id, callback.message.message_id, 'The live coin list is unavailable right now. Please try again shortly.', environment, backToCoinsKeyboard(mode, page));
+      await editMessageText(callback.message.chat.id, callback.message.message_id, 'The live coin list is unavailable right now. Please try again shortly.', environment, backToCoinsKeyboard(mode, page, riskProfile));
     }
   }
 };
@@ -343,18 +405,17 @@ const handleMessage = async (message: TelegramMessage, environment: ServerEnviro
   if (command === '/help') {
     await sendMessage(message.chat.id, [
       '<b>BlockLens AI commands</b>',
-      '/ai_analysis — choose an analysis horizon',
-      '/short_term_trade — short-term analysis (6 hours–3 days)',
-      '/swing_trade — swing analysis (3 days–4 weeks)',
-      '/long_term_trade — long-term analysis (1–12+ months)',
+      '/ai_analysis — choose Conservative or Risk, then a trading horizon',
+      '/short_term_trade — choose an approach for short-term analysis (6 hours–3 days)',
+      '/swing_trade — choose an approach for swing analysis (3 days–4 weeks)',
+      '/long_term_trade — choose an approach for long-term analysis (1–12+ months)',
     ].join('\n'), environment);
     return;
   }
-  const directMode = directModes[command];
+  const directMode = Object.hasOwn(directModes, command) ? directModes[command] : undefined;
   if (!directMode && command !== '/ai-analysis' && command !== '/ai_analysis' && command !== '/start') return;
   try {
-    if (directMode) await sendCoinPicker(message.chat.id, directMode, 0, environment);
-    else await sendModePicker(message.chat.id, environment);
+    await sendProfilePicker(message.chat.id, environment, undefined, directMode);
   } catch (error) {
     console.error('Telegram analysis menu failed:', error instanceof Error ? error.message : 'Unknown market-data error');
     await sendMessage(
