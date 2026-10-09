@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { browserPopupRedirectResolver, createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut as firebaseSignOut, updateProfile } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { firebaseAuth, isFirebaseConfigured } from '../lib/firebase';
+import { verifyPasswordAuth } from '../services/authVerification';
 
 type AccountUser = { id: string; email: string | null; displayName: string | null };
 type AuthContextValue = {
@@ -9,9 +10,9 @@ type AuthContextValue = {
   loading: boolean;
   user: AccountUser | null;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string, turnstileToken: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  signUp: (email: string, password: string, displayName: string | undefined, turnstileToken: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   signOut: () => Promise<{ error: string | null }>;
 };
 
@@ -27,6 +28,8 @@ const AuthContext = createContext<AuthContextValue>(disabledAuth);
 
 export const readableAuthError = (error: unknown): string => {
   const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+  if (code === 'TURNSTILE_VERIFICATION_FAILED') return 'Please complete verification and try again.';
+  if (code === 'TURNSTILE_UNAVAILABLE') return unavailable;
   if (['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/wrong-password', 'auth/user-not-found'].includes(code)) return 'Email or password is incorrect.';
   if (code === 'auth/email-already-in-use') return 'An account with this email already exists.';
   if (code === 'auth/invalid-email') return 'Enter a valid email address.';
@@ -94,10 +97,11 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const message = readableAuthError(failure); setError(message); return { error: message };
       }
     },
-    signIn: async (email, password) => {
+    signIn: async (email, password, turnstileToken) => {
       if (!firebaseAuth) return { error: unavailable };
       setError(null);
       try {
+        await verifyPasswordAuth('sign-in', turnstileToken);
         await firebaseAuth.authStateReady();
         const credential = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
         if (firebaseAuth.currentUser?.uid !== credential.user.uid) throw { code: 'auth/user-token-expired' };
@@ -107,13 +111,14 @@ export const AuthProvider: React.FC<React.PropsWithChildren> = ({ children }) =>
         const message = readableAuthError(failure); setError(message); return { error: message };
       }
     },
-    signUp: async (email, password, displayName) => {
+    signUp: async (email, password, displayName, turnstileToken) => {
       if (!firebaseAuth) return { error: unavailable, needsConfirmation: false };
       setError(null);
       registering.current = true;
       setLoading(true);
       let created = false;
       try {
+        await verifyPasswordAuth('sign-up', turnstileToken);
         await firebaseAuth.authStateReady();
         const credential = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
         created = true;

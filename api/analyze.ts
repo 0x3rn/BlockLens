@@ -1,4 +1,5 @@
 import { processEnvironment } from './_env.ts';
+import { TurnstileError, verifyAnalysisTurnstile } from './_turnstile.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from './_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from './_rate-limit.ts';
 import { AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest, runAIAnalysis } from './_analysis.ts';
@@ -50,7 +51,7 @@ export default async function handler(request: RequestLike, response: ResponseLi
     if (!isAIAnalysisConfigured(environment)) {
       return response.status(503).json({ error: 'Gemini trading analysis is not configured on this deployment yet.' });
     }
-    const body = readBody(request);
+    const body = await verifyAnalysisTurnstile(readBody(request), environment, readClientIp(request));
     let input = normalizeAIAnalysisRequest(body);
     if (!input) {
       const selection = normalizeAnalysisSelection(body);
@@ -70,6 +71,7 @@ export default async function handler(request: RequestLike, response: ResponseLi
     const analysis = await runAIAnalysis(input, environment, 'node');
     return response.status(200).json(analysis);
   } catch (error) {
+    if (error instanceof TurnstileError) return response.status(error.status).json({ error: error.message, code: error.code });
     if (error instanceof AnalysisAccessError) return response.status(error.status).json({ error: error.message });
     if (error instanceof AnalysisError) return response.status(error.status).json({ error: error.message });
     console.error('AI analysis request failed:', error instanceof Error ? error.message : 'Unknown provider error');

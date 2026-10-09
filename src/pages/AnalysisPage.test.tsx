@@ -6,6 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AnalysisPage from './AnalysisPage';
 import { requestAIAnalysis } from '../services/api';
 import type { AIAnalysis } from '../types/crypto';
+import type { TurnstileApi } from '../components/TurnstileVerification';
+
+let widgetOptions: Parameters<TurnstileApi['render']>[1];
+let autoVerify = true;
+const widgetReset = vi.fn(() => { if (autoVerify) widgetOptions.callback('fresh-test-token'); });
+const widgetRender = vi.fn((_element, options: typeof widgetOptions) => {
+  widgetOptions = options;
+  if (autoVerify) options.callback('fresh-test-token');
+  return 'analysis-widget';
+});
 
 const { save, toast } = vi.hoisted(() => ({ save: vi.fn(), toast: vi.fn() }));
 vi.mock('../context/MarketContext', () => ({ useMarket: () => ({
@@ -36,18 +46,79 @@ const showPage = (path = '/analysis?coin=bitcoin') => render(<MemoryRouter initi
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(requestAIAnalysis).mockReset();
+  autoVerify = true;
+  vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'unit-test-site-key');
+  window.turnstile = { ready: (callback) => callback(), render: widgetRender, reset: widgetReset, remove: vi.fn() };
   Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { value: vi.fn(), configurable: true });
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); delete window.turnstile; vi.unstubAllEnvs(); });
 
 describe('analysis approaches', () => {
+  it('keeps generation disabled until verification succeeds and clears expired/error tokens', async () => {
+    autoVerify = false;
+    const user = userEvent.setup();
+    showPage();
+    const generate = screen.getByRole('button', { name: 'Generate swing analysis' });
+    await waitFor(() => expect(widgetRender).toHaveBeenCalled());
+    expect(generate).toBeDisabled();
+    await user.click(generate);
+    expect(requestAIAnalysis).not.toHaveBeenCalled();
+    act(() => widgetOptions.callback('first-token'));
+    expect(generate).toBeEnabled();
+    act(() => widgetOptions['expired-callback']());
+    expect(generate).toBeDisabled();
+    act(() => widgetOptions.callback('second-token'));
+    act(() => widgetOptions['error-callback']());
+    expect(generate).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Retry verification' }));
+    await waitFor(() => expect(widgetRender).toHaveBeenCalledTimes(2));
+    act(() => widgetOptions.callback('third-token'));
+    expect(generate).toBeEnabled();
+  });
+
+  it.each(['success', 'failure'])('resets after a %s and requires a fresh token before retrying', async (outcome) => {
+    autoVerify = false;
+    if (outcome === 'success') vi.mocked(requestAIAnalysis).mockResolvedValue(brief());
+    else vi.mocked(requestAIAnalysis).mockRejectedValue(new Error('upstream failed'));
+    const user = userEvent.setup();
+    showPage();
+    await waitFor(() => expect(widgetRender).toHaveBeenCalled());
+    act(() => widgetOptions.callback('spent-token'));
+    await user.dblClick(screen.getByRole('button', { name: 'Generate swing analysis' }));
+    await waitFor(() => expect(widgetReset).toHaveBeenCalledTimes(1));
+    expect(requestAIAnalysis).toHaveBeenCalledTimes(1);
+    const generate = screen.getByRole('button', { name: 'Generate swing analysis' });
+    expect(generate).toBeDisabled();
+    if (outcome === 'failure') expect(screen.getByRole('button', { name: 'Try analysis again' })).toBeDisabled();
+    act(() => widgetOptions.callback('new-token'));
+    expect(generate).toBeEnabled();
+    await user.click(generate);
+    expect(requestAIAnalysis).toHaveBeenLastCalledWith(expect.any(Object), 'new-token');
+  });
+
+  it('removes the widget on navigation and ignores callbacks from the old selection', async () => {
+    autoVerify = false;
+    const user = userEvent.setup();
+    showPage();
+    await waitFor(() => expect(widgetRender).toHaveBeenCalled());
+    const oldOptions = widgetOptions;
+    act(() => oldOptions.callback('old-token'));
+    await user.click(screen.getByRole('tab', { name: 'Risk' }));
+    await waitFor(() => expect(widgetRender).toHaveBeenCalledTimes(2));
+    expect(window.turnstile?.remove).toHaveBeenCalledWith('analysis-widget');
+    act(() => oldOptions.callback('late-old-token'));
+    expect(screen.getByRole('button', { name: 'Generate swing analysis' })).toBeDisabled();
+    act(() => widgetOptions.callback('current-token'));
+    expect(screen.getByRole('button', { name: 'Generate swing analysis' })).toBeEnabled();
+  });
+
   it('defaults to Conservative and preserves the existing request contract', async () => {
     vi.mocked(requestAIAnalysis).mockResolvedValue(brief());
     const user = userEvent.setup();
     showPage();
     expect(screen.getByRole('tab', { name: 'Conservative' })).toHaveAttribute('aria-selected', 'true');
     await user.click(screen.getByRole('button', { name: 'Generate swing analysis' }));
-    expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'bitcoin', currency: 'usd', mode: 'swing' });
+    expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'bitcoin', currency: 'usd', mode: 'swing' }, 'fresh-test-token');
     await screen.findByRole('heading', { name: 'A conditional setup' });
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ analysis: expect.objectContaining({ riskProfile: 'conservative' }) }));
   });
@@ -60,7 +131,7 @@ describe('analysis approaches', () => {
     await user.click(screen.getByRole('radio', { name: /Long-term/ }));
     await user.selectOptions(screen.getByLabelText('Analyze asset'), 'ripple');
     await user.click(screen.getByRole('button', { name: 'Generate long-term analysis' }));
-    expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'ripple', currency: 'usd', mode: 'long-term', riskProfile: 'risk' });
+    expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'ripple', currency: 'usd', mode: 'long-term', riskProfile: 'risk' }, 'fresh-test-token');
     expect(screen.getByRole('tab', { name: 'Risk' })).toHaveAttribute('aria-selected', 'true');
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ coinId: 'ripple', analysis: expect.objectContaining({ riskProfile: 'risk' }) }));
   });

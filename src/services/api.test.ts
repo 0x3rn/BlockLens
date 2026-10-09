@@ -38,10 +38,12 @@ describe('getApiErrorMessage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('logs the raw error details to console.error', () => {
-    const rawError = new Error('Database connection failed on postgres://internal:5432');
-    getApiErrorMessage(rawError);
-    expect(console.error).toHaveBeenCalledWith('API Error details:', rawError);
+  it('logs only status and code, without request tokens or credentials', () => {
+    const rawError = { isAxiosError: true, code: 'ERR_BAD_REQUEST', response: { status: 403, data: { code: 'TURNSTILE_VERIFICATION_FAILED' } },
+      config: { data: '{"cf-turnstile-response":"sensitive-token"}' } };
+    expect(getApiErrorMessage(rawError, 'ai')).toBe(CONTROLLED_ERROR_MESSAGES.verification);
+    expect(console.error).toHaveBeenCalledWith('API request failed:', { status: 403, code: 'ERR_BAD_REQUEST' });
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain('sensitive-token');
   });
 
   it('returns generic market error for standard market failures', () => {

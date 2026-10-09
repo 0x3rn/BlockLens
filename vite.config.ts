@@ -8,6 +8,7 @@ import telegramWebhookHandler from './api/telegram/webhook.ts';
 import marketSnapshotHandler from './api/market/snapshot.ts';
 import coinProfileHandler from './api/market/coin.ts';
 import accountHandler from './api/account.ts';
+import authVerificationHandler from './api/auth/verify.ts';
 
 class LocalApiResponse {
   constructor(private readonly response: ServerResponse) {}
@@ -59,6 +60,7 @@ const localAnalyzeApi = (): Plugin => ({
     };
     server.middlewares.use('/api/analyze', handleBody(analyzeHandler));
     server.middlewares.use('/api/account', handleBody(accountHandler));
+    server.middlewares.use('/api/auth/verify', handleBody(authVerificationHandler));
   },
 });
 
@@ -142,6 +144,8 @@ export default defineConfig(({ mode }) => {
   process.env.COINGECKO_API_PLAN = environment.COINGECKO_API_PLAN || process.env.COINGECKO_API_PLAN;
   process.env.TELEGRAM_BOT_TOKEN = environment.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
   process.env.TELEGRAM_WEBHOOK_SECRET = environment.TELEGRAM_WEBHOOK_SECRET || process.env.TELEGRAM_WEBHOOK_SECRET;
+  if ('TURNSTILE_SECRET' in environment) process.env.TURNSTILE_SECRET = environment.TURNSTILE_SECRET;
+  if ('TURNSTILE_HOSTNAMES' in environment) process.env.TURNSTILE_HOSTNAMES = environment.TURNSTILE_HOSTNAMES;
 
   return {
     plugins: [react(), localAnalyzeApi(), localMarketApi(), localTelegramApi()],

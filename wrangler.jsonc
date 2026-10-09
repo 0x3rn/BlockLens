@@ -4,6 +4,9 @@
   "main": "./worker/index.ts",
   "compatibility_date": "2026-09-02",
   "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  "vars": {
+    "TURNSTILE_HOSTNAMES": "blocklens.corstack.dev"
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

@@ -1,8 +1,9 @@
-import React, { FormEvent, useEffect, useState } from 'react';
+import React, { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Cloud, LogIn, LogOut, UserRound } from 'lucide-react';
 import { readableAuthError, useAuth } from '../context/AuthContext';
 import { usePageMeta } from '../hooks/usePageMeta';
+import TurnstileVerification from '../components/TurnstileVerification';
 
 const AccountPage: React.FC = () => {
   const { configured, user, error: authError, signIn, signInWithGoogle, signUp, signOut } = useAuth();
@@ -10,27 +11,41 @@ const AccountPage: React.FC = () => {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const [verificationReset, setVerificationReset] = useState(0);
+  const updateToken = useCallback((token: string | null) => {
+    tokenRef.current = token;
+    setVerificationToken(token);
+  }, []);
   const [pendingAction, setPendingAction] = useState<'email' | 'google' | 'sign-out' | null>(null);
   const busy = pendingAction !== null;
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
     setMessage(null);
     setPassword('');
-  }, [user?.id]);
+    updateToken(null);
+  }, [user?.id, updateToken]);
   usePageMeta('Account', 'Sign in to sync your BlockLens portfolio, watchlist, and alerts across devices.');
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (busy) return;
+    const token = tokenRef.current;
+    if (busy || !token) return;
+    updateToken(null);
     setPendingAction('email');
     setMessage(null);
     try {
       const result = mode === 'sign-in'
-        ? await signIn(email, password)
-        : await signUp(email, password, displayName);
+        ? await signIn(email, password, token)
+        : await signUp(email, password, displayName, token);
       setMessage(result.error);
     } catch (failure) { setMessage(readableAuthError(failure)); }
-    finally { setPendingAction(null); }
+    finally {
+      updateToken(null);
+      setVerificationReset(value => value + 1);
+      setPendingAction(null);
+    }
   };
 
   const handleSignOut = async () => {
@@ -94,9 +109,10 @@ const AccountPage: React.FC = () => {
             {mode === 'sign-up' && <label><span>Name (optional)</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" maxLength={80} /></label>}
             <label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
             <label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} minLength={6} required /></label>
+            <TurnstileVerification key={mode} action={mode === 'sign-in' ? 'password_login' : 'password_signup'} className="account-verification" onToken={updateToken} resetKey={verificationReset} />
             {(message || authError) && <p className="account-message" role="alert">{message || authError}</p>}
-            <button type="submit" className="primary-button" disabled={busy}><LogIn size={15} aria-hidden="true" /> {pendingAction === 'email' ? (mode === 'sign-in' ? 'Signing in' : 'Creating account') : (mode === 'sign-in' ? 'Sign in' : 'Create account')}</button>
-            <button type="button" className="account-mode-toggle" disabled={busy} onClick={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setMessage(null); }}>{mode === 'sign-in' ? 'Need an account? Create one' : 'Already have an account? Sign in'}</button>
+            <button type="submit" className="primary-button" disabled={busy || !verificationToken}><LogIn size={15} aria-hidden="true" /> {pendingAction === 'email' ? (mode === 'sign-in' ? 'Signing in' : 'Creating account') : (mode === 'sign-in' ? 'Sign in' : 'Create account')}</button>
+            <button type="button" className="account-mode-toggle" disabled={busy} onClick={() => { updateToken(null); setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setMessage(null); }}>{mode === 'sign-in' ? 'Need an account? Create one' : 'Already have an account? Sign in'}</button>
           </form>
         </section>
       )}

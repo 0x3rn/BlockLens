@@ -6,10 +6,12 @@ const mocks = vi.hoisted(() => ({
   changed: undefined as ((user: unknown) => void) | undefined,
   unsubscribe: vi.fn(), signIn: vi.fn(), signUp: vi.fn(), signOut: vi.fn(), updateProfile: vi.fn(),
   google: vi.fn(), setGoogleParameters: vi.fn(), popupResolver: {},
+  verify: vi.fn(),
   notify: undefined as ((user: unknown) => void) | undefined,
   auth: { currentUser: null as { uid: string; email: string; displayName: string } | null, authStateReady: vi.fn() },
 }));
 vi.mock('../lib/firebase', () => ({ isFirebaseConfigured: true, firebaseAuth: mocks.auth }));
+vi.mock('../services/authVerification', () => ({ verifyPasswordAuth: mocks.verify }));
 vi.mock('firebase/auth', () => ({
   onAuthStateChanged: (_auth: unknown, callback: (user: unknown) => void) => {
     mocks.notify = callback;
@@ -27,7 +29,7 @@ import { AuthProvider, useAuth } from './AuthContext';
 const firebaseUser = { uid: 'FirebaseUid_123', email: 'trader@example.com', displayName: 'Trader' };
 const wrapper = ({ children }: React.PropsWithChildren) => <AuthProvider>{children}</AuthProvider>;
 describe('Firebase auth context', () => {
-  beforeEach(() => { vi.resetAllMocks(); mocks.auth.currentUser = null; mocks.auth.authStateReady.mockResolvedValue(undefined); mocks.updateProfile.mockResolvedValue(undefined); });
+  beforeEach(() => { vi.resetAllMocks(); mocks.verify.mockResolvedValue(undefined); mocks.auth.currentUser = null; mocks.auth.authStateReady.mockResolvedValue(undefined); mocks.updateProfile.mockResolvedValue(undefined); });
   afterEach(cleanup);
   it('restores a Firebase session and uses its UID as the account ID', async () => {
     const { result, unmount } = renderHook(useAuth, { wrapper });
@@ -42,17 +44,21 @@ describe('Firebase auth context', () => {
   it('signs in with trimmed email and reports Firebase failures safely', async () => {
     mocks.signIn.mockResolvedValue({ user: firebaseUser });
     const { result } = renderHook(useAuth, { wrapper });
-    await act(async () => { expect(await result.current.signIn(' trader@example.com ', 'password')).toEqual({ error: null }); });
+    await act(async () => { expect(await result.current.signIn(' trader@example.com ', 'password', 'login-token')).toEqual({ error: null }); });
+    expect(mocks.verify).toHaveBeenCalledWith('sign-in', 'login-token');
+    expect(mocks.verify.mock.invocationCallOrder[0]).toBeLessThan(mocks.signIn.mock.invocationCallOrder[0]);
     expect(mocks.signIn).toHaveBeenCalledWith(expect.anything(), 'trader@example.com', 'password');
     expect(result.current.user?.id).toBe(firebaseUser.uid);
     mocks.signIn.mockRejectedValue({ code: 'auth/invalid-credential', message: 'internal diagnostic' });
-    await act(async () => { expect(await result.current.signIn('trader@example.com', 'wrong')).toEqual({ error: 'Email or password is incorrect.' }); });
+    await act(async () => { expect(await result.current.signIn('trader@example.com', 'wrong', 'new-token')).toEqual({ error: 'Email or password is incorrect.' }); });
   });
   it('creates a signed-in account and tolerates an optional name-update failure', async () => {
     mocks.signUp.mockResolvedValue({ user: firebaseUser });
     mocks.updateProfile.mockRejectedValue({ code: 'auth/network-request-failed' });
     const { result } = renderHook(useAuth, { wrapper });
-    await act(async () => { expect(await result.current.signUp('trader@example.com', 'password', ' Trader ')).toEqual({ error: null, needsConfirmation: false }); });
+    await act(async () => { expect(await result.current.signUp('trader@example.com', 'password', ' Trader ', 'signup-token')).toEqual({ error: null, needsConfirmation: false }); });
+    expect(mocks.verify).toHaveBeenCalledWith('sign-up', 'signup-token');
+    expect(mocks.verify.mock.invocationCallOrder[0]).toBeLessThan(mocks.signUp.mock.invocationCallOrder[0]);
     expect(mocks.updateProfile).toHaveBeenCalledWith(firebaseUser, { displayName: 'Trader' });
     expect(result.current.user?.id).toBe(firebaseUser.uid);
   });
@@ -65,7 +71,7 @@ describe('Firebase auth context', () => {
     });
     const { result } = renderHook(useAuth, { wrapper });
     await act(async () => {
-      expect(await result.current.signUp(' trader@example.com ', 'password', 'Trader')).toEqual({ error: null, needsConfirmation: false });
+      expect(await result.current.signUp(' trader@example.com ', 'password', 'Trader', 'signup-token')).toEqual({ error: null, needsConfirmation: false });
     });
     expect(mocks.signUp).toHaveBeenCalledOnce();
     expect(mocks.signIn).toHaveBeenCalledExactlyOnceWith(mocks.auth, 'trader@example.com', 'password');
@@ -79,7 +85,7 @@ describe('Firebase auth context', () => {
     mocks.updateProfile.mockImplementation(() => new Promise<void>(resolve => { finishProfile = resolve; }));
     const { result } = renderHook(useAuth, { wrapper });
     let registration!: ReturnType<typeof result.current.signUp>;
-    await act(async () => { registration = result.current.signUp('trader@example.com', 'password', 'Trader'); });
+    await act(async () => { registration = result.current.signUp('trader@example.com', 'password', 'Trader', 'signup-token'); });
     act(() => mocks.changed!(firebaseUser));
     expect(result.current.loading).toBe(true);
     await act(async () => { finishProfile(); await registration; });
@@ -95,7 +101,7 @@ describe('Firebase auth context', () => {
     });
     const { result } = renderHook(useAuth, { wrapper });
     await act(async () => {
-      expect((await result.current.signUp('trader@example.com', 'password', 'Trader')).error).toContain('Your account was created');
+      expect((await result.current.signUp('trader@example.com', 'password', 'Trader', 'signup-token')).error).toContain('Your account was created');
     });
     expect(mocks.signUp).toHaveBeenCalledOnce();
     expect(mocks.signIn).toHaveBeenCalledOnce();
@@ -106,7 +112,7 @@ describe('Firebase auth context', () => {
     mocks.signUp.mockResolvedValue({ user: firebaseUser });
     mocks.updateProfile.mockImplementation(async () => { mocks.changed!(null); throw { code: 'auth/user-disabled' }; });
     const { result } = renderHook(useAuth, { wrapper });
-    await act(async () => { expect((await result.current.signUp('trader@example.com', 'password', 'Trader')).error).toBe('This account has been disabled.'); });
+    await act(async () => { expect((await result.current.signUp('trader@example.com', 'password', 'Trader', 'signup-token')).error).toBe('This account has been disabled.'); });
     expect(mocks.signIn).not.toHaveBeenCalled();
     expect(result.current.user).toBeNull();
   });
@@ -138,6 +144,7 @@ describe('Firebase auth context', () => {
     expect(mocks.google).toHaveBeenCalledWith(expect.anything(), expect.anything(), mocks.popupResolver);
     expect(result.current.user).toEqual({ id: firebaseUser.uid, email: firebaseUser.email, displayName: firebaseUser.displayName });
     expect(mocks.signUp).not.toHaveBeenCalled();
+    expect(mocks.verify).not.toHaveBeenCalled();
   });
   it.each([
     ['auth/popup-blocked', 'Allow pop-ups for this site, then try Google sign-in again.'],
@@ -150,5 +157,21 @@ describe('Firebase auth context', () => {
     await act(async () => { expect(await result.current.signInWithGoogle()).toEqual({ error: message }); });
     expect(result.current.error).toBe(message);
     expect(result.current.user).toBeNull();
+  });
+
+  it.each(['sign-in', 'sign-up'] as const)('never contacts Firebase for %s when verification fails', async (operation) => {
+    mocks.verify.mockRejectedValue({ code: 'TURNSTILE_VERIFICATION_FAILED', message: 'private diagnostic' });
+    const { result } = renderHook(useAuth, { wrapper });
+    act(() => mocks.changed!(null));
+    await act(async () => {
+      const response = operation === 'sign-in'
+        ? await result.current.signIn('trader@example.com', 'password', 'rejected-token')
+        : await result.current.signUp('trader@example.com', 'password', undefined, 'rejected-token');
+      expect(response.error).toBe('Please complete verification and try again.');
+    });
+    expect(mocks.signIn).not.toHaveBeenCalled();
+    expect(mocks.signUp).not.toHaveBeenCalled();
+    expect(result.current.user).toBeNull();
+    expect(result.current.loading).toBe(false);
   });
 });

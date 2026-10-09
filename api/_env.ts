@@ -8,6 +8,9 @@ export type ServerEnvironment = {
   DATABASE_URL?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_WEBHOOK_SECRET?: string;
+  TURNSTILE_SECRET?: string;
+  /** Exact frontend hostnames, comma-separated; deployment-specific, never request-derived. */
+  TURNSTILE_HOSTNAMES?: string;
 };
 
 export const processEnvironment = (): ServerEnvironment => ({
@@ -19,4 +22,6 @@ export const processEnvironment = (): ServerEnvironment => ({
   DATABASE_URL: process.env.DATABASE_URL,
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
+  TURNSTILE_SECRET: process.env.TURNSTILE_SECRET,
+  TURNSTILE_HOSTNAMES: process.env.TURNSTILE_HOSTNAMES,
 });

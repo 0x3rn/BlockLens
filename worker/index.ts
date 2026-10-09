@@ -1,4 +1,6 @@
 import { handleCoinApi, handleCoinPage } from './coin-page.ts';
+import { TurnstileError, verifyAnalysisTurnstile } from '../api/_turnstile.ts';
+import { authVerificationFailure, verifyPasswordAuth } from '../api/_auth-verification.ts';
 import { runAIAnalysis, AnalysisError, isAIAnalysisConfigured, normalizeAIAnalysisRequest } from '../api/_analysis.ts';
 import { consumeAnalysisQuota, AnalysisAccessError } from '../api/_analysis-access.ts';
 import { acquireAnalysisSlot, isRateLimited } from '../api/_rate-limit.ts';
@@ -108,9 +110,10 @@ const handleAnalysis = async (request: Request, env: WorkerEnvironment): Promise
     if (!isAIAnalysisConfigured(env)) {
       return json({ error: 'Gemini trading analysis is not configured on this deployment yet.' }, 503);
     }
-    let input = normalizeAIAnalysisRequest(body.value);
+    const payload = await verifyAnalysisTurnstile(body.value, env, request.headers.get('cf-connecting-ip') ?? undefined);
+    let input = normalizeAIAnalysisRequest(payload);
     if (!input) {
-      const selection = normalizeAnalysisSelection(body.value);
+      const selection = normalizeAnalysisSelection(payload);
       if (!selection) return json({ error: 'The selected asset is incomplete or invalid.' }, 400);
       try {
         input = await buildAnalysisRequest(selection.coinId, selection.currency, env, selection.mode);
@@ -127,6 +130,7 @@ const handleAnalysis = async (request: Request, env: WorkerEnvironment): Promise
     const analysis = await runAIAnalysis(input, env, 'fetch');
     return json(analysis, 200, { 'Cache-Control': 'no-store' });
   } catch (error) {
+    if (error instanceof TurnstileError) return json({ error: error.message, code: error.code }, error.status, { 'Cache-Control': 'no-store' });
     if (error instanceof AnalysisAccessError) return json({ error: error.message }, error.status);
     if (error instanceof AnalysisError) return json({ error: error.message }, error.status);
     console.error('Cloudflare AI analysis request failed:', error instanceof Error ? error.message : 'Unknown provider error');
@@ -226,6 +230,21 @@ const handleTelegramWebhook = async (request: Request, env: WorkerEnvironment): 
 
 const notFound = () => json({ error: 'Not found.' }, 404);
 
+const handleAuthVerification = async (request: Request, env: WorkerEnvironment) => {
+  const headers = { 'Cache-Control': 'no-store' };
+  if (request.method !== 'POST') return json({ error: 'Only POST requests are accepted.' }, 405, { ...headers, Allow: 'POST' });
+  const body = await readJsonBody(request);
+  if (!body.ok) return body.response;
+  if (JSON.stringify(body.value).length > 8_192) return json({ error: 'The verification request is too large.' }, 413, headers);
+  try {
+    await verifyPasswordAuth(body.value, env, request.headers.get('cf-connecting-ip') ?? undefined);
+    return json({ verified: true }, 200, headers);
+  } catch (error) {
+    const failure = authVerificationFailure(error);
+    return json(failure.body, failure.status, headers);
+  }
+};
+
 const handleAccount = async (request: Request, env: WorkerEnvironment) => {
   const headers = { 'Cache-Control': 'no-store' };
   if (request.method !== 'POST') return json({ data: null, error: { message: 'Only POST requests are accepted.' } }, 405, { ...headers, Allow: 'POST' });
@@ -246,6 +265,7 @@ const worker = {
     if (pathname.startsWith('/coin/')) return handleCoinPage(request, env, pathname.slice('/coin/'.length));
     if (pathname === '/api/market/coin') return handleCoinApi(request, env);
     if (pathname === '/api/analyze') return handleAnalysis(request, env);
+    if (pathname === '/api/auth/verify') return handleAuthVerification(request, env);
     if (pathname === '/api/account') return handleAccount(request, env);
     if (pathname === '/api/market/snapshot') return handleMarketSnapshot(request, env);
     if (pathname === '/api/telegram/coins') return handleTelegramCoins(request, env);

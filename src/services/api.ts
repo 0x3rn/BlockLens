@@ -465,8 +465,8 @@ export const fetchTrendingCoins = async (): Promise<TrendingCoin[]> => (
   })
 );
 
-export const requestAIAnalysis = async (payload: AIAnalysisRequest | AIAnalysisSelectionRequest): Promise<AIAnalysis> => {
-  const response = await axios.post<AIAnalysis>('/api/analyze', payload, {
+export const requestAIAnalysis = async (payload: AIAnalysisRequest | AIAnalysisSelectionRequest, turnstileToken: string): Promise<AIAnalysis> => {
+  const response = await axios.post<AIAnalysis>('/api/analyze', { ...payload, 'cf-turnstile-response': turnstileToken }, {
     timeout: 100_000,
     headers: { 'Content-Type': 'application/json' },
   });
@@ -482,13 +482,14 @@ export const CONTROLLED_ERROR_MESSAGES = {
   network: 'Check your connection and try again.',
   partial: 'Some market data is temporarily unavailable. Please try again.',
   ai: 'We couldn’t complete the analysis. Please try again.',
+  verification: 'Please complete verification and try again.',
   auth: 'Please sign in to continue.',
   unknown: 'We couldn’t complete your request. Please try again.',
 } as const;
 
 export const getApiErrorMessage = (error: unknown, context: ApiErrorContext = 'market'): string => {
-  // Always log the actual raw error for diagnostics and debugging
-  console.error('API Error details:', error);
+  // Axios errors include request bodies: do not log verification tokens or credentials.
+  if (axios.isAxiosError(error)) console.error('API request failed:', { status: error.response?.status, code: error.code });
 
   // Preserve messages that are already part of our controlled vocabulary
   if (typeof error === 'string') {
@@ -505,6 +506,7 @@ export const getApiErrorMessage = (error: unknown, context: ApiErrorContext = 'm
   let rawText = '';
 
   if (axios.isAxiosError(error)) {
+    if (error.response?.data?.code === 'TURNSTILE_VERIFICATION_FAILED') return CONTROLLED_ERROR_MESSAGES.verification;
     const axiosError = error as AxiosError<{ error?: string }>;
     status = axiosError.response?.status;
     code = axiosError.code;

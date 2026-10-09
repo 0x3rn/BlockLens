@@ -7,6 +7,11 @@ import { runAIAnalysis } from './_analysis';
 import { requestVertexCompletion, requestVertexGroundedResearch } from './_vertex-fetch';
 
 vi.mock('./_ai', () => ({ getGemini: vi.fn() }));
+// These model/normalization tests isolate the gate; real Siteverify is covered separately.
+vi.mock('./_turnstile', async (importOriginal) => ({
+  ...await importOriginal<typeof import('./_turnstile')>(),
+  verifyAnalysisTurnstile: vi.fn(async (body) => body),
+}));
 vi.mock('./_vertex-fetch', () => ({ requestVertexCompletion: vi.fn(), requestVertexGroundedResearch: vi.fn() }));
 vi.mock('./_analysis-access', () => ({
   AnalysisAccessError: class AnalysisAccessError extends Error {

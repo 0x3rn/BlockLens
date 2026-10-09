@@ -7,6 +7,15 @@ import App from './App';
 import { MarketProvider } from './context/MarketContext';
 import { fetchMarketSnapshot, requestAIAnalysis } from './services/api';
 
+vi.mock('./components/TurnstileVerification', () => ({ default: ({ onToken }: { onToken: (token: string) => void }) => {
+  React.useEffect(() => {
+    let active = true;
+    queueMicrotask(() => { if (active) onToken('route-test-token'); });
+    return () => { active = false; };
+  }, [onToken]);
+  return <div>Verification complete.</div>;
+} }));
+
 vi.mock('./services/api', () => ({
   fetchMarketSnapshot: vi.fn().mockResolvedValue({
     coins: [{
@@ -105,7 +114,7 @@ describe('BlockLens routes', () => {
 
   it('renders the simulated futures terminal', async () => {
     renderRoute('/futures?coin=bitcoin');
-    expect(await screen.findByRole('heading', { name: /futures simulator/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /futures simulator/i }, { timeout: 5000 })).toBeInTheDocument();
     expect(screen.getByText(/no exchange orders/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /open long/i })).toBeInTheDocument();
   });
@@ -118,8 +127,10 @@ describe('BlockLens routes', () => {
     const longTerm = longTermLabel.closest('button');
     expect(longTerm).not.toBeNull();
     await user.click(longTerm!);
-    await user.click(screen.getByRole('button', { name: /generate long-term analysis/i }));
-    await waitFor(() => expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'bitcoin', currency: 'usd', mode: 'long-term' }));
+    const generate = screen.getByRole('button', { name: /generate long-term analysis/i });
+    await waitFor(() => expect(generate).toBeEnabled());
+    await user.click(generate);
+    await waitFor(() => expect(requestAIAnalysis).toHaveBeenCalledWith({ coinId: 'bitcoin', currency: 'usd', mode: 'long-term' }, 'route-test-token'));
     expect(longTerm).toHaveAttribute('aria-checked', 'true');
   }, 30_000);
 

@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, ArrowRight, Bot, Crosshair, ExternalLink, Gauge, LoaderCircle, RefreshCw, SearchCheck, ShieldAlert, Target } from 'lucide-react';
 import PriceChart from '../components/PriceChart';
+import TurnstileVerification from '../components/TurnstileVerification';
 import { DataState } from '../components/DataState';
 import { useMarket } from '../context/MarketContext';
 import { useToast } from '../context/ToastContext';
@@ -28,6 +29,13 @@ const AnalysisPage: React.FC = () => {
   const [analysis, setAnalysis] = useState<AIAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const [verificationReset, setVerificationReset] = useState(0);
+  const updateToken = useCallback((token: string | null) => {
+    tokenRef.current = token;
+    setTurnstileToken(token);
+  }, []);
   const briefRef = useRef<HTMLElement>(null);
   const requestVersion = useRef(0);
   const researchGroups = analysis ? [
@@ -40,10 +48,11 @@ const AnalysisPage: React.FC = () => {
     setAnalysis(null);
     setError(null);
     setLoading(false);
+    updateToken(null);
     // A response for an old selection must not replace or save the current brief.
     requestVersion.current += 1;
     return () => { requestVersion.current += 1; };
-  }, [selectedCoin?.id, currency, analysisMode, riskProfile]);
+  }, [selectedCoin?.id, currency, analysisMode, riskProfile, updateToken]);
 
   const selectMode = (mode: AIAnalysisMode) => {
     const next = new URLSearchParams(searchParams);
@@ -68,7 +77,10 @@ const AnalysisPage: React.FC = () => {
   }, [analysis]);
 
   const handleAnalyze = async () => {
-    if (!selectedCoin || loading) return;
+    const token = tokenRef.current;
+    if (!selectedCoin || loading || !token || currency !== 'usd') return;
+    // Consume locally immediately, so double clicks cannot reuse this token.
+    updateToken(null);
     const version = ++requestVersion.current;
     setLoading(true);
     setError(null);
@@ -78,7 +90,7 @@ const AnalysisPage: React.FC = () => {
         currency,
         mode: analysisMode,
         ...(riskProfile === 'risk' ? { riskProfile } : {}),
-      });
+      }, token);
       if (version !== requestVersion.current) return;
       const brief = { ...result, riskProfile };
       setAnalysis(brief);
@@ -97,7 +109,11 @@ const AnalysisPage: React.FC = () => {
       setError(message);
       showToast('Trading analysis could not be generated.', 'error');
     } finally {
-      if (version === requestVersion.current) setLoading(false);
+      if (version === requestVersion.current) {
+        updateToken(null);
+        setVerificationReset((value) => value + 1);
+        setLoading(false);
+      }
     }
   };
 
@@ -203,7 +219,11 @@ const AnalysisPage: React.FC = () => {
               </div>
               <span className={`analysis-profile-label ${riskProfile}`}>{profileDefinition.label} approach</span>
               {currency !== 'usd' && <p className="analysis-currency-note">Switch display currency to USD to use verified exchange-candle analysis.</p>}
-              <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading || currency !== 'usd'} aria-busy={loading}>
+              {currency === 'usd' && <TurnstileVerification
+                key={`${selectedCoin.id}:${currency}:${analysisMode}:${riskProfile}`}
+                onToken={updateToken} resetKey={verificationReset}
+              />}
+              <button type="button" className="analyze-btn" onClick={() => void handleAnalyze()} disabled={loading || !turnstileToken || currency !== 'usd'} aria-busy={loading}>
                 {loading ? <LoaderCircle size={17} className="is-spinning" aria-hidden="true" /> : <Bot size={17} aria-hidden="true" />}
                 {loading ? `Generating ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis` : `Generate ${analysisModeDefinitions[analysisMode].label.toLowerCase()} analysis`}
               </button>
@@ -223,7 +243,7 @@ const AnalysisPage: React.FC = () => {
                 <p>{error}</p>
                 <small>Your selected asset and chart remain unchanged.</small>
               </div>
-              <button type="button" className="analysis-retry-button" onClick={() => void handleAnalyze()} disabled={loading} aria-busy={loading}>
+              <button type="button" className="analysis-retry-button" onClick={() => void handleAnalyze()} disabled={loading || !turnstileToken || currency !== 'usd'} aria-busy={loading}>
                 <RefreshCw size={15} className={loading ? 'is-spinning' : ''} aria-hidden="true" />
                 {loading ? 'Retrying' : 'Try analysis again'}
               </button>

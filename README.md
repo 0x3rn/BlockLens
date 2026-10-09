@@ -56,6 +56,24 @@ npm run preview   # serve the production build locally
 
 ## AI configuration
 
+Website AI generation requires Turnstile verification before fetching analysis inputs or calling Gemini. Conservative and Risk use the same `ai_analysis` action and `/api/analyze` endpoint. Each submission sends `cf-turnstile-response`; both hosting adapters require Siteverify success, the expected action, and an exact allowed frontend hostname. The widget resets after every completed attempt. Telegram retains webhook authentication and shared quotas without a browser challenge.
+
+Email/password sign-in and registration also require a fresh verification. Their submit buttons remain disabled until the widget succeeds; Google sign-in remains independent. Before invoking Firebase, the app sends only the token and operation to `/api/auth/verify`, which validates the exact `password_login` or `password_signup` action and allowed hostname on both hosting platforms. Tokens reset after each attempt or form switch. This uses the same three environment variables below. This protects the website's password forms; Firebase's public authentication API remains accessible directly, so provider-level abuse protection must be configured in Firebase separately.
+
+Use the existing widget `0x4AAAAAAFSFBv33VMh4DpXy`. Configure these on **each deployment**:
+
+| Variable | Placement | Production value |
+| --- | --- | --- |
+| `VITE_TURNSTILE_SITE_KEY` | Public build configuration | `0x4AAAAAAFSFBv33VMh4DpXy` |
+| `TURNSTILE_SECRET` | Private runtime secret | The matching widget secret, stored through the platform secret manager |
+| `TURNSTILE_HOSTNAMES` | Runtime configuration | `blocklens.corstack.dev` |
+
+For Cloudflare, the `VITE_` value must be available during the Vite build, while the secret and hostname list belong to the Worker. For Vercel, configure all three environment variables for the appropriate environment and redeploy. A production hostname list must exclude `localhost`, `127.0.0.1`, and development hosts. Preview deployments need their own exact allowed frontend hostnames; no wildcard or request-header fallback is accepted.
+
+For local testing, store the secret only in the ignored `.env.local`, set `TURNSTILE_HOSTNAMES=localhost,127.0.0.1`, and open an address allowed by the widget. Cloudflare's widget may allow the root `corstack.dev`, but the backend still needs the exact frontend `blocklens.corstack.dev`. Turnstile domains have no scheme, port, or path. Missing secret/hostnames fail closed; no automatic development bypass is installed. `public/_headers` and `vercel.json` allow Cloudflare's challenge script and iframe in CSP.
+
+After configuring/deploying, submit with a fresh real token, then verify the same token is rejected on replay. Mocked unit tests do not substitute for this destination check. See the [existing-widget flow](https://developers.cloudflare.com/turnstile/spin/prompt.md) and [server-side validation](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).
+
 Copy `.env.example` to `.env.local` for a local serverless environment, or configure the variables in the deployment platform:
 
 ```env

@@ -38,6 +38,10 @@ describe('Cloudflare request and static response controls', () => {
     expect(cloudflareHeaders).toContain('Cross-Origin-Opener-Policy: same-origin-allow-popups');
     expect(vercel.headers[0].headers.find(header => header.key === 'Cross-Origin-Opener-Policy')?.value).toBe('same-origin-allow-popups');
     expect(vercelCsp).toContain('https://apis.google.com');
+    expect(vercelCsp).toMatch(/script-src[^;]+https:\/\/challenges.cloudflare.com/);
+    expect(vercelCsp).toMatch(/frame-src[^;]+https:\/\/challenges.cloudflare.com/);
+    expect(cloudflareHeaders).toMatch(/script-src[^;]+https:\/\/challenges.cloudflare.com/);
+    expect(cloudflareHeaders).toMatch(/frame-src[^;]+https:\/\/challenges.cloudflare.com/);
     expect(cloudflareHeaders).toContain('https://apis.google.com');
     expect(vercelCsp).toContain('frame-src https://blocklens-0x.firebaseapp.com');
     expect(cloudflareHeaders).toContain('frame-src https://blocklens-0x.firebaseapp.com');
