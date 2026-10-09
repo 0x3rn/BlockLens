@@ -28,6 +28,7 @@
   --shadow-hover: 0 18px 45px rgba(0, 0, 0, 0.38);
   --radius: 14px;
   --radius-sm: 9px;
+  --brand-logo-size: 32px;
 }
 
 body {
@@ -43,6 +44,8 @@ button, input, select { font: inherit; }
 button, select { cursor: pointer; }
 button:disabled, select:disabled { cursor: not-allowed; opacity: .55; }
 img { max-width: 100%; }
+.brand-logo-mark { display: grid; place-items: center; width: var(--brand-logo-size); height: var(--brand-logo-size); flex: 0 0 var(--brand-logo-size); padding: 0; overflow: hidden; background: #e5edf1; border-radius: 8px; box-shadow: 0 0 0 1px rgba(255,255,255,.16); }
+.logo-mark { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -569,8 +572,6 @@ img { max-width: 100%; }
 
 .not-found-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; min-height: 480px; justify-content: center; }
 .account-page { max-width: 520px; }
-.account-icon { color: var(--accent); overflow: hidden; background: #e5edf1; border-color: rgba(255,255,255,.16); border-radius: 10px; }
-.account-icon img { display: block; width: 40px; height: 40px; transform: scale(1.12); }
 .account-layout { display: block; width: 100%; }
 .account-card, .account-benefits { padding: 24px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius); box-shadow: var(--shadow-card); }
 .account-card { display: flex; align-items: center; gap: 16px; }
@@ -627,6 +628,7 @@ img { max-width: 100%; }
 }
 
 @media (max-width: 760px) {
+  :root { --brand-logo-size: 28px; }
   .app-container, .site-footer { width: min(100% - 28px, 1320px); }
   .app-container { padding-top: 22px; padding-bottom: 92px; }
   .page-stack { gap: 18px; }

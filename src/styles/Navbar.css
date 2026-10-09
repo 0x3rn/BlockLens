@@ -12,9 +12,8 @@
 
 .nav-container { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(100% - 48px, 1320px); margin: 0 auto; }
 .nav-logo { display: flex; align-items: center; flex-shrink: 0; gap: 10px; font: 850 1.24rem var(--font-heading); color: #f4f7fb; letter-spacing: -.03em; }
-.logo-icon-wrap { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; padding: 0; overflow: hidden; background: #e5edf1; border-radius: 9px; box-shadow: 0 0 0 1px rgba(255,255,255,.16); transition: filter .18s ease; }
+.logo-icon-wrap { transition: filter .18s ease; }
 .nav-logo:hover .logo-icon-wrap, .nav-logo:focus-visible .logo-icon-wrap { filter: drop-shadow(0 0 6px rgba(0, 233, 133, .3)); }
-.logo-mark { display: block; width: 100%; height: 100%; object-fit: contain; transform: scale(1.12); }
 .nav-links { display: flex; gap: 3px; padding: 3px; background: rgba(255,255,255,.025); border: 1px solid var(--border-subtle); border-radius: 10px; }
 .nav-link { display: flex; align-items: center; gap: 6px; padding: 8px 11px; color: var(--text-secondary); border-radius: 7px; font-size: .76rem; font-weight: 600; }
 .nav-link:hover { color: var(--text-primary); background: rgba(255,255,255,.04); }
@@ -47,7 +46,6 @@
   .nav-container { width: min(100% - 28px, 1320px); }
   .nav-links { display: none; }
   .nav-logo { font-size: 1.12rem; }
-  .logo-icon-wrap { width: 32px; height: 32px; flex-basis: 32px; }
   .mobile-bottom-nav { position: fixed; z-index: 100; inset: auto 0 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 7px max(8px, env(safe-area-inset-left)) calc(7px + env(safe-area-inset-bottom)); background: rgba(6,6,16,.97); border-top: 1px solid var(--border-subtle); backdrop-filter: blur(18px); }
   .mobile-nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding: 6px 2px; color: var(--text-muted); border-radius: 7px; font-size: .56rem; }
   .mobile-nav-item.active { color: var(--accent); background: var(--accent-dim); }

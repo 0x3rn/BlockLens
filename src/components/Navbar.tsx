@@ -46,8 +46,8 @@ const Navbar: React.FC = () => {
       <nav className="navbar" aria-label="Primary navigation">
         <div className="nav-container">
           <Link className="nav-logo" to="/" aria-label="BlockLens dashboard">
-            <span className="logo-icon-wrap" aria-hidden="true">
-              <img className="logo-mark" src="/blocklens-logo.png" width="36" height="36" alt="" />
+            <span className="brand-logo-mark logo-icon-wrap" aria-hidden="true">
+              <img className="logo-mark" src="/blocklens-logo.png" width="32" height="32" alt="" />
             </span>
             <span>BlockLens</span>
           </Link>
