@@ -128,6 +128,7 @@
 .futures-protection-fields label { display: flex; flex-direction: column; gap: 7px; min-width: 0; color: var(--text-secondary); font-size: .7rem; }
 .futures-protection-fields input { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); }
 .futures-protection-fields input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.futures-protection-preview { font: 650 .65rem var(--font-mono); line-height: 1.5; overflow-wrap: anywhere; }
 .futures-protection-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .futures-orders-card { padding-bottom: 12px; }
 .futures-pending-list { display: flex; flex-direction: column; }

@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { FuturesActionResult } from '../hooks/usePaperFutures';
+import { FuturesActionResult, getFuturesUnrealizedPnl, getFuturesReturnOnEquity } from '../hooks/usePaperFutures';
 import { PaperFuturesPosition } from '../types/crypto';
 import { formatCurrency } from '../utils/format';
 
@@ -17,6 +17,15 @@ export const FuturesPositionProtection = ({ position, markPrice, busy, onSave, o
   const [target, setTarget] = useState('');
   const [error, setError] = useState<string | null>(null);
   const priceAvailable = typeof markPrice === 'number' && Number.isFinite(markPrice) && markPrice > 0;
+  const preview = (value: string, label: string) => {
+    const price = value.trim() ? Number(value) : NaN;
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const pnl = getFuturesUnrealizedPnl(position, price);
+    const roe = getFuturesReturnOnEquity(position, price);
+    return <span className={`futures-protection-preview ${pnl >= 0 ? 'text-up' : 'text-down'}`} role="status" aria-label={`${label} estimated result`}>
+      Estimated {pnl >= 0 ? 'profit' : 'loss'}: {pnl > 0 ? '+' : ''}{formatCurrency(pnl, 'usd')} ({roe > 0 ? '+' : ''}{roe.toFixed(2)}% ROE)
+    </span>;
+  };
   const edit = () => {
     setStop(position.stopLoss == null ? '' : String(position.stopLoss));
     setTarget(position.takeProfit == null ? '' : String(position.takeProfit));
@@ -41,9 +50,10 @@ export const FuturesPositionProtection = ({ position, markPrice, busy, onSave, o
         <form className="futures-protection-form" onSubmit={save} aria-label={`TP/SL for ${position.coinName}`}>
           <strong>Take profit / Stop loss</strong>
           <p>Mark price: {priceAvailable ? formatCurrency(markPrice!, 'usd') : 'Unavailable'}. Leave a field empty to remove its limit.</p>
+          <p>Estimates apply to the remaining position, before fees and funding. The fill price may differ.</p>
           <div className="futures-protection-fields">
-            <label>Stop loss (USD)<input type="number" min="0" step="any" inputMode="decimal" value={stop} onChange={event => { setStop(event.target.value); setError(null); }} disabled={busy} aria-label={`Stop loss for ${position.coinName}`} /></label>
-            <label>Take profit (USD)<input type="number" min="0" step="any" inputMode="decimal" value={target} onChange={event => { setTarget(event.target.value); setError(null); }} disabled={busy} aria-label={`Take profit for ${position.coinName}`} /></label>
+            <label>Stop loss (USD)<input type="number" min="0" step="any" inputMode="decimal" value={stop} onChange={event => { setStop(event.target.value); setError(null); }} disabled={busy} aria-label={`Stop loss for ${position.coinName}`} />{preview(stop, 'Stop loss')}</label>
+            <label>Take profit (USD)<input type="number" min="0" step="any" inputMode="decimal" value={target} onChange={event => { setTarget(event.target.value); setError(null); }} disabled={busy} aria-label={`Take profit for ${position.coinName}`} />{preview(target, 'Take profit')}</label>
           </div>
           {error && <p className="futures-form-error" role="alert">{error}</p>}
           <div className="futures-protection-actions">

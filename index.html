@@ -26,6 +26,7 @@
     <link rel="icon" type="image/png" href="/blocklens-logo.png" />
     <link rel="apple-touch-icon" href="/blocklens-logo.png" />
     <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/startup.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -36,7 +37,8 @@
   </head>
   <body>
     <noscript>BlockLens requires JavaScript to load live market data.</noscript>
-    <div id="root"></div>
+    <div id="root"><main class="startup-shell" data-startup-shell role="status"><img src="/blocklens-logo.png" width="32" height="32" alt="BlockLens" /><h1 data-startup-title>Loading BlockLens…</h1><p data-startup-message>Please wait a moment.</p><button type="button" data-startup-retry hidden>Reload page</button></main></div>
+    <script src="/startup.js"></script>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
