@@ -13,7 +13,7 @@ vi.mock('../context/MarketContext', () => ({ useMarket: () => {
   const paper = usePaperFutures();
   return { coins: [{ id: 'bitcoin', name: 'Bitcoin', symbol: 'btc', current_price: 100, high_24h: 110, low_24h: 90 }, { id: 'ethereum', name: 'Ethereum', symbol: 'eth', current_price: 200, high_24h: 210, low_24h: 190 }].filter(coin => !mocks.coinIds || mocks.coinIds.includes(coin.id)), currency: 'usd', loading: false, error: null, refresh: vi.fn(), aiHistory: [], positionHistory: [], positions: [],
     paperFutures: paper.account, paperFuturesSyncStatus: paper.syncStatus, paperFuturesSyncError: paper.syncError, retryPaperFuturesSync: paper.retrySync,
-    openFuturesPosition: paper.openPosition, closeFuturesPosition: paper.closePosition, placeFuturesOrder: paper.placeOrder, cancelFuturesOrder: paper.cancelOrder, checkFuturesOrders: paper.checkOrders, checkFuturesPosition: paper.checkPosition };
+    openFuturesPosition: paper.openPosition, closeFuturesPosition: paper.closePosition, updateFuturesPositionProtection: paper.updatePositionProtection, placeFuturesOrder: paper.placeOrder, cancelFuturesOrder: paper.cancelOrder, checkFuturesOrders: paper.checkOrders, checkFuturesPosition: paper.checkPosition };
 } }));
 import FuturesPage from './FuturesPage';
 import HistoryPage from './HistoryPage';
@@ -26,6 +26,33 @@ const change = (label: string, value: string) => fireEvent.change(screen.getByRo
 const ticket = () => screen.getByRole('heading', { name: /Open a position|Reduce a position/ }).closest('form')!;
 const submit = () => fireEvent.submit(ticket());
 describe('Trade screen regression flows', () => {
+  it('edits active TP/SL, preserves it after remount, and can remove it', async () => {
+    await setup(); change('Margin (USD)', '10'); submit();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit TP/SL for Bitcoin' }));
+    change('Stop loss for Bitcoin', '95'); change('Take profit for Bitcoin', '110');
+    fireEvent.click(screen.getByRole('button', { name: 'Save TP/SL' }));
+    expect(mocks.toast).toHaveBeenLastCalledWith('BTC TP/SL updated.');
+    expect(screen.getByRole('region', { name: 'Open positions' })).toHaveTextContent('$95.00');
+    cleanup();
+    render(<MemoryRouter initialEntries={['/futures?coin=bitcoin']}><FuturesPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Edit TP/SL for Bitcoin' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Edit TP/SL for Bitcoin' }));
+    expect(screen.getByRole('spinbutton', { name: 'Stop loss for Bitcoin' })).toHaveValue(95);
+    expect(screen.getByRole('spinbutton', { name: 'Take profit for Bitcoin' })).toHaveValue(110);
+    change('Stop loss for Bitcoin', ''); change('Take profit for Bitcoin', '');
+    fireEvent.click(screen.getByRole('button', { name: 'Save TP/SL' }));
+    expect(JSON.parse(localStorage.getItem('blocklens_paper_futures')!).positions[0]).toMatchObject({ stopLoss: null, takeProfit: null });
+  });
+  it('rejects crossed limits and cancels edits without changing the position', async () => {
+    await setup(); change('Margin (USD)', '10'); submit();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit TP/SL for Bitcoin' }));
+    change('Stop loss for Bitcoin', '105');
+    fireEvent.click(screen.getByRole('button', { name: 'Save TP/SL' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('below the current mark price');
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/ }));
+    expect(screen.queryByRole('form', { name: 'TP/SL for Bitcoin' })).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('blocklens_paper_futures')!).positions[0].stopLoss).toBeNull();
+  });
   it('keeps the selected asset when a market refresh removes it from the top list', async () => {
     const page = <MemoryRouter initialEntries={['/futures?coin=ethereum']}><FuturesPage /></MemoryRouter>;
     const view = render(page);

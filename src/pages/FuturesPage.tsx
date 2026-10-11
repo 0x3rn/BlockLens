@@ -2,6 +2,7 @@ import React, { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowRight, BarChart3, CircleDollarSign, Gauge, LockKeyhole, RadioTower, ShieldAlert, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { DataState } from '../components/DataState';
+import { FuturesPositionProtection } from '../components/FuturesPositionProtection';
 import { useMarket } from '../context/MarketContext';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -40,6 +41,7 @@ const FuturesPage: React.FC = () => {
     cancelFuturesOrder,
     checkFuturesOrders,
     closeFuturesPosition,
+    updateFuturesPositionProtection,
     checkFuturesPosition,
     paperFuturesSyncStatus,
     paperFuturesSyncError,
@@ -426,6 +428,7 @@ const FuturesPage: React.FC = () => {
                       <div className="futures-position-heading"><div className="futures-order-asset">{positionCoin?.image && <img src={positionCoin.image} alt="" />}<div><strong>{position.coinName}</strong><span>{position.symbol.toUpperCase()} · {position.leverage}x · {position.marginMode ?? 'isolated'}</span></div></div><span className={`signal-badge ${position.side}`}>{position.side}</span></div>
                       <div className="futures-position-values"><div><span>Entry</span><strong>{formatCurrency(position.entryPrice, 'usd')}</strong></div><div><span>Mark</span><strong>{positionMark ? formatCurrency(positionMark, 'usd') : 'Unavailable'}</strong></div><div><span>Stop loss</span><strong className="text-down">{position.stopLoss != null ? formatCurrency(position.stopLoss, 'usd') : '—'}</strong></div><div><span>Take profit</span><strong className="text-up">{position.takeProfit != null ? formatCurrency(position.takeProfit, 'usd') : '—'}</strong></div><div><span>Liquidation</span><strong>{formatCurrency(liquidationPrice, 'usd')}</strong></div><div><span>Maintenance</span><strong>{positionMark ? formatCurrency(maintenanceMargin, 'usd') : '—'}</strong></div><div><span>P&amp;L</span><strong className={pnl >= 0 ? 'text-up' : 'text-down'}>{positionMark ? formatCurrency(pnl, 'usd') : '—'}</strong></div><div><span>ROE</span><strong className={roe >= 0 ? 'text-up' : 'text-down'}>{positionMark ? `${roe >= 0 ? '+' : ''}${roe.toFixed(2)}%` : '—'}</strong></div></div>
                       <div className="futures-position-footer"><span>{formatQuantity(position.quantity)} {position.symbol.toUpperCase()} · {formatCurrency(position.margin, 'usd')} margin</span><div className="futures-position-actions"><label><span>Close</span><select value={closePercent} onChange={(event) => setClosePercents(current => ({ ...current, [position.id]: event.target.value }))} aria-label={`Amount to close ${position.coinName}`}><option value="25">25%</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%</option></select></label><button type="button" className="futures-close-button" onClick={() => positionMark && closeSelectedPosition(position.id, positionMark)} disabled={!positionMark || paperFuturesSyncStatus !== 'ready'}><X size={14} aria-hidden="true" /> {paperFuturesSyncStatus === 'saving' ? 'Saving position…' : paperFuturesSyncStatus === 'loading' ? 'Loading account…' : paperFuturesSyncStatus === 'error' ? 'Account unavailable' : Number(closePercent) === 100 ? 'Close position' : 'Reduce position'}</button></div></div>
+                      <FuturesPositionProtection position={position} markPrice={positionMark} busy={accountSyncBusy} onSave={updateFuturesPositionProtection} onSuccess={showToast} />
                     </article>
                   );
                 })}

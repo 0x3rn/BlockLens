@@ -34,6 +34,7 @@ interface MarketContextValue {
   paperFutures: PaperFuturesAccount;
   openFuturesPosition: (input: OpenFuturesPositionInput) => FuturesActionResult;
   closeFuturesPosition: (positionId: string, price: number, action?: 'close' | 'liquidated' | 'stop-loss' | 'take-profit', quantity?: number) => FuturesActionResult;
+  updateFuturesPositionProtection: (positionId: string, markPrice: number, stopLoss: number | null, takeProfit: number | null) => FuturesActionResult;
   placeFuturesOrder: (input: PlaceFuturesOrderInput) => FuturesActionResult;
   cancelFuturesOrder: (orderId: string) => FuturesActionResult;
   checkFuturesOrders: (coinId: string, markPrice: number) => FuturesActionResult[];
@@ -67,6 +68,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     account: paperFutures,
     openPosition: openFuturesPosition,
     closePosition: closeFuturesPosition,
+    updatePositionProtection: updateFuturesPositionProtection,
     checkPosition: checkFuturesPosition,
     placeOrder: placeFuturesOrder,
     cancelOrder: cancelFuturesOrder,
@@ -173,6 +175,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     paperFutures,
     openFuturesPosition,
     closeFuturesPosition,
+    updateFuturesPositionProtection,
     checkFuturesPosition,
     placeFuturesOrder,
     cancelFuturesOrder,
@@ -200,6 +203,7 @@ export const MarketProvider: React.FC<React.PropsWithChildren> = ({ children }) 
     paperFutures,
     openFuturesPosition,
     closeFuturesPosition,
+    updateFuturesPositionProtection,
     checkFuturesPosition,
     paperFuturesSyncStatus,
     paperFuturesSyncError,

@@ -115,6 +115,20 @@
 .futures-position-actions select { min-height: 28px; padding: 4px 20px 4px 6px; color: var(--text-secondary); background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: 5px; font: 650 .62rem var(--font-mono); }
 .futures-close-button { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; color: var(--text-secondary); background: transparent; border: 1px solid var(--border-subtle); border-radius: 6px; font-size: .65rem; font-weight: 700; white-space: nowrap; }
 .futures-close-button:hover { color: var(--down); border-color: rgba(255,91,116,.3); }
+.futures-position-protection { margin-top: 12px; }
+.futures-protection-button, .futures-protection-save { min-height: 36px; padding: 8px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; font-size: .7rem; font-weight: 700; }
+.futures-protection-button { color: var(--text-secondary); background: var(--bg-secondary); }
+.futures-protection-button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.futures-protection-save { color: #03140c; background: var(--accent); }
+.futures-protection-form { display: flex; flex-direction: column; gap: 12px; padding: 14px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-secondary); }
+.futures-protection-form > strong { font-size: .8rem; }
+.futures-protection-form p { color: var(--text-muted); font-size: .68rem; line-height: 1.5; }
+.futures-protection-form .futures-form-error { color: #ff9aaa; }
+.futures-protection-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.futures-protection-fields label { display: flex; flex-direction: column; gap: 7px; min-width: 0; color: var(--text-secondary); font-size: .7rem; }
+.futures-protection-fields input { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--border-subtle); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); }
+.futures-protection-fields input:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+.futures-protection-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .futures-orders-card { padding-bottom: 12px; }
 .futures-pending-list { display: flex; flex-direction: column; }
 .futures-pending-row { display: grid; grid-template-columns: minmax(75px, 1.2fr) repeat(2, minmax(70px, 1fr)) auto; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-subtle); }
@@ -147,7 +161,8 @@
   .futures-market-toolbar { align-items: stretch; flex-direction: column; }
   .futures-market-toolbar .coin-select-control { flex-basis: auto; }
   .futures-live-price { align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 7px 12px; }
-  .futures-market-column { display: flex; }
+  .futures-market-column { display: flex; align-items: stretch; }
+  .futures-market-column > section { width: 100%; min-width: 0; }
   .futures-position-values { grid-template-columns: repeat(2, 1fr); }
   .futures-trade-row { grid-template-columns: 1fr 1fr; gap: 8px 12px; }
   .futures-trade-row time { grid-column: 1 / -1; }
@@ -170,6 +185,9 @@
   .futures-close-button { width: 100%; justify-content: center; }
   .futures-position-actions { width: 100%; }
   .futures-position-actions .futures-close-button { flex: 1; }
+  .futures-position-protection > button { width: 100%; }
+  .futures-protection-fields { grid-template-columns: 1fr; }
+  .futures-protection-actions > button { flex: 1; }
   .futures-pending-row { grid-template-columns: 1fr 1fr; }
   .futures-pending-row .futures-cancel-button { width: 100%; }
 }

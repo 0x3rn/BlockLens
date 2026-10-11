@@ -15,6 +15,28 @@ const orderInput = { coinId: 'bitcoin', coinName: 'Bitcoin', symbol: 'btc', side
 beforeEach(() => { mocks.auth.user = { id: 'user-a' }; mocks.query.maybeSingle.mockReset().mockResolvedValue({ data: row(), error: null }); });
 afterEach(() => { cleanup(); mocks.auth.user = null; vi.clearAllMocks(); localStorage.clear(); });
 describe('paper futures cloud persistence', () => {
+  it('persists TP/SL with revision checking and blocks changes during saving', async () => {
+    const position = { id: 'active', coinId: 'bitcoin', coinName: 'Bitcoin', symbol: 'btc', side: 'long', quantity: .5, entryPrice: 100, margin: 10, leverage: 5, marginMode: 'isolated', stopLoss: null, takeProfit: null, openedAt: new Date().toISOString(), lastFundingAt: new Date().toISOString() };
+    mocks.query.maybeSingle.mockResolvedValueOnce({ data: { ...row(), positions: [position] }, error: null });
+    const { result } = renderHook(() => usePaperFutures());
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+    let resolveSave!: (value: unknown) => void;
+    mocks.query.maybeSingle.mockReturnValueOnce(new Promise(resolve => { resolveSave = resolve; }));
+    act(() => { result.current.updatePositionProtection('active', 110, 105, 120); });
+    await waitFor(() => expect(mocks.query.update).toHaveBeenCalled());
+    expect(result.current.syncStatus).toBe('saving');
+    expect(result.current.updatePositionProtection('active', 110, null, null).ok).toBe(false);
+    const payload = mocks.query.update.mock.lastCall![0];
+    expect(payload.positions[0]).toMatchObject({ stopLoss: 105, takeProfit: 120 });
+    expect(mocks.query.eq).toHaveBeenCalledWith('updated_at', row().updated_at);
+    await act(async () => { resolveSave({ data: { updated_at: payload.updated_at }, error: null }); });
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+    cleanup();
+    mocks.query.maybeSingle.mockResolvedValue({ data: { ...row(), ...payload }, error: null });
+    const reloaded = renderHook(() => usePaperFutures());
+    await waitFor(() => expect(reloaded.result.current.syncStatus).toBe('ready'));
+    expect(reloaded.result.current.account.positions[0]).toMatchObject({ stopLoss: 105, takeProfit: 120 });
+  });
   it('loads an existing ledger without overwriting it', async () => {
     const { result } = renderHook(() => usePaperFutures());
     await waitFor(() => expect(result.current.syncStatus).toBe('ready'));

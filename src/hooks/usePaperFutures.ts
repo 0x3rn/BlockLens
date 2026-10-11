@@ -107,12 +107,12 @@ export const getFuturesReservedBalance = (orders: PaperFuturesOrder[]) => orders
   (sum, order) => sum + (order.status === 'open' ? order.margin + (order.reservedFee ?? 0) : 0), 0,
 );
 
-export const validateFuturesProtection = (side: FuturesSide, entry: number, stop: number | null, target: number | null) => {
+export const validateFuturesProtection = (side: FuturesSide, entry: number, stop: number | null, target: number | null, reference = 'entry price') => {
   if (stop != null && (!Number.isFinite(stop) || stop <= 0 || (side === 'long' ? stop >= entry : stop <= entry))) {
-    return `The stop loss must be ${side === 'long' ? 'below' : 'above'} the entry price.`;
+    return `The stop loss must be ${side === 'long' ? 'below' : 'above'} the ${reference}.`;
   }
   if (target != null && (!Number.isFinite(target) || target <= 0 || (side === 'long' ? target <= entry : target >= entry))) {
-    return `The take profit must be ${side === 'long' ? 'above' : 'below'} the entry price.`;
+    return `The take profit must be ${side === 'long' ? 'above' : 'below'} the ${reference}.`;
   }
   return null;
 };
@@ -587,6 +587,19 @@ export const usePaperFutures = () => {
     return { ok: true, message: `${input.side === 'long' ? 'Long' : 'Short'} position opened.`, position, trade };
   }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
+  const updatePositionProtection = useCallback((positionId: string, markPrice: number, stopLoss: number | null, takeProfit: number | null): FuturesActionResult => {
+    if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
+    const current = accountRef.current;
+    const position = current.positions.find(item => item.id === positionId);
+    if (!position) return { ok: false, message: 'That position is no longer open.' };
+    if (!Number.isFinite(markPrice) || markPrice <= 0) return { ok: false, message: 'The current price is unavailable. Please try updating TP/SL again shortly.' };
+    const error = validateFuturesProtection(position.side, markPrice, stopLoss, takeProfit, 'current mark price');
+    if (error) return { ok: false, message: error };
+    const updated = { ...position, stopLoss, takeProfit };
+    commitAccount({ ...current, positions: current.positions.map(item => item.id === positionId ? updated : item) });
+    return { ok: true, message: `${position.symbol.toUpperCase()} TP/SL updated.`, position: updated };
+  }, [accountSyncMessage, commitAccount, syncStatus, user]);
+
   const closePosition = useCallback((positionId: string, price: number, action: Exclude<PaperFuturesTradeAction, 'open' | 'funding'> = 'close', requestedQuantity?: number, orderId?: string): FuturesActionResult => {
     const current = accountRef.current;
     if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
@@ -858,6 +871,7 @@ export const usePaperFutures = () => {
     account,
     openPosition,
     closePosition,
+    updatePositionProtection,
     placeOrder,
     cancelOrder,
     checkOrders,

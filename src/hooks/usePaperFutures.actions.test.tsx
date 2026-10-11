@@ -11,6 +11,61 @@ const setup = async () => {
 };
 afterEach(() => { cleanup(); localStorage.clear(); vi.useRealTimers(); });
 describe('paper order lifecycle', () => {
+  it.each(['long', 'short'] as const)('updates %s limits against the mark, keeps the ledger unchanged, and persists them', async side => {
+    const result = await setup();
+    act(() => { result.current.openPosition({ ...input, side }); });
+    const before = result.current.account;
+    const mark = side === 'long' ? 110 : 90;
+    const stop = side === 'long' ? 105 : 95;
+    const target = side === 'long' ? 120 : 80;
+    let response;
+    act(() => { response = result.current.updatePositionProtection(before.positions[0].id, mark, stop, target); });
+    expect(response).toMatchObject({ ok: true });
+    expect(result.current.account.positions[0]).toEqual({ ...before.positions[0], stopLoss: stop, takeProfit: target });
+    expect(result.current.account.balance).toBe(before.balance);
+    expect(result.current.account.trades).toEqual(before.trades);
+    expect(result.current.account.realizedPnl).toBe(before.realizedPnl);
+    cleanup();
+    const reloaded = await setup();
+    expect(reloaded.current.account.positions[0]).toMatchObject({ stopLoss: stop, takeProfit: target });
+    act(() => { reloaded.current.updatePositionProtection(before.positions[0].id, mark, null, null); });
+    expect(reloaded.current.account.positions[0]).toMatchObject({ stopLoss: null, takeProfit: null });
+  });
+  it.each([
+    ['long', 95, 110, 94, 'stop-loss'], ['long', 95, 110, 111, 'take-profit'],
+    ['short', 105, 90, 106, 'stop-loss'], ['short', 105, 90, 89, 'take-profit'],
+  ] as const)('triggers edited %s protection at %s / %s', async (side, stop, target, mark, action) => {
+    const result = await setup();
+    act(() => { result.current.openPosition({ ...input, side, leverage: 2 }); });
+    const id = result.current.account.positions[0].id;
+    act(() => { result.current.updatePositionProtection(id, 100, stop, target); });
+    act(() => { result.current.checkPosition(id, mark); });
+    expect(result.current.account.positions).toHaveLength(0);
+    expect(result.current.account.trades[0].action).toBe(action);
+  });
+  it.each([
+    ['long', 100, 100, null], ['long', 100, null, 100],
+    ['short', 100, 99, null], ['short', 100, null, 101],
+    ['long', 100, NaN, null], ['long', 100, null, Infinity],
+    ['long', 0, 90, 110], ['long', NaN, null, null], ['long', 100, -1, null],
+  ] as const)('rejects invalid active protection %s %s %s %s', async (side, mark, stop, target) => {
+    const result = await setup();
+    act(() => { result.current.openPosition({ ...input, side }); });
+    const before = result.current.account;
+    let response;
+    act(() => { response = result.current.updatePositionProtection(before.positions[0].id, mark, stop, target); });
+    expect(response).toMatchObject({ ok: false });
+    expect(result.current.account).toBe(before);
+  });
+  it('cannot update a position after it is closed', async () => {
+    const result = await setup();
+    act(() => { result.current.openPosition(input); });
+    const id = result.current.account.positions[0].id;
+    act(() => { result.current.closePosition(id, 100); });
+    let response;
+    act(() => { response = result.current.updatePositionProtection(id, 100, 90, 110); });
+    expect(response).toMatchObject({ ok: false, message: 'That position is no longer open.' });
+  });
   it.each(['long', 'short'] as const)('validates %s protection against limit entry, not mark price', async side => {
     const result = await setup();
     let response;
