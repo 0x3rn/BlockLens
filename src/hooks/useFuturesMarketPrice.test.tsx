@@ -73,4 +73,12 @@ describe('futures feed lifecycle', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(Socket.instances).toHaveLength(1);
   });
+  it('streams live mark prices for additional tracked position and order coins', () => {
+    const tracked = [{ id: 'ethereum', symbol: 'eth', current_price: 200 }];
+    const { result } = renderHook(() => useFuturesMarketPrice(coin, tracked));
+    expect(Socket.instances).toHaveLength(2);
+    expect(Socket.instances[1].url).toContain('ethusdt@markPrice@1s');
+    act(() => Socket.instances[1].tick('195.5', 'ETHUSDT'));
+    expect(result.current.extraPrices.get('ethereum')).toBe(195.5);
+  });
 });

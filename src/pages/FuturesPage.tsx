@@ -60,12 +60,19 @@ const FuturesPage: React.FC = () => {
     }
     let active = true;
     setUsdError(null);
-    void fetchMarketData('usd').then((nextCoins) => {
-      if (active) setUsdCoins(nextCoins);
-    }).catch((loadError) => {
-      if (active) setUsdError(getApiErrorMessage(loadError, 'market'));
-    });
-    return () => { active = false; };
+    const loadUsdCoins = () => {
+      void fetchMarketData('usd').then((nextCoins) => {
+        if (active) setUsdCoins(nextCoins);
+      }).catch((loadError) => {
+        if (active) setUsdError(getApiErrorMessage(loadError, 'market'));
+      });
+    };
+    loadUsdCoins();
+    const interval = window.setInterval(loadUsdCoins, 60_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
   }, [currency, usdRequestKey]);
   const futuresCoins = currency === 'usd' ? coins : usdCoins;
   const tradableCoins = useMemo(() => futuresCoins.filter((coin) => (
@@ -78,7 +85,30 @@ const FuturesPage: React.FC = () => {
     ?? tradableCoins[0] ?? null, [requestedCoin, tradableCoins]);
   useEffect(() => { if (selectedCoin) previousSelection.current = selectedCoin; }, [selectedCoin]);
   const assetOptions = selectedCoin && !tradableCoins.some(coin => coin.id === selectedCoin.id) ? [selectedCoin, ...tradableCoins] : tradableCoins;
-  const { price: feedMarkPrice, priceCoinId, status: feedStatus, lastUpdated: markUpdatedAt, fundingRate, retry: retryFeed } = useFuturesMarketPrice(selectedCoin);
+  const trackedCoins = useMemo(() => {
+    const activeById = new Map<string, Pick<Coin, 'id' | 'symbol' | 'current_price'>>();
+    const coinById = new Map(futuresCoins.map((coin) => [coin.id, coin]));
+    paperFutures.positions.forEach((position) => {
+      if (position.coinId === selectedCoin?.id) return;
+      const listed = coinById.get(position.coinId);
+      activeById.set(position.coinId, listed ?? {
+        id: position.coinId,
+        symbol: position.symbol,
+        current_price: position.entryPrice,
+      });
+    });
+    paperFutures.orders.forEach((order) => {
+      if (order.status !== 'open' || order.coinId === selectedCoin?.id || activeById.has(order.coinId)) return;
+      const listed = coinById.get(order.coinId);
+      activeById.set(order.coinId, listed ?? {
+        id: order.coinId,
+        symbol: order.symbol,
+        current_price: order.limitPrice ?? order.triggerPrice ?? 0,
+      });
+    });
+    return [...activeById.values()];
+  }, [futuresCoins, paperFutures.orders, paperFutures.positions, selectedCoin?.id]);
+  const { price: feedMarkPrice, priceCoinId, extraPrices, status: feedStatus, lastUpdated: markUpdatedAt, fundingRate, retry: retryFeed } = useFuturesMarketPrice(selectedCoin, trackedCoins);
   const markPrice = resolveFuturesMarkPrice(selectedCoin, priceCoinId, feedMarkPrice);
   const [side, setSide] = useState<FuturesSide>('long');
   const [margin, setMargin] = useState('100');
@@ -124,9 +154,12 @@ const FuturesPage: React.FC = () => {
   const marks = useMemo(() => {
     const next = new Map(missingOrderMarks);
     futuresCoins.forEach((coin) => next.set(coin.id, coin.id === selectedCoin?.id ? markPrice : coin.current_price));
+    extraPrices?.forEach((extraPrice, coinId) => {
+      if (Number.isFinite(extraPrice) && extraPrice > 0) next.set(coinId, extraPrice);
+    });
     if (selectedCoin && markPrice > 0) next.set(selectedCoin.id, markPrice);
     return next;
-  }, [futuresCoins, markPrice, missingOrderMarks, selectedCoin?.id]);
+  }, [extraPrices, futuresCoins, markPrice, missingOrderMarks, selectedCoin?.id]);
   const openPositions = paperFutures.positions;
   const marginUsed = openPositions.reduce((sum, position) => sum + position.margin, 0);
   const reservedBalance = getFuturesReservedBalance(paperFutures.orders);
@@ -150,7 +183,7 @@ const FuturesPage: React.FC = () => {
   const accountSyncBusy = paperFuturesSyncStatus !== 'ready';
 
   useEffect(() => {
-    if (paperFuturesSyncStatus !== 'ready') return;
+    if (paperFuturesSyncStatus !== 'ready' && paperFuturesSyncStatus !== 'saving') return;
     openPositions.forEach((position) => {
       const positionMark = marks.get(position.coinId);
       if (!positionMark || !Number.isFinite(positionMark)) return;

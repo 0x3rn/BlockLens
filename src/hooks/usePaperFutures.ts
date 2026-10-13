@@ -237,6 +237,8 @@ const normalizePosition = (value: unknown): unknown => {
   return {
     ...position,
     marginMode: position.marginMode === 'cross' ? 'cross' : 'isolated',
+    stopLoss: typeof position.stopLoss === 'number' ? position.stopLoss : null,
+    takeProfit: typeof position.takeProfit === 'number' ? position.takeProfit : null,
     lastFundingAt: typeof position.lastFundingAt === 'string' ? position.lastFundingAt : position.openedAt,
   };
 };
@@ -289,6 +291,27 @@ export const getFuturesMaintenanceMargin = (position: PaperFuturesPosition, mark
   getFuturesNotional(position, markPrice) * FUTURES_MAINTENANCE_RATE
 );
 
+export const roundFuturesPrice = (price: number) => {
+  if (!Number.isFinite(price) || price <= 0) return 0;
+  const absolute = Math.abs(price);
+  if (absolute >= 1_000) return Number(price.toFixed(2));
+  if (absolute >= 1) return Number(price.toFixed(4));
+  return Number(price.toPrecision(5));
+};
+
+export const hasReachedFuturesPrice = (
+  markPrice: number,
+  targetPrice: number,
+  direction: 'at-or-below' | 'at-or-above',
+) => {
+  if (!Number.isFinite(markPrice) || markPrice <= 0 || !Number.isFinite(targetPrice) || targetPrice <= 0) return false;
+  const roundedMark = roundFuturesPrice(markPrice);
+  const roundedTarget = roundFuturesPrice(targetPrice);
+  return direction === 'at-or-below'
+    ? markPrice <= targetPrice || (roundedTarget > 0 && roundedMark <= roundedTarget)
+    : markPrice >= targetPrice || (roundedTarget > 0 && roundedMark >= roundedTarget);
+};
+
 export const getFuturesLiquidationPrice = (position: PaperFuturesPosition, crossBalance = 0) => {
   const collateral = position.margin + (position.marginMode === 'cross' ? Math.max(0, crossBalance) : 0);
   const entryValue = position.entryPrice * position.quantity;
@@ -301,8 +324,8 @@ export const getFuturesLiquidationPrice = (position: PaperFuturesPosition, cross
 export const shouldTriggerFuturesOrder = (order: Pick<PaperFuturesOrder, 'type' | 'side' | 'limitPrice' | 'triggerPrice'>, markPrice: number) => {
   const referencePrice = order.type === 'limit' ? order.limitPrice : order.triggerPrice;
   if (referencePrice == null || !Number.isFinite(markPrice)) return false;
-  if (order.type === 'limit') return order.side === 'long' ? markPrice <= referencePrice : markPrice >= referencePrice;
-  return order.side === 'long' ? markPrice >= referencePrice : markPrice <= referencePrice;
+  if (order.type === 'limit') return hasReachedFuturesPrice(markPrice, referencePrice, order.side === 'long' ? 'at-or-below' : 'at-or-above');
+  return hasReachedFuturesPrice(markPrice, referencePrice, order.side === 'long' ? 'at-or-above' : 'at-or-below');
 };
 
 const toCloudValues = (account: PaperFuturesAccount) => ({
@@ -602,7 +625,11 @@ export const usePaperFutures = () => {
 
   const closePosition = useCallback((positionId: string, price: number, action: Exclude<PaperFuturesTradeAction, 'open' | 'funding'> = 'close', requestedQuantity?: number, orderId?: string): FuturesActionResult => {
     const current = accountRef.current;
-    if (user && syncStatus !== 'ready') return { ok: false, message: accountSyncMessage };
+    const isAutomatedTrigger = action !== 'close' || Boolean(orderId);
+    const canExecute = !user || (isAutomatedTrigger
+      ? cloudReady.current && !syncConflict.current && (syncStatus === 'ready' || syncStatus === 'saving')
+      : syncStatus === 'ready');
+    if (!canExecute) return { ok: false, message: accountSyncMessage };
     const position = current.positions.find((item) => item.id === positionId);
     if (!position) return { ok: false, message: 'That position is no longer open.' };
     if (!Number.isFinite(price) || price <= 0) return { ok: false, message: 'The current price is unavailable. Please try closing this position again shortly.' };
@@ -633,15 +660,17 @@ export const usePaperFutures = () => {
       ...(orderId ? { orderId } : {}),
     };
     const remainingQuantity = position.quantity - quantity;
-    const remainingPosition = remainingQuantity > 0
-      ? { ...position, quantity: remainingQuantity, margin: Math.max(0, position.margin - releasedMargin) }
+    const remainingMargin = Math.max(0, position.margin - releasedMargin);
+    const remainingPosition = remainingQuantity > position.quantity * 1e-9 && remainingMargin > 0
+      ? { ...position, quantity: remainingQuantity, margin: remainingMargin }
       : null;
     commitAccount({
       balance: Math.max(0, current.balance + releasedMargin + realizedPnl),
       realizedPnl: current.realizedPnl + realizedPnl,
       positions: current.positions.flatMap((item) => item.id !== positionId ? [item] : (remainingPosition ? [remainingPosition] : [])),
       orders: current.orders.map(order => {
-        if (order.status !== 'open' || !order.reduceOnly || order.positionId !== positionId || order.id === orderId) return order;
+        if (orderId && order.id === orderId) return { ...order, status: 'filled' as const, filledAt: trade.createdAt };
+        if (order.status !== 'open' || !order.reduceOnly || order.positionId !== positionId) return order;
         return remainingPosition
           ? { ...order, quantity: Math.min(order.quantity ?? remainingQuantity, remainingQuantity) }
           : { ...order, status: 'cancelled' as const, cancelledAt: trade.createdAt };
@@ -722,7 +751,7 @@ export const usePaperFutures = () => {
   }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
   const checkOrders = useCallback((coinId: string, markPrice: number): FuturesActionResult[] => {
-    if (user && syncStatus !== 'ready') return [];
+    if (user && (!cloudReady.current || syncConflict.current || (syncStatus !== 'ready' && syncStatus !== 'saving'))) return [];
     if (!Number.isFinite(markPrice) || markPrice <= 0) return [];
     const openOrders = accountRef.current.orders.filter((order) => order.status === 'open' && order.coinId === coinId);
     const results: FuturesActionResult[] = [];
@@ -740,9 +769,7 @@ export const usePaperFutures = () => {
         const quantity = Math.min(order.quantity ?? position.quantity, position.quantity);
         const result = closePosition(order.positionId, markPrice, action, quantity, order.id);
         if (!result.ok) { results.push(result); return; }
-        const current = accountRef.current;
-        const filled = { ...order, status: 'filled' as const, filledAt: new Date().toISOString() };
-        commitAccount({ ...current, orders: current.orders.map((item) => item.id === order.id ? filled : item), updatedAt: new Date().toISOString() });
+        const filled = accountRef.current.orders.find(item => item.id === order.id) ?? { ...order, status: 'filled' as const, filledAt: new Date().toISOString() };
         results.push({ ...result, order: filled });
         return;
       }
@@ -819,7 +846,7 @@ export const usePaperFutures = () => {
   }, [accountSyncMessage, commitAccount, syncStatus, user]);
 
   const checkPosition = useCallback((positionId: string, markPrice: number): FuturesActionResult | null => {
-    if (user && syncStatus !== 'ready') return null;
+    if (user && (!cloudReady.current || syncConflict.current || (syncStatus !== 'ready' && syncStatus !== 'saving'))) return null;
     let position = accountRef.current.positions.find((item) => item.id === positionId);
     if (!position || !Number.isFinite(markPrice) || markPrice <= 0) return null;
     const elapsed = Date.now() - Date.parse(position.lastFundingAt || position.openedAt);
@@ -858,11 +885,23 @@ export const usePaperFutures = () => {
       position = fundedPosition;
     }
     const liquidationPrice = getFuturesLiquidationPrice(position, accountRef.current.balance);
-    const liquidationHit = position.side === 'long' ? markPrice <= liquidationPrice : markPrice >= liquidationPrice;
+    const liquidationHit = position.margin <= 0 || hasReachedFuturesPrice(
+      markPrice,
+      liquidationPrice,
+      position.side === 'long' ? 'at-or-below' : 'at-or-above',
+    );
     if (liquidationHit) return closePosition(positionId, markPrice, 'liquidated');
-    const stopHit = position.stopLoss != null && (position.side === 'long' ? markPrice <= position.stopLoss : markPrice >= position.stopLoss);
+    const stopHit = position.stopLoss != null && hasReachedFuturesPrice(
+      markPrice,
+      position.stopLoss,
+      position.side === 'long' ? 'at-or-below' : 'at-or-above',
+    );
     if (stopHit) return closePosition(positionId, markPrice, 'stop-loss');
-    const targetHit = position.takeProfit != null && (position.side === 'long' ? markPrice >= position.takeProfit : markPrice <= position.takeProfit);
+    const targetHit = position.takeProfit != null && hasReachedFuturesPrice(
+      markPrice,
+      position.takeProfit,
+      position.side === 'long' ? 'at-or-above' : 'at-or-below',
+    );
     if (targetHit) return closePosition(positionId, markPrice, 'take-profit');
     return null;
   }, [closePosition, commitAccount, syncStatus, user]);

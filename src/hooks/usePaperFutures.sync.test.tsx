@@ -89,4 +89,22 @@ describe('paper futures cloud persistence', () => {
     await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
     expect(mocks.query.update.mock.lastCall?.[0].orders).toHaveLength(1);
   });
+  it('liquidates an active position even while a cloud save is in flight', async () => {
+    const { result } = renderHook(() => usePaperFutures());
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+    let resolveOpenSave!: (value: unknown) => void;
+    mocks.query.maybeSingle.mockReturnValueOnce(new Promise(resolve => { resolveOpenSave = resolve; }));
+    act(() => { result.current.openPosition({ coinId: 'bitcoin', coinName: 'Bitcoin', symbol: 'btc', side: 'long', price: 83182.30, margin: 100, leverage: 125, stopLoss: null, takeProfit: null }); });
+    await waitFor(() => expect(result.current.syncStatus).toBe('saving'));
+    const positionId = result.current.account.positions[0].id;
+    let resolveLiqSave!: (value: unknown) => void;
+    mocks.query.maybeSingle.mockReturnValueOnce(new Promise(resolve => { resolveLiqSave = resolve; }));
+    let liqResult;
+    act(() => { liqResult = result.current.checkPosition(positionId, 82931.50); });
+    expect(liqResult).toMatchObject({ ok: true, message: 'BTC position liquidated.' });
+    expect(result.current.account.positions).toHaveLength(0);
+    await act(async () => { resolveOpenSave({ data: { updated_at: '2026-01-01T00:00:01.000Z' }, error: null }); });
+    await act(async () => { resolveLiqSave({ data: { updated_at: '2026-01-01T00:00:02.000Z' }, error: null }); });
+    await waitFor(() => expect(result.current.syncStatus).toBe('ready'));
+  });
 });

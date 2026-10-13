@@ -152,4 +152,24 @@ describe('paper order lifecycle', () => {
     expect(result.current.account.realizedPnl).toBeCloseTo(-10_000);
     expect(result.current.account.trades[0].fee).toBeCloseTo(0);
   });
+  it.each([
+    ['long', 83182.30, 125, 82931.50],
+    ['short', 83182.10, 125, 83430.40],
+  ] as const)('liquidates %s position when mark price hits the displayed liquidation price (%s -> %s)', async (side, entryPrice, leverage, displayedLiqMark) => {
+    const result = await setup();
+    act(() => { result.current.openPosition({ ...input, side, price: entryPrice, margin: 100, leverage }); });
+    const id = result.current.account.positions[0].id;
+    let checkResult;
+    act(() => { checkResult = result.current.checkPosition(id, displayedLiqMark); });
+    expect(checkResult).toMatchObject({ ok: true, message: 'BTC position liquidated.' });
+    expect(result.current.account.positions).toHaveLength(0);
+    expect(result.current.account.trades[0]).toMatchObject({ action: 'liquidated', price: displayedLiqMark });
+  });
+  it('does not liquidate a fully collateralized cross-margin long when liquidation price is zero', async () => {
+    const result = await setup();
+    act(() => { result.current.openPosition({ ...input, side: 'long', price: 100, margin: 10, leverage: 5, marginMode: 'cross' }); });
+    const id = result.current.account.positions[0].id;
+    act(() => { result.current.checkPosition(id, 50); });
+    expect(result.current.account.positions).toHaveLength(1);
+  });
 });
